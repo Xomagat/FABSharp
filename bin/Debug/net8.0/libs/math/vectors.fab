@@ -1,0 +1,495 @@
+// ══════════════════════════════════════════════════════════════════════════════
+//  vectors.fab  —  FAB# Vector Math Library
+//  Путь: ...libs/math/vectors.fab
+//
+//  Подключение:
+//      use "libs/math/vectors.fab";
+//
+//  Содержит:
+//      class Vec2  — 2D вектор (x, y)
+//      class Vec3  — 3D вектор (x, y, z)
+//
+//  Вспомогательные функции (вызываются напрямую после use):
+//      vec2(x, y)               — создать Vec2
+//      vec3(x, y, z)            — создать Vec3
+//      vec2_zero()              — Vec2(0, 0)
+//      vec3_zero()              — Vec3(0, 0, 0)
+//      vec2_one()               — Vec2(1, 1)
+//      vec3_one()               — Vec3(1, 1, 1)
+//      vec2_up()                — Vec2(0, 1)
+//      vec2_right()             — Vec2(1, 0)
+//      vec3_up()                — Vec3(0, 1, 0)
+//      vec3_right()             — Vec3(1, 0, 0)
+//      vec3_forward()           — Vec3(0, 0, 1)
+// ══════════════════════════════════════════════════════════════════════════════
+
+
+// ── 2D Вектор ─────────────────────────────────────────────────────────────────
+
+class Vec2
+{
+    public double x = 0.0;
+    public double y = 0.0;
+
+    // Конструктор
+    public def Vec2(double px, double py)
+    {
+        x = px;
+        y = py;
+    }
+
+    // ── Базовые операции ──────────────────────────────────────────────────────
+
+    // Сложение: возвращает новый Vec2
+    public def add(double ox, double oy) -> Vec2
+    {
+        return new Vec2(x + ox, y + oy);
+    }
+
+    // Вычитание: возвращает новый Vec2
+    public def sub(double ox, double oy) -> Vec2
+    {
+        return new Vec2(x - ox, y - oy);
+    }
+
+    // Умножение на скаляр
+    public def scale(double s) -> Vec2
+    {
+        return new Vec2(x * s, y * s);
+    }
+
+    // Деление на скаляр
+    public def div(double s) -> Vec2
+    {
+        return new Vec2(x / s, y / s);
+    }
+
+    // Отрицание (обратный вектор)
+    public def negate() -> Vec2
+    {
+        return new Vec2(0.0 - x, 0.0 - y);
+    }
+
+    // ── Математические свойства ───────────────────────────────────────────────
+
+    // Длина (модуль) вектора
+    public def length() -> double
+    {
+        double sum = x * x + y * y;
+        // Метод sqrt через степень 0.5
+        double result = sum ^ 0.5;
+        return result;
+    }
+
+    // Квадрат длины (быстрее length() — без sqrt)
+    public def length_sq() -> double
+    {
+        return x * x + y * y;
+    }
+
+    // Нормализованный вектор (единичный)
+    public def normalize() -> Vec2
+    {
+        double len = length();
+        return new Vec2(x / len, y / len);
+    }
+
+    // Скалярное произведение с другим вектором (задаётся компонентами)
+    public def dot(double ox, double oy) -> double
+    {
+        return x * ox + y * oy;
+    }
+
+    // Расстояние до другой точки
+    public def dist(double ox, double oy) -> double
+    {
+        double dx = x - ox;
+        double dy = y - oy;
+        return (dx * dx + dy * dy) ^ 0.5;
+    }
+
+    // Угол вектора в радианах (относительно оси X)
+    public def angle() -> double
+    {
+        // atan2(y, x) через разложение: используем math.atan2 через степени
+        // FAB# не имеет встроенного atan2 без библиотеки math,
+        // поэтому используем простую аппроксимацию через нормализацию
+        // Возвращаем угол через встроенную операцию (rad)
+        double len = length();
+        double nx = x / len;
+        double ny = y / len;
+        // Аппроксимация atan2 через формулу arctg
+        // sign(y) * arccos(nx) — точная через итерации Тейлора (не нужна math)
+        // Используем sign(y) и cos приближение
+        double absY = ny;
+        if (absY < 0.0)
+        {
+            absY = 0.0 - absY;
+        }
+        double a = 1.0 - absY;
+        double angle_val = (3.14159265358979 / 4.0) * absY - absY * a * 0.2447;
+        if (nx < 0.0)
+        {
+            angle_val = 3.14159265358979 - angle_val;
+        }
+        if (ny < 0.0)
+        {
+            angle_val = 0.0 - angle_val;
+        }
+        return angle_val;
+    }
+
+    // Поворот вектора на угол (в радианах)
+    // Используем разложение cos/sin через степенной ряд (4 члена)
+    public def rotate(double radians) -> Vec2
+    {
+        double r2 = radians * radians;
+        double r4 = r2 * r2;
+        double r6 = r4 * r2;
+        double cosA = 1.0 - r2 / 2.0 + r4 / 24.0 - r6 / 720.0;
+        double sinA = radians - r2 * radians / 6.0 + r4 * radians / 120.0 - r6 * radians / 5040.0;
+        return new Vec2(x * cosA - y * sinA, x * sinA + y * cosA);
+    }
+
+    // Перпендикулярный вектор (повёрнут на 90° влево)
+    public def perp() -> Vec2
+    {
+        return new Vec2(0.0 - y, x);
+    }
+
+    // Линейная интерполяция к другой точке: t=0 → this, t=1 → (ox, oy)
+    public def lerp(double ox, double oy, double t) -> Vec2
+    {
+        return new Vec2(x + (ox - x) * t, y + (oy - y) * t);
+    }
+
+    // Поэлементный минимум
+    public def min_v(double ox, double oy) -> Vec2
+    {
+        double rx = x;
+        if (ox < x) { rx = ox; }
+        double ry = y;
+        if (oy < y) { ry = oy; }
+        return new Vec2(rx, ry);
+    }
+
+    // Поэлементный максимум
+    public def max_v(double ox, double oy) -> Vec2
+    {
+        double rx = x;
+        if (ox > x) { rx = ox; }
+        double ry = y;
+        if (oy > y) { ry = oy; }
+        return new Vec2(rx, ry);
+    }
+
+    // Отражение вектора относительно нормали (нормаль задаётся компонентами)
+    public def reflect(double nx, double ny) -> Vec2
+    {
+        double d = dot(nx, ny);
+        return new Vec2(x - 2.0 * d * nx, y - 2.0 * d * ny);
+    }
+
+    // Зажать длину вектора в диапазон [0, maxLen]
+    public def clamp_length(double maxLen) -> Vec2
+    {
+        double len = length();
+        if (len > maxLen)
+        {
+            double s = maxLen / len;
+            return new Vec2(x * s, y * s);
+        }
+        return new Vec2(x, y);
+    }
+
+    // ── Утилиты ───────────────────────────────────────────────────────────────
+
+    // Равен ли другому вектору (с эпсилон-допуском)
+    public def equals(double ox, double oy, double eps) -> bool
+    {
+        double dx = x - ox;
+        double dy = y - oy;
+        if (dx < 0.0) { dx = 0.0 - dx; }
+        if (dy < 0.0) { dy = 0.0 - dy; }
+        return dx < eps and dy < eps;
+    }
+
+    // Является ли нулевым вектором
+    public def is_zero() -> bool
+    {
+        return x == 0.0 and y == 0.0;
+    }
+
+    // Копия вектора
+    public def clone() -> Vec2
+    {
+        return new Vec2(x, y);
+    }
+
+    // Строковое представление
+    public def to_str() -> string
+    {
+        return $"Vec2({x}, {y})";
+    }
+}
+
+
+// ── 3D Вектор ─────────────────────────────────────────────────────────────────
+
+class Vec3
+{
+    public double x = 0.0;
+    public double y = 0.0;
+    public double z = 0.0;
+
+    // Конструктор
+    public def Vec3(double px, double py, double pz)
+    {
+        x = px;
+        y = py;
+        z = pz;
+    }
+
+    // ── Базовые операции ──────────────────────────────────────────────────────
+
+    // Сложение
+    public def add(double ox, double oy, double oz) -> Vec3
+    {
+        return new Vec3(x + ox, y + oy, z + oz);
+    }
+
+    // Вычитание
+    public def sub(double ox, double oy, double oz) -> Vec3
+    {
+        return new Vec3(x - ox, y - oy, z - oz);
+    }
+
+    // Умножение на скаляр
+    public def scale(double s) -> Vec3
+    {
+        return new Vec3(x * s, y * s, z * s);
+    }
+
+    // Деление на скаляр
+    public def div(double s) -> Vec3
+    {
+        return new Vec3(x / s, y / s, z / s);
+    }
+
+    // Отрицание
+    public def negate() -> Vec3
+    {
+        return new Vec3(0.0 - x, 0.0 - y, 0.0 - z);
+    }
+
+    // ── Математические свойства ───────────────────────────────────────────────
+
+    // Длина (модуль)
+    public def length() -> double
+    {
+        return (x * x + y * y + z * z) ^ 0.5;
+    }
+
+    // Квадрат длины
+    public def length_sq() -> double
+    {
+        return x * x + y * y + z * z;
+    }
+
+    // Нормализованный вектор
+    public def normalize() -> Vec3
+    {
+        double len = length();
+        return new Vec3(x / len, y / len, z / len);
+    }
+
+    // Скалярное произведение
+    public def dot(double ox, double oy, double oz) -> double
+    {
+        return x * ox + y * oy + z * oz;
+    }
+
+    // Векторное произведение
+    public def cross(double ox, double oy, double oz) -> Vec3
+    {
+        return new Vec3(
+            y * oz - z * oy,
+            z * ox - x * oz,
+            x * oy - y * ox
+        );
+    }
+
+    // Расстояние до другой точки
+    public def dist(double ox, double oy, double oz) -> double
+    {
+        double dx = x - ox;
+        double dy = y - oy;
+        double dz = z - oz;
+        return (dx * dx + dy * dy + dz * dz) ^ 0.5;
+    }
+
+    // Линейная интерполяция
+    public def lerp(double ox, double oy, double oz, double t) -> Vec3
+    {
+        return new Vec3(
+            x + (ox - x) * t,
+            y + (oy - y) * t,
+            z + (oz - z) * t
+        );
+    }
+
+    // Поэлементный минимум
+    public def min_v(double ox, double oy, double oz) -> Vec3
+    {
+        double rx = x; if (ox < x) { rx = ox; }
+        double ry = y; if (oy < y) { ry = oy; }
+        double rz = z; if (oz < z) { rz = oz; }
+        return new Vec3(rx, ry, rz);
+    }
+
+    // Поэлементный максимум
+    public def max_v(double ox, double oy, double oz) -> Vec3
+    {
+        double rx = x; if (ox > x) { rx = ox; }
+        double ry = y; if (oy > y) { ry = oy; }
+        double rz = z; if (oz > z) { rz = oz; }
+        return new Vec3(rx, ry, rz);
+    }
+
+    // Отражение относительно нормали
+    public def reflect(double nx, double ny, double nz) -> Vec3
+    {
+        double d = dot(nx, ny, nz);
+        return new Vec3(x - 2.0 * d * nx, y - 2.0 * d * ny, z - 2.0 * d * nz);
+    }
+
+    // Проекция вектора на вектор (ox, oy, oz)
+    public def project(double ox, double oy, double oz) -> Vec3
+    {
+        double olen = (ox * ox + oy * oy + oz * oz) ^ 0.5;
+        double ux = ox / olen;
+        double uy = oy / olen;
+        double uz = oz / olen;
+        double d = dot(ux, uy, uz);
+        return new Vec3(ux * d, uy * d, uz * d);
+    }
+
+    // Угол между двумя векторами в радианах (косинусная формула)
+    public def angle_to(double ox, double oy, double oz) -> double
+    {
+        double lenA = length();
+        double lenB = (ox * ox + oy * oy + oz * oz) ^ 0.5;
+        double cosA = dot(ox, oy, oz) / (lenA * lenB);
+        // Зажать в [-1, 1] на случай погрешности
+        if (cosA > 1.0) { cosA = 1.0; }
+        if (cosA < -1.0) { cosA = -1.0; }
+        // arccos через ряд Тейлора (точный в диапазоне [-1, 1])
+        // arccos(x) = pi/2 - arcsin(x)
+        // arcsin(x) ≈ x + x³/6 + 3x⁵/40 + 15x⁷/336  (|x| ≤ 0.7)
+        // для |x| > 0.7 используем arccos(x) = 2*arcsin(sqrt((1-x)/2))
+        double PI = 3.14159265358979;
+        double result = 0.0;
+        double u = cosA;
+        double absU = u;
+        if (absU < 0.0) { absU = 0.0 - absU; }
+        if (absU <= 0.7)
+        {
+            double u3 = u * u * u;
+            double u5 = u3 * u * u;
+            double u7 = u5 * u * u;
+            double asin_v = u + u3 / 6.0 + 3.0 * u5 / 40.0 + 15.0 * u7 / 336.0;
+            result = PI / 2.0 - asin_v;
+        }
+        else
+        {
+            double h = ((1.0 - u) / 2.0) ^ 0.5;
+            double h3 = h * h * h;
+            double h5 = h3 * h * h;
+            double h7 = h5 * h * h;
+            double asin_h = h + h3 / 6.0 + 3.0 * h5 / 40.0 + 15.0 * h7 / 336.0;
+            result = 2.0 * asin_h;
+            if (u < 0.0) { result = PI - result; }
+        }
+        return result;
+    }
+
+    // Зажать длину в диапазон [0, maxLen]
+    public def clamp_length(double maxLen) -> Vec3
+    {
+        double len = length();
+        if (len > maxLen)
+        {
+            double s = maxLen / len;
+            return new Vec3(x * s, y * s, z * s);
+        }
+        return new Vec3(x, y, z);
+    }
+
+    // Равен ли другому вектору (с эпсилон-допуском)
+    public def equals(double ox, double oy, double oz, double eps) -> bool
+    {
+        double dx = x - ox; if (dx < 0.0) { dx = 0.0 - dx; }
+        double dy = y - oy; if (dy < 0.0) { dy = 0.0 - dy; }
+        double dz = z - oz; if (dz < 0.0) { dz = 0.0 - dz; }
+        return dx < eps and dy < eps and dz < eps;
+    }
+
+    // Является ли нулевым
+    public def is_zero() -> bool
+    {
+        return x == 0.0 and y == 0.0 and z == 0.0;
+    }
+
+    // Копия
+    public def clone() -> Vec3
+    {
+        return new Vec3(x, y, z);
+    }
+
+    // XY-проекция в Vec2
+    public def to_vec2() -> Vec2
+    {
+        return new Vec2(x, y);
+    }
+
+    // Строковое представление
+    public def to_str() -> string
+    {
+        return $"Vec3({x}, {y}, {z})";
+    }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Фабричные функции — удобное создание векторов без new
+// ══════════════════════════════════════════════════════════════════════════════
+
+def vec2(double x, double y) -> Vec2
+{
+    return new Vec2(x, y);
+}
+
+def vec3(double x, double y, double z) -> Vec3
+{
+    return new Vec3(x, y, z);
+}
+
+// ── Предустановленные Vec2 ────────────────────────────────────────────────────
+
+def vec2_zero() -> Vec2  { return new Vec2(0.0, 0.0); }
+def vec2_one()  -> Vec2  { return new Vec2(1.0, 1.0); }
+def vec2_up()   -> Vec2  { return new Vec2(0.0, 1.0); }
+def vec2_down() -> Vec2  { return new Vec2(0.0, -1.0); }
+def vec2_right() -> Vec2 { return new Vec2(1.0, 0.0); }
+def vec2_left()  -> Vec2 { return new Vec2(-1.0, 0.0); }
+
+// ── Предустановленные Vec3 ────────────────────────────────────────────────────
+
+def vec3_zero()    -> Vec3  { return new Vec3(0.0, 0.0, 0.0); }
+def vec3_one()     -> Vec3  { return new Vec3(1.0, 1.0, 1.0); }
+def vec3_up()      -> Vec3  { return new Vec3(0.0, 1.0, 0.0); }
+def vec3_down()    -> Vec3  { return new Vec3(0.0, -1.0, 0.0); }
+def vec3_right()   -> Vec3  { return new Vec3(1.0, 0.0, 0.0); }
+def vec3_left()    -> Vec3  { return new Vec3(-1.0, 0.0, 0.0); }
+def vec3_forward() -> Vec3  { return new Vec3(0.0, 0.0, 1.0); }
+def vec3_back()    -> Vec3  { return new Vec3(0.0, 0.0, -1.0); }

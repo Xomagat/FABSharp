@@ -1,0 +1,714 @@
+// ═══════════════════════════════════════════════════════════════
+//  matrix.fab  —  Библиотека матриц для FAB#
+//  Подключение:  use "libs/math/matrix.fab";
+//
+//  Представление:
+//    Матрица — это плоский список double[] длиной rows*cols.
+//    Размер закодирован в первых двух слотах:
+//      list[0] = строки,  list[1] = столбцы,  list[2..] = данные
+//
+//  Все функции следуют одному соглашению: первый аргумент
+//  всегда является списком матрицы. Индексы строк и столбцов
+//  начинаются с 0.
+//
+//  Экспортируемые функции:
+//    mat_make(rows, cols)              → нулевая матрица
+//    mat_identity(n)                   → единичная матрица n×n
+//    mat_set(m, row, col, val)         → void (изменяет m)
+//    mat_get(m, row, col)              → double
+//    mat_rows(m)                       → int
+//    mat_cols(m)                       → int
+//    mat_fill(m, val)                  → void
+//    mat_copy(m)                       → глубокая копия
+//    mat_add(a, b)                     → a + b
+//    mat_sub(a, b)                     → a − b
+//    mat_scale(m, k)                   → k * m (умножение на скаляр)
+//    mat_mul(a, b)                     → a × b (произведение матриц)
+//    mat_transpose(m)                  → транспонированная копия
+//    mat_trace(m)                      → сумма диагональных элементов
+//    mat_frobenius(m)                  → норма Фробениуса
+//    mat_row_swap(m, r1, r2)           → void (изменяет m)
+//    mat_row_scale(m, r, k)            → void
+//    mat_row_add(m, dst, src, k)       → void  dst += k*src
+//    mat_ref(m)                        → ступенчатый вид (копия)
+//    mat_rref(m)                       → приведённый ступенчатый вид (копия)
+//    mat_det(m)                        → определитель (только квадратные)
+//    mat_equal(a, b, eps)              → bool (поэлементно с допуском)
+//    mat_print(m)                      → void (красивый вывод)
+//    mat_from_list(rows, cols, data)   → матрица из плоского списка
+//    mat_to_list(m)                    → плоский список данных (без заголовка)
+//    mat_diag(v)                       → диагональная матрица из списка
+//    mat_sum(m)                        → сумма всех элементов
+//    mat_max(m)                        → наибольший элемент
+//    mat_min(m)                        → наименьший элемент
+//    mat_apply(m, f_name)              → поэлементное применение именованной функции
+//    mat_hadamard(a, b)                → поэлементное произведение
+//    mat_pow(m, p)                     → целая степень матрицы
+// ═══════════════════════════════════════════════════════════════
+
+// ── Внутренние вспомогательные функции ──────────────────────────
+
+// Кодирование размера в список: слот 0 = строки, слот 1 = столбцы
+def _mat_encode_shape(double[] m, double rows, double cols) -> double
+{
+    m[0] = rows;
+    m[1] = cols;
+    return 0;
+}
+
+// Индекс элемента (r, c) в плоских данных матрицы с 'cols' столбцами
+// данные начинаются с индекса 2
+def _mat_idx(double cols, double r, double c) -> double
+{
+    return 2 + r * cols + c;
+}
+
+// ── Создание матриц ──────────────────────────────────────────────
+
+// Создать нулевую матрицу размера rows×cols.
+// Формат: [строки, столбцы, 0, 0, 0, ...]  (rows*cols нулей)
+def mat_make(double rows, double cols) -> double[]
+{
+    double[] m;
+    vfree total = rows * cols + 2;
+    vfree i = 0;
+    while (i < total)
+    {
+        m.addend(0);
+        i++;
+    }
+    m[0] = rows;
+    m[1] = cols;
+    return m;
+}
+
+// Единичная матрица n×n
+def mat_identity(double n) -> double[]
+{
+    double[] m = mat_make(n, n);
+    vfree r = 0;
+    while (r < n)
+    {
+        vfree idx = _mat_idx(n, r, r);
+        m[idx] = 1;
+        r++;
+    }
+    return m;
+}
+
+// Построить матрицу из плоского списка данных (без заголовка)
+def mat_from_list(double rows, double cols, double[] data) -> double[]
+{
+    double[] m = mat_make(rows, cols);
+    vfree i = 0;
+    while (i < rows * cols)
+    {
+        m[i + 2] = data[i];
+        i++;
+    }
+    return m;
+}
+
+// ── Доступ к размеру ─────────────────────────────────────────────
+
+def mat_rows(double[] m) -> double
+{
+    return m[0];
+}
+
+def mat_cols(double[] m) -> double
+{
+    return m[1];
+}
+
+// ── Доступ к элементам ───────────────────────────────────────────
+
+def mat_get(double[] m, double row, double col) -> double
+{
+    vfree cols = m[1];
+    vfree idx = _mat_idx(cols, row, col);
+    return m[idx];
+}
+
+def mat_set(double[] m, double row, double col, double val) -> double
+{
+    vfree cols = m[1];
+    vfree idx = _mat_idx(cols, row, col);
+    m[idx] = val;
+    return 0;
+}
+
+// ── Заполнение / копирование ─────────────────────────────────────
+
+def mat_fill(double[] m, double val) -> double
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    vfree total = rows * cols;
+    vfree i = 0;
+    while (i < total)
+    {
+        m[i + 2] = val;
+        i++;
+    }
+    return 0;
+}
+
+def mat_copy(double[] m) -> double[]
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    double[] c = mat_make(rows, cols);
+    vfree total = rows * cols;
+    vfree i = 0;
+    while (i < total)
+    {
+        c[i + 2] = m[i + 2];
+        i++;
+    }
+    return c;
+}
+
+// Извлечь плоский список данных (без служебных слотов заголовка)
+def mat_to_list(double[] m) -> double[]
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    vfree total = rows * cols;
+    double[] out;
+    vfree i = 0;
+    while (i < total)
+    {
+        out.addend(m[i + 2]);
+        i++;
+    }
+    return out;
+}
+
+// ── Арифметические операции ──────────────────────────────────────
+
+def mat_add(double[] a, double[] b) -> double[]
+{
+    vfree rows = a[0];
+    vfree cols = a[1];
+    double[] r = mat_make(rows, cols);
+    vfree total = rows * cols;
+    vfree i = 0;
+    while (i < total)
+    {
+        r[i + 2] = a[i + 2] + b[i + 2];
+        i++;
+    }
+    return r;
+}
+
+def mat_sub(double[] a, double[] b) -> double[]
+{
+    vfree rows = a[0];
+    vfree cols = a[1];
+    double[] r = mat_make(rows, cols);
+    vfree total = rows * cols;
+    vfree i = 0;
+    while (i < total)
+    {
+        r[i + 2] = a[i + 2] - b[i + 2];
+        i++;
+    }
+    return r;
+}
+
+def mat_scale(double[] m, double k) -> double[]
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    double[] r = mat_make(rows, cols);
+    vfree total = rows * cols;
+    vfree i = 0;
+    while (i < total)
+    {
+        r[i + 2] = m[i + 2] * k;
+        i++;
+    }
+    return r;
+}
+
+// Стандартное умножение матриц A(m×k) × B(k×n) → C(m×n)
+def mat_mul(double[] a, double[] b) -> double[]
+{
+    vfree arows = a[0];
+    vfree acols = a[1];
+    vfree bcols = b[1];
+    double[] c = mat_make(arows, bcols);
+    vfree i = 0;
+    while (i < arows)
+    {
+        vfree j = 0;
+        while (j < bcols)
+        {
+            vfree s = 0;
+            vfree k = 0;
+            while (k < acols)
+            {
+                s = s + mat_get(a, i, k) * mat_get(b, k, j);
+                k++;
+            }
+            mat_set(c, i, j, s);
+            j++;
+        }
+        i++;
+    }
+    return c;
+}
+
+// Поэлементное (произведение Адамара) — матрицы должны быть одинакового размера
+def mat_hadamard(double[] a, double[] b) -> double[]
+{
+    vfree rows = a[0];
+    vfree cols = a[1];
+    double[] r = mat_make(rows, cols);
+    vfree total = rows * cols;
+    vfree i = 0;
+    while (i < total)
+    {
+        r[i + 2] = a[i + 2] * b[i + 2];
+        i++;
+    }
+    return r;
+}
+
+// ── Транспонирование ─────────────────────────────────────────────
+
+def mat_transpose(double[] m) -> double[]
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    double[] t = mat_make(cols, rows);
+    vfree i = 0;
+    while (i < rows)
+    {
+        vfree j = 0;
+        while (j < cols)
+        {
+            mat_set(t, j, i, mat_get(m, i, j));
+            j++;
+        }
+        i++;
+    }
+    return t;
+}
+
+// ── Свёртки / статистика ─────────────────────────────────────────
+
+def mat_trace(double[] m) -> double
+{
+    vfree n = m[0];
+    vfree s = 0;
+    vfree i = 0;
+    while (i < n)
+    {
+        s = s + mat_get(m, i, i);
+        i++;
+    }
+    return s;
+}
+
+def mat_sum(double[] m) -> double
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    vfree total = rows * cols;
+    vfree s = 0;
+    vfree i = 0;
+    while (i < total)
+    {
+        s = s + m[i + 2];
+        i++;
+    }
+    return s;
+}
+
+def mat_max(double[] m) -> double
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    vfree total = rows * cols;
+    double best = m[2];
+    vfree i = 1;
+    while (i < total)
+    {
+        vfree v = m[i + 2];
+        if (v > best)
+        {
+            best = v;
+        }
+        i++;
+    }
+    return best;
+}
+
+def mat_min(double[] m) -> double
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    vfree total = rows * cols;
+    double best = m[2];
+    vfree i = 1;
+    while (i < total)
+    {
+        vfree v = m[i + 2];
+        if (v < best)
+        {
+            best = v;
+        }
+        i++;
+    }
+    return best;
+}
+
+// Норма Фробениуса: sqrt(суммы квадратов всех элементов)
+def mat_frobenius(double[] m) -> double
+{
+    use math;
+    vfree rows = m[0];
+    vfree cols = m[1];
+    vfree total = rows * cols;
+    vfree s = 0;
+    vfree i = 0;
+    while (i < total)
+    {
+        s = s + m[i + 2] * m[i + 2];
+        i++;
+    }
+    return math.sqrt(s);
+}
+
+// ── Диагональная матрица из списка ───────────────────────────────
+
+def mat_diag(double[] v) -> double[]
+{
+    vfree n = v.length;
+    double[] m = mat_make(n, n);
+    vfree i = 0;
+    while (i < n)
+    {
+        mat_set(m, i, i, v[i]);
+        i++;
+    }
+    return m;
+}
+
+// ── Операции со строками (in-place) ──────────────────────────────
+
+def mat_row_swap(double[] m, double r1, double r2) -> double
+{
+    vfree cols = m[1];
+    vfree j = 0;
+    while (j < cols)
+    {
+        vfree tmp = mat_get(m, r1, j);
+        mat_set(m, r1, j, mat_get(m, r2, j));
+        mat_set(m, r2, j, tmp);
+        j++;
+    }
+    return 0;
+}
+
+def mat_row_scale(double[] m, double r, double k) -> double
+{
+    vfree cols = m[1];
+    vfree j = 0;
+    while (j < cols)
+    {
+        mat_set(m, r, j, mat_get(m, r, j) * k);
+        j++;
+    }
+    return 0;
+}
+
+// строка_dst += k * строка_src
+def mat_row_add(double[] m, double dst, double src, double k) -> double
+{
+    vfree cols = m[1];
+    vfree j = 0;
+    while (j < cols)
+    {
+        mat_set(m, dst, j, mat_get(m, dst, j) + k * mat_get(m, src, j));
+        j++;
+    }
+    return 0;
+}
+
+// ── Метод Гаусса — ступенчатый вид (REF) ────────────────────────
+
+def mat_ref(double[] m) -> double[]
+{
+    double[] r = mat_copy(m);
+    vfree rows = r[0];
+    vfree cols = r[1];
+    vfree pivot_row = 0;
+    vfree col = 0;
+    while (col < cols and pivot_row < rows)
+    {
+        // Поиск ведущего элемента в этом столбце
+        vfree found = -1;
+        vfree i = pivot_row;
+        while (i < rows)
+        {
+            vfree v = mat_get(r, i, col);
+            if (v < 0)
+            {
+                v = 0 - v;
+            }
+            if (v > 0.0000001 and found == -1)
+            {
+                found = i;
+            }
+            i++;
+        }
+        if (found == -1)
+        {
+            col++;
+        }
+        else
+        {
+            if (found != pivot_row)
+            {
+                mat_row_swap(r, pivot_row, found);
+            }
+            vfree pval = mat_get(r, pivot_row, col);
+            mat_row_scale(r, pivot_row, 1 / pval);
+            vfree elim = pivot_row + 1;
+            while (elim < rows)
+            {
+                vfree factor = mat_get(r, elim, col);
+                if (factor < 0)
+                {
+                    factor = 0 - factor;
+                }
+                if (factor > 0.0000001)
+                {
+                    mat_row_add(r, elim, pivot_row, 0 - mat_get(r, elim, col));
+                }
+                elim++;
+            }
+            pivot_row++;
+            col++;
+        }
+    }
+    return r;
+}
+
+// ── Приведённый ступенчатый вид (RREF) ──────────────────────────
+
+def mat_rref(double[] m) -> double[]
+{
+    double[] r = mat_ref(m);
+    vfree rows = r[0];
+    vfree cols = r[1];
+    vfree row = rows - 1;
+    while (row >= 0)
+    {
+        // Поиск ведущего столбца в этой строке
+        vfree pivot_col = -1;
+        vfree j = 0;
+        while (j < cols)
+        {
+            vfree v = mat_get(r, row, j);
+            if (v < 0)
+            {
+                v = 0 - v;
+            }
+            if (v > 0.0000001 and pivot_col == -1)
+            {
+                pivot_col = j;
+            }
+            j++;
+        }
+        if (pivot_col != -1)
+        {
+            vfree above = row - 1;
+            while (above >= 0)
+            {
+                vfree factor = mat_get(r, above, pivot_col);
+                if (factor < 0)
+                {
+                    factor = 0 - factor;
+                }
+                if (factor > 0.0000001)
+                {
+                    mat_row_add(r, above, row, 0 - mat_get(r, above, pivot_col));
+                }
+                above--;
+            }
+        }
+        row--;
+    }
+    return r;
+}
+
+// ── Определитель (метод Гаусса с отслеживанием знака) ───────────
+
+def mat_det(double[] m) -> double
+{
+    vfree n = m[0];
+    double[] r = mat_copy(m);
+    double sign = 1;
+    vfree col = 0;
+    while (col < n)
+    {
+        // Частичный выбор главного элемента
+        vfree best_row = col;
+        vfree best_val = mat_get(r, col, col);
+        if (best_val < 0)
+        {
+            best_val = 0 - best_val;
+        }
+        vfree i = col + 1;
+        while (i < n)
+        {
+            vfree v = mat_get(r, i, col);
+            if (v < 0)
+            {
+                v = 0 - v;
+            }
+            if (v > best_val)
+            {
+                best_val = v;
+                best_row = i;
+            }
+            i++;
+        }
+        if (best_val < 0.0000000001)
+        {
+            return 0;
+        }
+        if (best_row != col)
+        {
+            mat_row_swap(r, col, best_row);
+            sign = 0 - sign;
+        }
+        vfree pivot = mat_get(r, col, col);
+        vfree elim = col + 1;
+        while (elim < n)
+        {
+            vfree factor = mat_get(r, elim, col) / pivot;
+            mat_row_add(r, elim, col, 0 - factor);
+            elim++;
+        }
+        col++;
+    }
+    // Произведение диагональных элементов
+    double product = sign;
+    vfree d = 0;
+    while (d < n)
+    {
+        product = product * mat_get(r, d, d);
+        d++;
+    }
+    return product;
+}
+
+// ── Проверка равенства (с допуском) ─────────────────────────────
+
+def mat_equal(double[] a, double[] b, double eps) -> bool
+{
+    vfree rows = a[0];
+    vfree cols = a[1];
+    vfree total = rows * cols;
+    vfree i = 0;
+    while (i < total)
+    {
+        vfree diff = a[i + 2] - b[i + 2];
+        if (diff < 0)
+        {
+            diff = 0 - diff;
+        }
+        if (diff > eps)
+        {
+            return false;
+        }
+        i++;
+    }
+    return true;
+}
+
+// ── Целая степень матрицы M^p (p ≥ 0) ──────────────────────────
+
+def mat_pow(double[] m, double p) -> double[]
+{
+    vfree n = m[0];
+    double[] result = mat_identity(n);
+    vfree remaining = p;
+    double[] base_m = mat_copy(m);
+    while (remaining > 0)
+    {
+        result = mat_mul(result, base_m);
+        remaining--;
+    }
+    return result;
+}
+
+// ── Красивый вывод матрицы ──────────────────────────────────────
+
+def mat_print(double[] m) -> double
+{
+    vfree rows = m[0];
+    vfree cols = m[1];
+    writeln "┌" + _repeat_str("─────────", cols) + "┐";
+    vfree i = 0;
+    while (i < rows)
+    {
+        write "│";
+        vfree j = 0;
+        while (j < cols)
+        {
+            vfree val = mat_get(m, i, j);
+            write " " + _fmt_num(val) + " │";
+            j++;
+        }
+        writeln "";
+        i++;
+    }
+    writeln "└" + _repeat_str("─────────", cols) + "┘";
+    return 0;
+}
+
+// ── Внутренние вспомогательные функции форматирования ───────────
+
+// Форматирует число шириной 5 символов (выравнивание вправо) для mat_print
+def _fmt_num(double v) -> string
+{
+    vfree s = v.to_str();
+    vfree len = s.length;
+    vfree pad = 7 - len;
+    if (pad < 0)
+    {
+        pad = 0;
+    }
+    vfree spaces = _spaces(pad);
+    return spaces + s;
+}
+
+def _spaces(double n) -> string
+{
+    string result = "";
+    vfree i = 0;
+    while (i < n)
+    {
+        result += " ";
+        i++;
+    }
+    return result;
+}
+
+def _repeat_str(string s, double n) -> string
+{
+    string result = "";
+    vfree i = 0;
+    while (i < n)
+    {
+        result += s;
+        i++;
+    }
+    return result;
+}
