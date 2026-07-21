@@ -2380,7 +2380,6 @@ public class AST
 
         public override object Eval(FabInterpreter interpreter)
         {
-            // String concatenation with +
             var lv = Left.Eval(interpreter);
             var rv = Right.Eval(interpreter);
 
