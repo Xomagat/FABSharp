@@ -107,7 +107,8 @@ namespace FAB_Compilator
                 Console.ResetColor();
                 return 1;
             }
-            FabCCompiler.RuntimeHeader = File.ReadAllText(rtPath);
+            string header = $"#include {'"'}{rtPath}{'"'}";
+            FabCCompiler.RuntimeHeader = header;
 
             string cSource = "";
             try

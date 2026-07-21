@@ -1694,7 +1694,7 @@ public class Parser
         switch (tok?.Name)
         {
             case "NUMBER":
-                node = new FabNumber(Convert.ToDouble(_tokens[_pos++].Value));
+                node = new FabNumber(_tokens[_pos++].Value);
                 break;
             case "CHAR_LIT":
                 node = new FabChar((char)_tokens[_pos++].Value);

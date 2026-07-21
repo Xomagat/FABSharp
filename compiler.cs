@@ -1,5 +1,6 @@
-using System.Text;
+using System.Diagnostics;
 using System.Globalization;
+using System.Text;
 using static AST;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1110,7 +1111,7 @@ public class FabCCompiler
 
     private string Expr(FabBase node) => node switch
     {
-        FabNumber n => $"fab_num({n.Value.ToString(CultureInfo.InvariantCulture)})",
+        FabNumber n => $"fab_num({n.Value})",
         FabBoolLit b => b.Value ? "FAB_TRUE" : "FAB_FALSE",
         FabString s => $"fab_str({CStr(s.Value)})",
         FabChar ch => $"fab_char_v('{EscCh(ch.Value)}')",
@@ -1956,6 +1957,7 @@ public static class FabCRunner
         }
 
         PrintStep("done", $"Binary: {outPath}");
+
         return 0;
     }
 

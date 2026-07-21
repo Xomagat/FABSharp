@@ -83,6 +83,10 @@ public class AST
         {
             if (Capacity != -1 && Items.Count >= Capacity)
                 throw new Exception($"List is full (capacity {Capacity})");
+            if (ElementType is not ("object" or "vfree"))
+                item = FabAssign.CastDeclaredPublic(item, ElementType, "list element");
+            else if (ElementType == "vfree")
+                item = FabVFreeDecl.InferMinType(item);
             Items.Add(item);
         }
 
@@ -90,6 +94,10 @@ public class AST
         {
             if (Capacity != -1 && Items.Count >= Capacity)
                 throw new Exception($"List is full (capacity {Capacity})");
+            if (ElementType is not ("object" or "vfree"))
+                item = FabAssign.CastDeclaredPublic(item, ElementType, "list element");
+            else if (ElementType == "vfree")
+                item = FabVFreeDecl.InferMinType(item);
             Items.Insert(0, item);
         }
 
@@ -133,8 +141,18 @@ public class AST
 
         public void Set(object key, object value)
         {
-            if (KeyType == "vfree") key = FabVFreeDecl.InferMinType(key);
-            if (ValType == "vfree") value = FabVFreeDecl.InferMinType(value);
+            key = KeyType switch
+            {
+                "vfree" => FabVFreeDecl.InferMinType(key),
+                "object" => key,
+                _ => FabAssign.CastDeclaredPublic(key, KeyType, "dict key")
+            };
+            value = ValType switch
+            {
+                "vfree" => FabVFreeDecl.InferMinType(value),
+                "object" => value,
+                _ => FabAssign.CastDeclaredPublic(value, ValType, "dict value")
+            };
             int i = FindIndex(key);
             if (i >= 0) { Pairs[i] = (key, value); return; }
             if (Capacity != -1 && Pairs.Count >= Capacity)
@@ -229,8 +247,8 @@ public class AST
 
     public class FabNumber : FabBase
     {
-        public double Value { get; }
-        public FabNumber(double value) { Value = value; }
+        public object Value { get; }
+        public FabNumber(object value) { Value = value; }
         public override object Eval(FabInterpreter interpreter) => Value;
     }
 
@@ -1713,6 +1731,129 @@ public class AST
         }
     }
 
+    public static class NumericPromotion
+    {
+        private static readonly Dictionary<Type, int> _rank = new()
+        {
+            [typeof(sbyte)] = 0,
+            [typeof(byte)] = 1,
+            [typeof(short)] = 2,
+            [typeof(ushort)] = 3,
+            [typeof(int)] = 4,
+            [typeof(uint)] = 5,
+            [typeof(long)] = 6,
+            [typeof(ulong)] = 7,
+            [typeof(float)] = 8,
+            [typeof(double)] = 9,
+            [typeof(decimal)] = 10,
+        };
+
+        public static bool IsNumeric(object v) =>
+            v is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal;
+
+        private static int RankOf(object v) => _rank.TryGetValue(v.GetType(), out var r) ? r : -1;
+
+        public static object Widen(object v, Type target)
+        {
+            if (target == typeof(sbyte)) return Convert.ToSByte(v);
+            if (target == typeof(byte)) return Convert.ToByte(v);
+            if (target == typeof(short)) return Convert.ToInt16(v);
+            if (target == typeof(ushort)) return Convert.ToUInt16(v);
+            if (target == typeof(int)) return Convert.ToInt32(v);
+            if (target == typeof(uint)) return Convert.ToUInt32(v);
+            if (target == typeof(long)) return Convert.ToInt64(v);
+            if (target == typeof(ulong)) return Convert.ToUInt64(v);
+            if (target == typeof(float)) return Convert.ToSingle(v);
+            if (target == typeof(double)) return Convert.ToDouble(v);
+            if (target == typeof(decimal)) return Convert.ToDecimal(v);
+            throw new Exception($"Cannot widen to non-numeric type {target.Name}");
+        }
+
+        /// <summary>Higher-ranked operand's CLR type wins — C-like promotion, not a blanket collapse.</summary>
+        public static Type PromotedType(object a, object b)
+        {
+            int ra = RankOf(a), rb = RankOf(b);
+            if (ra < 0 || rb < 0) throw new Exception("PromotedType requires two numeric operands");
+            return ra >= rb ? a.GetType() : b.GetType();
+        }
+
+        public static object Arith(object a, object b, string op)
+        {
+            Type t = PromotedType(a, b);
+
+            if (t == typeof(decimal))
+            {
+                decimal x = Convert.ToDecimal(a), y = Convert.ToDecimal(b);
+                return op switch
+                {
+                    "+" => x + y,
+                    "-" => x - y,
+                    "*" => x * y,
+                    "/" => x / y,
+                    "%" => x % y,
+                    "^" => (decimal)Math.Pow((double)x, (double)y),
+                    _ => throw new Exception($"Unknown operator: {op}")
+                };
+            }
+            if (t == typeof(float) || t == typeof(double))
+            {
+                double x = Convert.ToDouble(a), y = Convert.ToDouble(b);
+                double r = op switch
+                {
+                    "+" => x + y,
+                    "-" => x - y,
+                    "*" => x * y,
+                    "/" => x / y,
+                    "%" => x % y,
+                    "^" => Math.Pow(x, y),
+                    _ => throw new Exception($"Unknown operator: {op}")
+                };
+                return t == typeof(float) ? (object)(float)r : r;
+            }
+
+            // Integer path
+            bool unsigned = t == typeof(uint) || t == typeof(ulong) || t == typeof(ushort) || t == typeof(byte);
+            if (unsigned)
+            {
+                ulong x = Convert.ToUInt64(a), y = Convert.ToUInt64(b);
+                ulong r = op switch
+                {
+                    "+" => x + y,
+                    "-" => x - y,
+                    "*" => x * y,
+                    "/" => y == 0 ? throw new DivideByZeroException() : x / y,
+                    "%" => y == 0 ? throw new DivideByZeroException() : x % y,
+                    "^" => (ulong)Math.Pow(x, y),
+                    _ => throw new Exception($"Unknown operator: {op}")
+                };
+                return Widen(r, t);
+            }
+            else
+            {
+                long x = Convert.ToInt64(a), y = Convert.ToInt64(b);
+                long r = op switch
+                {
+                    "+" => x + y,
+                    "-" => x - y,
+                    "*" => x * y,
+                    "/" => y == 0 ? throw new DivideByZeroException() : x / y,
+                    "%" => y == 0 ? throw new DivideByZeroException() : x % y,
+                    "^" => (long)Math.Pow(x, y),
+                    _ => throw new Exception($"Unknown operator: {op}")
+                };
+                return Widen(r, t);
+            }
+        }
+
+        public static int Compare(object a, object b)
+        {
+            Type t = PromotedType(a, b);
+            return t == typeof(decimal)
+                ? Convert.ToDecimal(a).CompareTo(Convert.ToDecimal(b))
+                : Convert.ToDouble(a).CompareTo(Convert.ToDouble(b));
+        }
+    }
+
     // ── Function definition ───────────────────────────────────────────────────
 
     public class FabFuncDef : FabBase
@@ -2386,18 +2527,10 @@ public class AST
             if (Op == "+" && (lv is string || rv is string))
                 return FormatValue(lv) + FormatValue(rv);
 
-            var left = Convert.ToDouble(lv);
-            var right = Convert.ToDouble(rv);
-            return Op switch
-            {
-                "+" => left + right,
-                "-" => left - right,
-                "*" => left * right,
-                "/" => left / right,
-                "%" => left % right,
-                "^" => Math.Pow(left, right),
-                _ => throw new Exception($"Unknown operator: {Op}")
-            };
+            if (!NumericPromotion.IsNumeric(lv) || !NumericPromotion.IsNumeric(rv))
+                throw new Exception($"Operator '{Op}' cannot be applied to '{FormatValue(lv)}' and '{FormatValue(rv)}'");
+
+            return NumericPromotion.Arith(lv, rv, Op);
         }
     }
 
@@ -2424,16 +2557,16 @@ public class AST
 
             if (left is string l && right is string r)
                 return Op switch { "==" => l == r, "!=" => l != r, _ => throw new Exception($"Operator '{Op}' cannot be applied to strings") };
-            var ld = Convert.ToDouble(left);
-            var rd = Convert.ToDouble(right);
+
+            var ld = left; var rd = right;   // both already numeric, non-string, non-null at this point
             return Op switch
             {
-                "==" => ld == rd,
-                "!=" => ld != rd,
-                "<" => ld < rd,
-                ">" => ld > rd,
-                "<=" => ld <= rd,
-                ">=" => ld >= rd,
+                "==" => NumericPromotion.Compare(ld, rd) == 0,
+                "!=" => NumericPromotion.Compare(ld, rd) != 0,
+                "<" => NumericPromotion.Compare(ld, rd) < 0,
+                ">" => NumericPromotion.Compare(ld, rd) > 0,
+                "<=" => NumericPromotion.Compare(ld, rd) <= 0,
+                ">=" => NumericPromotion.Compare(ld, rd) >= 0,
                 _ => throw new Exception($"Unknown comparison operator: {Op}")
             };
         }
@@ -2735,6 +2868,7 @@ public class AST
                 float _ => (float)result,
                 byte _ => (byte)result,
                 sbyte _ => (object)(sbyte)result,
+                decimal _ => (decimal)result,
                 _ => result
             };
 
@@ -3290,10 +3424,9 @@ public class AST
         null => "null",
         FabVoidSentinel => "",
         bool b => b ? "true" : "false",
-        double d when d == Math.Floor(d) && !double.IsInfinity(d) => ((long)d).ToString(),
-        decimal de when de == Math.Floor(de) => ((long)de).ToString(),
-        float f when f == Math.Floor(f) && !float.IsInfinity(f) => ((long)f).ToString(),
-        float f => f.ToString(CultureInfo.InvariantCulture),
+        float f => f.ToString("G15", CultureInfo.InvariantCulture),
+        double d => d.ToString("G15", CultureInfo.InvariantCulture),
+        decimal de => de.ToString("G15", CultureInfo.InvariantCulture),
         object[] arr => "[" + string.Join(", ", arr.Select(FormatValue)) + "]",
         FabList list => list.ToString(),
         FabDict dict => dict.ToString(),
