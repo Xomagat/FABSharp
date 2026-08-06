@@ -8,4 +8,10 @@ add_executable(FABSharp main.cpp
         Parser/Lexer.h
         Parser/Token.cpp
         Parser/Token.h
-        Parser/TokenType.h)
+        Parser/TokenType.h
+        Parser/Parser.cpp
+        Parser/Parser.h
+        Parser/AST/Expression.h
+        Parser/AST/NumberExpression.h
+        Parser/AST/BinExpression.h
+        Parser/AST/UnaryExpression.h)

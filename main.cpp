@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include "Parser/Lexer.h"
+#include "Parser/Parser.h"
 #include "Parser/Token.h"
 
 int main()
@@ -19,10 +20,13 @@ int main()
 
     while (std::getline(file, input)){}
 
-    std::vector<Token> tokens = Lexer(input).tokenize();
+    auto tokens = Lexer(input).tokenize();
 
-    for (Token& token : tokens)
+    Parser parser(tokens);
+    auto expression = parser.parse();
+
+    for (auto& expr : expression)
     {
-        std::cout << token.get_type() << ' ' << token.get_text() << std::endl;
+        std::cout << expr->to_str() << " = " << expr->eval() << std::endl;
     }
 }
