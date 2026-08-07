@@ -9,6 +9,7 @@ enum token_type
 {
     NUMBER,         // 1, 2, 3, 4 ,5 ...
     HEX_NUMBER,     // #101, #12, #645 ...
+    WORD,           // For const and vars
 
     PLUS,           // +
     MINUS,          // -

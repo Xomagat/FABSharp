@@ -9,7 +9,7 @@
 #include <vector>
 #include <memory>
 
-#include "AST/UnaryExpression.h"
+#include "AST/VariableExpression.h"
 
 #include "Token.h"
 #include "TokenType.h"

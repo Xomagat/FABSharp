@@ -118,6 +118,8 @@ std::unique_ptr<Expression> Parser::primary()
         return std::make_unique<NumberExpression>(std::stod(current.get_text()));
     if (match(token_type::HEX_NUMBER))
         return std::make_unique<NumberExpression>(std::stol(current.get_text(), nullptr, 16));
+    if (match(token_type::WORD))
+        return std::make_unique<VariableExpression>(current.get_text());
     if (match(token_type::LPARENT))
     {
         std::unique_ptr<Expression> result = expression();

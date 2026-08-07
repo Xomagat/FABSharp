@@ -4,6 +4,8 @@
 
 #include "Lexer.h"
 
+#include <stdexcept>
+
 // vars
 
 // funcs
@@ -34,6 +36,10 @@ std::vector<Token> Lexer::tokenize()
         {
             tokenize_number();
         }
+        else if (isalpha(current))
+        {
+            tokenize_word();
+        }
         else if (current == '#')
         {
             next();
@@ -52,13 +58,36 @@ std::vector<Token> Lexer::tokenize()
     return tokens;
 }
 
+void Lexer::tokenize_word()
+{
+    std::string buffer;
+    char current = peek(0);
+
+    while (true)
+    {
+        if (!isalnum(current) && current != '_')
+            break;
+        buffer.push_back(current);
+        current = next();
+    }
+
+    add_token(token_type::WORD, buffer);
+}
+
 void Lexer::tokenize_number()
 {
     std::string buffer;
     char current = peek(0);
 
-    while (isdigit(current))
+    while (true)
     {
+        if (current == '.')
+        {
+            if (buffer.find('.') != -1)
+                throw std::runtime_error("Incorrect notation of a real number!");
+        }
+        else if (!isdigit(current))
+            break;
         buffer.push_back(current);
         current = next();
     }
