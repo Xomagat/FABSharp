@@ -33,6 +33,7 @@ private:
     void tokenize_number();
     void tokenize_hex_number();
     void tokenize_operation();
+    void tokenize_word();
 
   public:
     Lexer(std::string code);
