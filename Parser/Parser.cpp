@@ -98,6 +98,14 @@ std::unique_ptr<Expression> Parser::primary()
 
     if (match(token_type::NUMBER))
         return std::make_unique<NumberExpression>(std::stod(current.get_text()));
+    if (match(token_type::HEX_NUMBER))
+        return std::make_unique<NumberExpression>(std::stol(current.get_text(), nullptr, 16));
+    if (match(token_type::LPARENT))
+    {
+        std::unique_ptr<Expression> result = expression();
+        match(token_type::RPARENT);
+        return result;
+    }
 
     throw std::runtime_error("Unknown expression!");
 }

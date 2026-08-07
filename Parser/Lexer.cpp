@@ -9,12 +9,11 @@
 // funcs
 Lexer::Lexer(std::string code)
 {
-    OPERATION_CHARS = "+-*/";
+    OPERATION_CHARS = "+-*/()";
     OPERATION_TYPE = {
-        token_type::PLUS,
-        token_type::MINUS,
-        token_type::MULT,
-        token_type::DIV,
+        token_type::PLUS, token_type::MINUS,
+        token_type::MULT, token_type::DIV,
+        token_type::LPARENT, token_type::RPARENT,
     };
 
     this->code = code;
@@ -33,11 +32,16 @@ std::vector<Token> Lexer::tokenize()
 
         if (isdigit(current))
         {
-            tokenizeNumber();
+            tokenize_number();
+        }
+        else if (current == '#')
+        {
+            next();
+            tokenize_hex_number();
         }
         else if (OPERATION_CHARS.find(current) != std::string::npos)
         {
-            tokenizeOperation();
+            tokenize_operation();
         }
         else
         {
@@ -48,7 +52,7 @@ std::vector<Token> Lexer::tokenize()
     return tokens;
 }
 
-void Lexer::tokenizeNumber()
+void Lexer::tokenize_number()
 {
     std::string buffer;
     char current = peek(0);
@@ -62,7 +66,21 @@ void Lexer::tokenizeNumber()
     add_token(token_type::NUMBER, buffer);
 }
 
-void Lexer::tokenizeOperation()
+void Lexer::tokenize_hex_number()
+{
+    std::string buffer, chars = "abcdef";
+    char current = peek(0);
+
+    while (isdigit(current) || chars.find(tolower(current)) != -1)
+    {
+        buffer.push_back(current);
+        current = next();
+    }
+
+    add_token(token_type::HEX_NUMBER, buffer);
+}
+
+void Lexer::tokenize_operation()
 {
     int position = OPERATION_CHARS.find(peek(0));
     add_token(OPERATION_TYPE[position]);

@@ -27,6 +27,6 @@ int main()
 
     for (auto& expr : expression)
     {
-        std::cout << expr->to_str() << " = " << expr->eval() << std::endl;
+        std::cout << expr->eval() << std::endl;
     }
 }

@@ -30,8 +30,9 @@ private:
     char peek(int relative_position);
     char next();
 
-    void tokenizeNumber();
-    void tokenizeOperation();
+    void tokenize_number();
+    void tokenize_hex_number();
+    void tokenize_operation();
 
   public:
     Lexer(std::string code);
