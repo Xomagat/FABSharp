@@ -14,4 +14,5 @@ add_executable(FABSharp main.cpp
         Parser/AST/Expression.h
         Parser/AST/NumberExpression.h
         Parser/AST/BinExpression.h
-        Parser/AST/UnaryExpression.h)
+        Parser/AST/UnaryExpression.h
+        Parser/AST/VariableExpression.h)
