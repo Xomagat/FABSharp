@@ -14,6 +14,7 @@ enum token_type
     MINUS,          // -
     MULT,           // *
     DIV,            // /
+    POW,            // ^
 
     LPARENT,        // (
     RPARENT,        // )

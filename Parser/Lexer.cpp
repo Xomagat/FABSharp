@@ -9,10 +9,10 @@
 // funcs
 Lexer::Lexer(std::string code)
 {
-    OPERATION_CHARS = "+-*/()";
+    OPERATION_CHARS = "+-*/^()";
     OPERATION_TYPE = {
         token_type::PLUS, token_type::MINUS,
-        token_type::MULT, token_type::DIV,
+        token_type::MULT, token_type::DIV, token_type::POW,
         token_type::LPARENT, token_type::RPARENT,
     };
 

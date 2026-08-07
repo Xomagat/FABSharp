@@ -61,18 +61,36 @@ std::unique_ptr<Expression> Parser::additive()
 
 std::unique_ptr<Expression> Parser::multiply()
 {
-    std::unique_ptr<Expression> expr = unary();
+    std::unique_ptr<Expression> expr = pow();
 
     while (true)
     {
         if (match(token_type::MULT))
         {
-            expr = std::make_unique<BinExpression>('*', std::move(expr), unary());
+            expr = std::make_unique<BinExpression>('*', std::move(expr), pow());
             continue;
         }
         if (match(token_type::DIV))
         {
             expr = std::make_unique<BinExpression>('/', std::move(expr), unary());
+            continue;
+        }
+        break;
+    }
+
+
+    return expr;
+}
+
+std::unique_ptr<Expression> Parser::pow()
+{
+    std::unique_ptr<Expression> expr = unary();
+
+    while (true)
+    {
+        if (match(token_type::POW))
+        {
+            expr = std::make_unique<BinExpression>('^', std::move(expr), unary());
             continue;
         }
         break;

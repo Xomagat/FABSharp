@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <string>
+#include <cmath>
 
 class BinExpression : public Expression
 {
@@ -27,6 +28,7 @@ public:
             case '-': return expr1->eval() - expr2->eval();
             case '*': return expr1->eval() * expr2->eval();
             case '/': return expr1->eval() / expr2->eval();
+            case '^': return std::pow(expr1->eval(), expr2->eval());
             default: throw std::runtime_error("Unknown operation!");
         }
     }
