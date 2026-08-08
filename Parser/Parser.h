@@ -9,7 +9,16 @@
 #include <vector>
 #include <memory>
 
+#include "AST/BinExpression.h"
+#include "AST/Expression.h"
+#include "AST/UnaryExpression.h"
+#include "AST/ValueExpression.h"
 #include "AST/VariableExpression.h"
+
+#include "AST/Statement.h"
+#include "AST/AssigementStatement.h"
+
+#include "AST/IOStatement.h"
 
 #include "Token.h"
 #include "TokenType.h"
@@ -25,6 +34,9 @@ private:
 
     Token get(int relative_position);
 
+    std::unique_ptr<Statement> statement();
+    std::unique_ptr<Statement> assigment_statement();
+
     std::unique_ptr<Expression> expression();
     std::unique_ptr<Expression> additive();
     std::unique_ptr<Expression> multiply();
@@ -34,10 +46,12 @@ private:
 
     bool match(token_type type);
 
+    Token consume(token_type type);
+
 public:
     Parser(std::vector<Token> tokens);
 
-    std::vector<std::unique_ptr<Expression>> parse();
+    std::vector<std::unique_ptr<Statement>> parse();
 };
 
 #endif // FABSHARP_PARSER_H

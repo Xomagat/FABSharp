@@ -2,10 +2,13 @@
 // Created by Xomagat on 07.08.2026.
 //
 
-#include "BinExpression.h"
-
+#pragma once
 #include <memory>
 #include <string>
+
+#include "Expression.h"
+#include "../../libs/Value.h"
+#include "../../libs/NumberValue.h"
 
 class UnaryExpression : public Expression
 {
@@ -16,12 +19,13 @@ private:
 public:
     explicit UnaryExpression(char op, std::unique_ptr<Expression> expr) : op(op), expr(std::move(expr)) {}
 
-    double eval() const override
+    std::unique_ptr<Value> eval() const override
     {
         switch (op)
         {
-            case '-': return -expr->eval();
-            case '+': return expr->eval();
+            case '-': return std::make_unique<NumberValue>(-expr->eval()->as_double());
+            case '+': return std::make_unique<NumberValue>(expr->eval()->as_double());
+            default: throw std::runtime_error("Undefined behavior!");
         }
     }
 

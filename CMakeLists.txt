@@ -12,7 +12,14 @@ add_executable(FABSharp main.cpp
         Parser/Parser.cpp
         Parser/Parser.h
         Parser/AST/Expression.h
-        Parser/AST/NumberExpression.h
+        Parser/AST/ValueExpression.h
         Parser/AST/BinExpression.h
         Parser/AST/UnaryExpression.h
-        Parser/AST/VariableExpression.h)
+        Parser/AST/VariableExpression.h
+        Parser/AST/Statement.h
+        Parser/AST/AssigementStatement.h
+        Parser/AST/IOStatement.h
+        libs/Value.h
+        libs/Variables.h
+        libs/StringValue.h
+        libs/NumberValue.h)

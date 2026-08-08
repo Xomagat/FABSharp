@@ -2,11 +2,15 @@
 // Created by Xomagat on 07.08.2026.
 //
 
-#include "NumberExpression.h"
-
+#pragma once
 #include <memory>
 #include <string>
 #include <cmath>
+
+#include "../../libs/NumberValue.h"
+#include "../../libs/StringValue.h"
+#include "../../libs/Value.h"
+#include "Expression.h"
 
 class BinExpression : public Expression
 {
@@ -20,15 +24,32 @@ public:
 
     }
 
-    double eval() const override
+    std::unique_ptr<Value> eval() const override
     {
+        std::unique_ptr<Value> value1 = expr1->eval();
+        std::unique_ptr<Value> value2 = expr2->eval();
+
+        if (auto s1 = std::make_unique<StringValue>(value1.get()->as_string()))
+        {
+            std::string s2 = value2->as_string();
+
+            switch (op)
+            {
+                case '+': return std::make_unique<StringValue>(s1->as_string() + s2);
+                default: throw std::runtime_error("Unknown operation!");
+            }
+        }
+
+        auto n1 = value1->as_double();
+        auto n2 = value2->as_double();
+
         switch (op)
         {
-            case '+': return expr1->eval() + expr2->eval();
-            case '-': return expr1->eval() - expr2->eval();
-            case '*': return expr1->eval() * expr2->eval();
-            case '/': return expr1->eval() / expr2->eval();
-            case '^': return std::pow(expr1->eval(), expr2->eval());
+            case '+': return std::make_unique<NumberValue>(n1 + n2);
+            case '-': return std::make_unique<NumberValue>(n1 - n2);
+            case '*': return std::make_unique<NumberValue>(n1 * n2);
+            case '/': return std::make_unique<NumberValue>(n1 / n2);
+            case '^': return std::make_unique<NumberValue>(std::pow(n1, n2));
             default: throw std::runtime_error("Unknown operation!");
         }
     }

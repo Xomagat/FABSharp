@@ -5,22 +5,41 @@
 #ifndef FABSHARP_TOKENTYPE_H
 #define FABSHARP_TOKENTYPE_H
 
+#include <string>
+#include <vector>
+
+// Real tokens
 enum token_type
 {
     NUMBER,         // 1, 2, 3, 4 ,5 ...
     HEX_NUMBER,     // #101, #12, #645 ...
     WORD,           // For const and vars
+    TEXT,           // Base string
+
+    // keywords
+    WRITE,          // Output command
+    WRITELN,        // Output command whit newline
 
     PLUS,           // +
     MINUS,          // -
     MULT,           // *
     DIV,            // /
     POW,            // ^
+    EQ,             // =
+    SEMI,           // ;
 
     LPARENT,        // (
     RPARENT,        // )
 
     eof,            // End of File
+};
+
+// Tokens for error
+inline std::vector<std::string> tokens_string = {
+    "number", "hex_number", "var_id", "text",
+    "write", "writeln", "+", "-", "*",
+    "/", "^", "=", ";", "(",
+    ")", "end of file",
 };
 
 #endif //FABSHARP_TOKENTYPE_H

@@ -18,16 +18,52 @@ Parser::Parser(std::vector<Token> tokens)
     pos = 0;
 }
 
-std::vector<std::unique_ptr<Expression>> Parser::parse()
+std::vector<std::unique_ptr<Statement>> Parser::parse()
 {
-    std::vector<std::unique_ptr<Expression>> result;
+    std::vector<std::unique_ptr<Statement>> result;
 
     while (!match(token_type::eof))
     {
-        result.push_back(expression());
+        result.push_back(statement());
     }
 
     return result;
+}
+
+std::unique_ptr<Statement> Parser::statement()
+{
+    if (match(token_type::WRITE))
+    {
+        auto expr = expression();
+        consume(token_type::SEMI);
+        return std::make_unique<WriteStatement>(std::move(expr));
+    }
+    if (match(token_type::WRITELN))
+    {
+        auto expr = expression();
+        consume(token_type::SEMI);
+        return std::make_unique<WritelnStatement>(std::move(expr));
+    }
+    return assigment_statement();
+}
+
+std::unique_ptr<Statement> Parser::assigment_statement()
+{
+    // name = 33
+    Token current = get(0);
+    if (current.get_type() == token_type::WORD && get(1).get_type() == token_type::EQ)
+    {
+        consume(token_type::WORD);
+        std::string var = current.get_text();
+        consume(token_type::EQ);
+
+        auto expr = expression();
+        if (!match(token_type::SEMI))
+            throw std::runtime_error("You miss the ;");
+
+        return std::make_unique<AssigementStatement>(var, std::move(expr));
+    }
+    throw std::runtime_error("Unknown operator!");
 }
 
 std::unique_ptr<Expression> Parser::expression()
@@ -72,7 +108,7 @@ std::unique_ptr<Expression> Parser::multiply()
         }
         if (match(token_type::DIV))
         {
-            expr = std::make_unique<BinExpression>('/', std::move(expr), unary());
+            expr = std::make_unique<BinExpression>('/', std::move(expr), pow());
             continue;
         }
         break;
@@ -115,9 +151,11 @@ std::unique_ptr<Expression> Parser::primary()
     Token current = get(0);
 
     if (match(token_type::NUMBER))
-        return std::make_unique<NumberExpression>(std::stod(current.get_text()));
+        return std::make_unique<ValueExpression>(std::stod(current.get_text()));
     if (match(token_type::HEX_NUMBER))
-        return std::make_unique<NumberExpression>(std::stol(current.get_text(), nullptr, 16));
+        return std::make_unique<ValueExpression>(std::stol(current.get_text(), nullptr, 16));
+    if (match(token_type::TEXT))
+        return std::make_unique<ValueExpression>(current.get_text());
     if (match(token_type::WORD))
         return std::make_unique<VariableExpression>(current.get_text());
     if (match(token_type::LPARENT))
@@ -148,4 +186,15 @@ bool Parser::match(token_type type)
 
     pos++;
     return true;
+}
+
+Token Parser::consume(token_type type)
+{
+    Token t = get(0);
+
+    if (type != t.get_type())
+        throw std::runtime_error("Token " + tokens_string[t.get_type()] + " does not match " + tokens_string[type]);
+
+    pos++;
+    return t;
 }

@@ -34,6 +34,7 @@ private:
     void tokenize_hex_number();
     void tokenize_operation();
     void tokenize_word();
+    void tokenize_string();
 
   public:
     Lexer(std::string code);
