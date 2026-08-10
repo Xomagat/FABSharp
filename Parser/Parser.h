@@ -10,12 +10,14 @@
 #include <memory>
 
 #include "AST/BinExpression.h"
+#include "AST/ConditionalExpression.h"
 #include "AST/Expression.h"
 #include "AST/UnaryExpression.h"
 #include "AST/ValueExpression.h"
 #include "AST/VariableExpression.h"
 
 #include "AST/Statement.h"
+#include "AST/IfStatement.h"
 #include "AST/AssigementStatement.h"
 
 #include "AST/IOStatement.h"
@@ -36,8 +38,10 @@ private:
 
     std::unique_ptr<Statement> statement();
     std::unique_ptr<Statement> assigment_statement();
+    std::unique_ptr<Statement> if_else();
 
     std::unique_ptr<Expression> expression();
+    std::unique_ptr<Expression> conditional();
     std::unique_ptr<Expression> additive();
     std::unique_ptr<Expression> multiply();
     std::unique_ptr<Expression> pow();

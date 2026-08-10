@@ -22,4 +22,6 @@ add_executable(FABSharp main.cpp
         libs/Value.h
         libs/Variables.h
         libs/StringValue.h
-        libs/NumberValue.h)
+        libs/NumberValue.h
+        Parser/AST/ConditionalExpression.h
+        Parser/AST/IfStatement.h)

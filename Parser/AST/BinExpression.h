@@ -29,7 +29,7 @@ public:
         std::unique_ptr<Value> value1 = expr1->eval();
         std::unique_ptr<Value> value2 = expr2->eval();
 
-        if (auto s1 = std::make_unique<StringValue>(value1.get()->as_string()))
+        if (auto s1 = dynamic_cast<StringValue*>(value1.get()))
         {
             std::string s2 = value2->as_string();
 

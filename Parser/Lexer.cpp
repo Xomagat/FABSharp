@@ -11,12 +11,14 @@
 // funcs
 Lexer::Lexer(std::string code)
 {
-    OPERATION_CHARS = "+-*/^()=;";
+    OPERATION_CHARS = "+-*/^(){}=;<>";
     OPERATION_TYPE = {
         token_type::PLUS, token_type::MINUS,
         token_type::MULT, token_type::DIV, token_type::POW,
         token_type::LPARENT, token_type::RPARENT,
+        token_type::LBRACKET, token_type::RBRACKET,
         token_type::EQ, token_type::SEMI,
+        token_type::LT, token_type::GT,
     };
 
     this->code = code;
@@ -83,6 +85,14 @@ void Lexer::tokenize_word()
     else if (buffer == "writeln")
     {
         add_token(token_type::WRITELN);
+    }
+    else if (buffer == "if")
+    {
+        add_token(token_type::IF);
+    }
+    else if (buffer == "else")
+    {
+        add_token(token_type::ELSE);
     }
     else
     {
@@ -159,9 +169,37 @@ void Lexer::tokenize_hex_number()
 
 void Lexer::tokenize_operation()
 {
-    int position = OPERATION_CHARS.find(peek(0));
-    add_token(OPERATION_TYPE[position]);
-    next();
+    char current = peek(0);
+    char next_char = peek(1);
+
+    switch (current)
+    {
+    case '=':
+        if (next_char == '=') { add_token(token_type::CEQ); next(); next(); return; }
+        add_token(token_type::EQ); next(); return;
+
+    case '<':
+        if (next_char == '=') { add_token(token_type::GTEQ); next(); next(); return; }
+        add_token(token_type::LT); next(); return;
+
+    case '>':
+        if (next_char == '=') { add_token(token_type::LTEQ); next(); next(); return; }
+        add_token(token_type::GT); next(); return;
+
+    case '+': add_token(token_type::PLUS); next(); return;
+    case '-': add_token(token_type::MINUS); next(); return;
+    case '*': add_token(token_type::MULT); next(); return;
+    case '/': add_token(token_type::DIV); next(); return;
+    case '^': add_token(token_type::POW); next(); return;
+    case '(': add_token(token_type::LPARENT); next(); return;
+    case ')': add_token(token_type::RPARENT); next(); return;
+    case '{': add_token(token_type::LBRACKET); next(); return;
+    case '}': add_token(token_type::RBRACKET); next(); return;
+    case ';': add_token(token_type::SEMI); next(); return;
+
+    default:
+        throw std::runtime_error(std::string("Unknown operator: ") + current);
+    }
 }
 
 void Lexer::add_token(token_type type)

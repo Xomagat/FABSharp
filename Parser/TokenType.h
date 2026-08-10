@@ -19,6 +19,8 @@ enum token_type
     // keywords
     WRITE,          // Output command
     WRITELN,        // Output command whit newline
+    IF,             // Conditional command (if)
+    ELSE,           // Conditional command (else)
 
     PLUS,           // +
     MINUS,          // -
@@ -26,10 +28,17 @@ enum token_type
     DIV,            // /
     POW,            // ^
     EQ,             // =
+    CEQ,            // ==
     SEMI,           // ;
+    LT,             // >
+    GT,             // <
+    LTEQ,           // >=
+    GTEQ,           // <=
 
     LPARENT,        // (
     RPARENT,        // )
+    LBRACKET,       // {
+    RBRACKET,       // }
 
     eof,            // End of File
 };
@@ -37,9 +46,12 @@ enum token_type
 // Tokens for error
 inline std::vector<std::string> tokens_string = {
     "number", "hex_number", "var_id", "text",
-    "write", "writeln", "+", "-", "*",
-    "/", "^", "=", ";", "(",
-    ")", "end of file",
+    "write", "writeln", "if", "else",
+    "+", "-", "*", "/",
+    "^", "=", "==", ";",
+    ">", "<", ">=", "<=",
+    "(", ")", "{", "}",
+    "end of file",
 };
 
 #endif //FABSHARP_TOKENTYPE_H

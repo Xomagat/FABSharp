@@ -44,6 +44,10 @@ std::unique_ptr<Statement> Parser::statement()
         consume(token_type::SEMI);
         return std::make_unique<WritelnStatement>(std::move(expr));
     }
+    if (match(token_type::IF))
+    {
+        return if_else();
+    }
     return assigment_statement();
 }
 
@@ -66,9 +70,74 @@ std::unique_ptr<Statement> Parser::assigment_statement()
     throw std::runtime_error("Unknown operator!");
 }
 
+std::unique_ptr<Statement> Parser::if_else()
+{
+    std::unique_ptr<Expression> condition = expression();
+    consume(token_type::LBRACKET);
+    get(1);
+    std::unique_ptr<Statement> if_statement = statement();
+    consume(token_type::RBRACKET);
+    get(1);
+    std::unique_ptr<Statement> else_statement = nullptr;
+
+    if (match(token_type::ELSE))
+    {
+        consume(token_type::LBRACKET);
+        get(1);
+        else_statement = statement();
+        consume(token_type::RBRACKET);
+        get(1);
+    }
+    else
+    {
+        else_statement = nullptr;
+    }
+
+    return std::make_unique<IfStatement>(std::move(condition), std::move(if_statement), std::move(else_statement));
+}
+
 std::unique_ptr<Expression> Parser::expression()
 {
-    return additive();
+    return conditional();
+}
+
+std::unique_ptr<Expression> Parser::conditional()
+{
+
+    std::unique_ptr<Expression> expr = additive();
+
+    while (true)
+    {
+        if (match(token_type::CEQ))
+        {
+            expr = std::make_unique<ConditionalExpression>("==", std::move(expr), additive());
+            continue;
+        }
+        if (match(token_type::LTEQ))
+        {
+            expr = std::make_unique<ConditionalExpression>(">=", std::move(expr), additive());
+            continue;
+        }
+        if (match(token_type::GTEQ))
+        {
+            expr = std::make_unique<ConditionalExpression>("<=", std::move(expr), additive());
+            continue;
+        }
+        if (match(token_type::LT))
+        {
+            expr = std::make_unique<ConditionalExpression>("<", std::move(expr), additive());
+            continue;
+        }
+        if (match(token_type::GT))
+        {
+            expr = std::make_unique<ConditionalExpression>(">", std::move(expr), additive());
+            continue;
+        }
+        break;
+    }
+
+
+    return expr;
 }
 
 std::unique_ptr<Expression> Parser::additive()
