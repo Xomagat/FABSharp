@@ -39,6 +39,10 @@ public:
             {
                 return std::make_unique<NumberValue>(s1->as_string() == s2 ? 1 : 0);
             }
+            if (op == "!=")
+            {
+                return std::make_unique<NumberValue>(s1->as_string() != s2 ? 1 : 0);
+            }
 
             throw std::runtime_error("Unknown operation!");
         }
@@ -49,6 +53,10 @@ public:
         if (op == "==")
         {
             return std::make_unique<NumberValue>(n1 == n2 ? 1 : 0);
+        }
+        if (op == "!=")
+        {
+            return std::make_unique<NumberValue>(n1 != n2 ? 1 : 0);
         }
         else if (op == ">=")
         {
