@@ -4,24 +4,36 @@
 
 #pragma once
 #include <string>
+#include <variant>
 
 #include "Value.h"
 
 class NumberValue : public Value
 {
 private:
-    double value;
+    std::variant<double, int> value;
 
 public:
-    explicit NumberValue(double val) : value(val) {}
+    explicit NumberValue(std::variant<double, int> val) : value(val) {}
 
-    double as_double() const override
+    std::variant<double, int> as_number() const override
     {
         return value;
     }
 
     std::string as_string() const override
     {
-        return std::to_string(value);
+        return std::visit([](auto& v) { return std::to_string(v); }, value);
+    }
+
+    bool as_bool() const override
+    {
+        if (value.valueless_by_exception() == 0) return false;
+        return true;
+    }
+
+    std::unique_ptr<Value> clone() const override
+    {
+        return std::make_unique<NumberValue>(value);
     }
 };

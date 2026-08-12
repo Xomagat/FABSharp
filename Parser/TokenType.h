@@ -21,6 +21,7 @@ enum token_type
     WRITELN,        // Output command whit newline
     IF,             // Conditional command (if)
     ELSE,           // Conditional command (else)
+    TYPES,          // Types: int, string, bool and another
 
     PLUS,           // +
     MINUS,          // -
@@ -29,11 +30,17 @@ enum token_type
     POW,            // ^
     EQ,             // =
     CEQ,            // ==
+    NOT,            // !
+    NEQ,            // !=
     SEMI,           // ;
-    LT,             // >
-    GT,             // <
-    LTEQ,           // >=
-    GTEQ,           // <=
+    LT,             // <
+    GT,             // >
+    LTEQ,           // <=
+    GTEQ,           // >=
+    AMP,            // &
+    AND,            // &&
+    BAR,            // |
+    OR,             // ||
 
     LPARENT,        // (
     RPARENT,        // )
@@ -46,10 +53,11 @@ enum token_type
 // Tokens for error
 inline std::vector<std::string> tokens_string = {
     "number", "hex_number", "var_id", "text",
-    "write", "writeln", "if", "else",
+    "write", "writeln", "if", "else", "type",
     "+", "-", "*", "/",
-    "^", "=", "==", ";",
-    ">", "<", ">=", "<=",
+    "^", "=", "==", "!",
+    "!=", ";", "<", ">",
+    "<=", ">=", "&&", "||",
     "(", ")", "{", "}",
     "end of file",
 };

@@ -4,6 +4,7 @@
 
 #pragma once
 #include <string>
+#include <variant>
 
 class Value
 {
@@ -12,6 +13,11 @@ private:
 public:
     virtual ~Value() = default;
 
-    virtual double as_double() const = 0;
+    virtual std::variant<double, int> as_number() const = 0;
     virtual std::string as_string() const = 0;
+    virtual bool as_bool() const = 0;
+
+    virtual std::unique_ptr<Value> clone() const = 0;
+
+    virtual std::string get_type() const = 0;
 };

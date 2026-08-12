@@ -39,6 +39,7 @@ private:
     std::unique_ptr<Statement> statement();
     std::unique_ptr<Statement> assigment_statement();
     std::unique_ptr<Statement> if_else();
+    std::unique_ptr<Statement> block();
 
     std::unique_ptr<Expression> expression();
     std::unique_ptr<Expression> conditional();
@@ -47,6 +48,9 @@ private:
     std::unique_ptr<Expression> pow();
     std::unique_ptr<Expression> unary();
     std::unique_ptr<Expression> primary();
+    std::unique_ptr<Expression> equality();
+    std::unique_ptr<Expression> logic_or();
+    std::unique_ptr<Expression> logic_and();
 
     bool match(token_type type);
 

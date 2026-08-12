@@ -7,6 +7,8 @@
 
 #include <string>
 #include <vector>
+#include <map>
+#include <unordered_map>
 
 #include "Token.h"
 #include "TokenType.h"
@@ -15,7 +17,7 @@ class Lexer
 {
 private:
     std::string OPERATION_CHARS;
-    std::vector<token_type> OPERATION_TYPE;
+    std::map<std::string, token_type> OPERATORS;
 
     std::string code;           // code
     std::vector<Token> tokens;  // tokens
@@ -35,6 +37,8 @@ private:
     void tokenize_operation();
     void tokenize_word();
     void tokenize_string();
+    void tokenize_comment();
+    void tokenize_mcomment();
 
   public:
     Lexer(std::string code);

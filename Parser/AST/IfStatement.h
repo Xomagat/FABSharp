@@ -26,15 +26,32 @@ public:
 
     void execute() const override
     {
-        double result = condition->eval()->as_double();
+        bool result = condition->eval()->as_bool();
 
-        if (result != 0)
+        if (result)
         {
             if_statement->execute();
         }
         else if (else_statement != nullptr)
         {
             else_statement->execute();
+        }
+    }
+};
+
+class BlockStatement : public Statement
+{
+private:
+    std::vector<std::unique_ptr<Statement>> statements;
+
+public:
+    explicit BlockStatement(std::vector<std::unique_ptr<Statement>> statements) : statements(std::move(statements)) {}
+
+    void execute() const override
+    {
+        for (auto& s : statements)
+        {
+            s->execute();
         }
     }
 };

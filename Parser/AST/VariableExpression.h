@@ -19,9 +19,6 @@ public:
 
     std::unique_ptr<Value> eval() const override
     {
-        if (!Variables::is_exist(name))
-            throw std::runtime_error("Variable {" + name + "} does not found!");
-
         return Variables::get(name);
     }
 

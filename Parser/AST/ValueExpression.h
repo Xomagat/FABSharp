@@ -4,10 +4,12 @@
 
 #pragma once
 #include <string>
+#include <variant>
 
 #include "../../libs/Value.h"
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
+#include "../../libs/BooleanValue.h"
 
 #include "Expression.h"
 
@@ -21,16 +23,26 @@ public:
     {
         this->value = std::make_unique<NumberValue>(value);
     }
+    explicit ValueExpression(int value)
+    {
+        this->value = std::make_unique<NumberValue>(value);
+    }
     explicit ValueExpression(std::string value)
     {
         this->value = std::make_unique<StringValue>(value);
     }
+    explicit ValueExpression(bool value)
+    {
+        this->value = std::make_unique<BooleanValue>(value);
+    }
 
     std::unique_ptr<Value> eval() const override
     {
+        if (auto b = dynamic_cast<BooleanValue*>(value.get()))
+            return std::make_unique<BooleanValue>(b->as_bool());
         if (auto s = dynamic_cast<StringValue*>(value.get()))
             return std::make_unique<StringValue>(s->as_string());
-        return std::make_unique<NumberValue>(value->as_double());
+        return std::make_unique<NumberValue>(value->as_number());
     }
 
     std::string to_str() const override

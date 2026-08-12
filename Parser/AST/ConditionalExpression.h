@@ -5,8 +5,9 @@
 #pragma once
 #include <memory>
 #include <string>
-#include <cmath>
+#include <unordered_map>
 
+#include "../../libs/BooleanValue.h"
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
 #include "../../libs/Value.h"
@@ -37,43 +38,31 @@ public:
 
             if (op == "==")
             {
-                return std::make_unique<NumberValue>(s1->as_string() == s2 ? 1 : 0);
+                return std::make_unique<BooleanValue>(s1->as_string() == s2);
             }
             if (op == "!=")
             {
-                return std::make_unique<NumberValue>(s1->as_string() != s2 ? 1 : 0);
+                return std::make_unique<BooleanValue>(s1->as_string() != s2);
             }
 
             throw std::runtime_error("Unknown operation!");
         }
 
-        auto n1 = value1->as_double();
-        auto n2 = value2->as_double();
+        auto n1 = value1->as_number();
+        auto n2 = value2->as_number();
 
-        if (op == "==")
-        {
-            return std::make_unique<NumberValue>(n1 == n2 ? 1 : 0);
-        }
-        if (op == "!=")
-        {
-            return std::make_unique<NumberValue>(n1 != n2 ? 1 : 0);
-        }
-        else if (op == ">=")
-        {
-            return std::make_unique<NumberValue>(n1 >= n2 ? 1 : 0);
-        }
-        else if (op == "<=")
-        {
-            return std::make_unique<NumberValue>(n1 <= n2 ? 1 : 0);
-        }
-        else if (op == ">")
-        {
-            return std::make_unique<NumberValue>(n1 > n2 ? 1 : 0);
-        }
-        else if (op == "<")
-        {
-            return std::make_unique<NumberValue>(n1 < n2 ? 1 : 0);
-        }
+        std::unordered_map<std::string, bool> operators = {
+            {"==", n1 == n2},
+            {"!=", n1 != n2},
+            {"<=", n1 <= n2},
+            {">=", n1 >= n2},
+            {"<", n1 < n2},
+            {">", n1 > n2},
+            {"&&", std::visit([](auto x) -> bool { return x != 0; }, n1) && std::visit([](auto x) -> bool { return x != 0; }, n2)},
+            {"||", std::visit([](auto x) -> bool { return x != 0; }, n1) || std::visit([](auto x) -> bool { return x != 0; }, n2)},
+        };
+
+        return std::make_unique<BooleanValue>(operators[op]);
 
         throw std::runtime_error("Unknown operation!");
     }

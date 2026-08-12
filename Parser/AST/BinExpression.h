@@ -5,12 +5,24 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <variant>
 #include <cmath>
 
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
 #include "../../libs/Value.h"
 #include "Expression.h"
+
+template <typename Op>
+std::variant<double,int> apply_numeric(
+    const std::variant<double,int>& a,
+    const std::variant<double,int>& b,
+    Op op)
+{
+    return std::visit([&](auto x, auto y) -> std::variant<double,int> {
+        return op(x, y);
+    }, a, b);
+}
 
 class BinExpression : public Expression
 {
@@ -40,16 +52,16 @@ public:
             }
         }
 
-        auto n1 = value1->as_double();
-        auto n2 = value2->as_double();
+        auto n1 = value1->as_number();
+        auto n2 = value2->as_number();
 
         switch (op)
         {
-            case '+': return std::make_unique<NumberValue>(n1 + n2);
-            case '-': return std::make_unique<NumberValue>(n1 - n2);
-            case '*': return std::make_unique<NumberValue>(n1 * n2);
-            case '/': return std::make_unique<NumberValue>(n1 / n2);
-            case '^': return std::make_unique<NumberValue>(std::pow(n1, n2));
+            case '+': return std::make_unique<NumberValue>(apply_numeric(n1, n2, std::plus<>()));
+            case '-': return std::make_unique<NumberValue>(apply_numeric(n1, n2, std::minus<>()));
+            case '*': return std::make_unique<NumberValue>(apply_numeric(n1, n2, std::multiplies<>()));
+            case '/': return std::make_unique<NumberValue>(apply_numeric(n1, n2, std::divides<>()));
+            case '^': return std::make_unique<NumberValue>(apply_numeric(n1, n2, [](auto x, auto y) { return std::pow(x, y); }));
             default: throw std::runtime_error("Unknown operation!");
         }
     }

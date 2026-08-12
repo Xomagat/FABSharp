@@ -1,0 +1,38 @@
+//
+// Created by Xomagat on 07.08.2026.
+//
+
+#pragma once
+#include <string>
+#include <format>
+
+#include "Value.h"
+
+class BooleanValue : public Value
+{
+private:
+    bool value;
+
+public:
+    explicit BooleanValue(bool value) : value(value) {}
+
+    std::variant<double, int> as_number() const override
+    {
+        return (int)value;
+    }
+
+    std::string as_string() const override
+    {
+        return value == true || value == 1 ? "true" : "false";
+    }
+
+    bool as_bool() const override
+    {
+        return value;
+    }
+
+    std::unique_ptr<Value> clone() const override
+    {
+        return std::make_unique<BooleanValue>(value);
+    }
+};

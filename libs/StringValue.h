@@ -4,10 +4,8 @@
 
 #pragma once
 #include <string>
-#include <format>
 
 #include "Value.h"
-
 
 class StringValue : public Value
 {
@@ -17,13 +15,13 @@ private:
 public:
     explicit StringValue(std::string text) : text(text) {}
 
-    double as_double() const override
+    std::variant<double, int> as_number() const override
     {
         try
         {
             return std::stod(text);
         }
-        catch (std::format_error)
+        catch (const std::exception&)
         {
             throw std::runtime_error("It cannot be converted from text to a number!");
         }
@@ -32,5 +30,15 @@ public:
     std::string as_string() const override
     {
         return text;
+    }
+
+    bool as_bool() const override
+    {
+        return !text.empty();
+    }
+
+    std::unique_ptr<Value> clone() const override
+    {
+        return std::make_unique<StringValue>(text);
     }
 };
