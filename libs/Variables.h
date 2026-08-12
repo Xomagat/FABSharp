@@ -4,7 +4,7 @@
 
 #pragma once
 #include <string>
-#include <map>
+#include <unordered_map>
 #include <memory>
 
 #include "Value.h"
@@ -18,7 +18,7 @@ struct Val
 class Variables
 {
 private:
-    inline static std::map<std::string, Val> variables;
+    inline static std::unordered_map<std::string, Val> variables;
 
 public:
     static bool is_exist(std::string name)
