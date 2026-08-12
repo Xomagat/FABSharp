@@ -18,6 +18,4 @@ public:
     virtual bool as_bool() const = 0;
 
     virtual std::unique_ptr<Value> clone() const = 0;
-
-    virtual std::string get_type() const = 0;
 };
