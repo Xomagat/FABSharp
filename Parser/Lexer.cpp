@@ -245,9 +245,8 @@ char Lexer::next()
 void Lexer::tokenize_comment()
 {
     char current = peek(0);
-    std::string chars = "\r\n\0";
 
-    while (chars.find(current) != -1)
+    while (current != '\n' && current != '\0')
     {
         current = next();
     }
