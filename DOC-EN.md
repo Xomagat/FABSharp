@@ -5,6 +5,7 @@
 - [Typing](##Typing)
 - [Conditions](##Conditions)
 - [Arithmetic](##Arithmetic)
+- [Loops](##Loops)
 
 ## Hello World
 ``` c++
@@ -66,3 +67,38 @@ else
 | `*` | Multiplication operator            | `4* 2 == 8`  |
 | `/` | Division operator              | `4 / 2 == 2`  |
 | `^` | Exponentiation operator | `4 ^ 2 == 16` |
+
+## Loops
+### While:
+- While is a conditional loop
+``` c++
+while (condition)
+{
+    // body
+}
+```
+Example of usage:
+``` c++
+int i = 0;
+while (i < 10)
+{
+    writeln i;
+    i = i + 1;
+}
+```
+
+### For:
+- For is a loop with a counter
+``` c++
+for (initialization; condition; increment)
+{
+    // body
+}
+```
+Example of usage:
+``` c++
+for (int i = 0; i < 10; i = i + 1)
+{
+    writeln i;
+}
+```
