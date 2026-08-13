@@ -72,7 +72,7 @@ public:
 
         if (type.empty())
         {
-            env.define(name, std::move(result));
+            env.assign(name, std::move(result));
             return;
         }
 

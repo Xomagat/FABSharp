@@ -29,10 +29,17 @@ public:
         variables[name] = {type, std::move(value)};
     }
 
-    void define(std::string name, std::unique_ptr<Value> value)
+    bool assign(const std::string& name, std::unique_ptr<Value> value)
     {
         auto it = variables.find(name);
-        variables[name] = {it->first, std::move(value)};
+        if (it != variables.end())
+        {
+            it->second.value = std::move(value);
+            return true;
+        }
+        if (parent != nullptr)
+            return parent->assign(name, std::move(value));
+        return false;
     }
 
     Val* revolve(std::string name)
