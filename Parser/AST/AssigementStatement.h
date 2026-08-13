@@ -13,9 +13,37 @@
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
+
+inline std::unordered_map<std::string, std::function<std::unique_ptr<Value>(Value*)>> coercers = {
+    {"int", [](Value* v) -> std::unique_ptr<Value> {
+        auto n = dynamic_cast<NumberValue*>(v);
+        if (!n) return nullptr;
+        int i = std::visit([](auto x) { return static_cast<int>(x); }, n->as_number());
+        return std::make_unique<NumberValue>(i);
+    }},
+    {"double", [](Value* v) -> std::unique_ptr<Value> {
+        auto n = dynamic_cast<NumberValue*>(v);
+        if (!n) return nullptr;
+        double d = std::visit([](auto x) { return static_cast<double>(x); }, n->as_number());
+        return std::make_unique<NumberValue>(d);
+    }},
+    {"bool", [](Value* v) -> std::unique_ptr<Value> {
+        auto n = dynamic_cast<BooleanValue*>(v);
+        if (!n) return nullptr;
+        bool b = n->as_bool();
+        return std::make_unique<BooleanValue>(b);
+    }},
+    {"string", [](Value* v) -> std::unique_ptr<Value> {
+        auto n = dynamic_cast<StringValue*>(v);
+        if (!n) return nullptr;
+        std::string str = n->as_string();
+        return std::make_unique<StringValue>(str);
+    }},
+};
 
 inline bool match_type(const std::string& type, Value* expr)
 {
@@ -51,6 +79,6 @@ public:
         if (!match_type(type, result.get()))
             throw std::runtime_error("Uncorrected expression type");
 
-        env.define(type, name, std::move(result));
+        env.define(type, name, std::move(coercers.at(type)(result.get())));
     }
 };
