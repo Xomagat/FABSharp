@@ -22,6 +22,8 @@ enum token_type
     IF,             // Conditional command (if)
     ELSE,           // Conditional command (else)
     TYPES,          // Types: int, string, bool and another
+    WHILE,
+    FOR,
 
     PLUS,           // +
     MINUS,          // -
@@ -53,7 +55,8 @@ enum token_type
 // Tokens for error
 inline std::vector<std::string> tokens_string = {
     "number", "hex_number", "var_id", "text",
-    "write", "writeln", "if", "else", "type",
+    "write", "writeln", "if", "else",
+    "while", "for", "type",
     "+", "-", "*", "/",
     "^", "=", "==", "!",
     "!=", ";", "<", ">",

@@ -98,23 +98,23 @@ void Lexer::tokenize_word()
         current = next();
     }
 
-    if (buffer == "int" || buffer == "string" || buffer == "double" || buffer == "bool")
-    {
-        add_token(token_type::TYPES, buffer);
-        return;
-    }
-
     static const std::unordered_map<std::string, token_type> keywords = {
         {"write",   token_type::WRITE},
         {"writeln", token_type::WRITELN},
         {"if",      token_type::IF},
         {"else",    token_type::ELSE},
+        {"while",   token_type::WHILE},
+        {"for",     token_type::FOR},
+        {"int",     token_type::TYPES},
+        {"double",  token_type::TYPES},
+        {"string",  token_type::TYPES},
+        {"bool",    token_type::TYPES},
     };
 
     auto it = keywords.find(buffer);
     if (it != keywords.end())
     {
-        add_token(it->second);
+        add_token(it->second, buffer);
     }
     else
     {

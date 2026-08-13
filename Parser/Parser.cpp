@@ -31,26 +31,39 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
 
 std::unique_ptr<Statement> Parser::statement()
 {
-    if (match(token_type::WRITE))
+    switch (get(0).get_type())
     {
-        auto expr = expression();
-        consume(token_type::SEMI);
-        return std::make_unique<WriteStatement>(std::move(expr));
-    }
-    if (match(token_type::WRITELN))
-    {
-        auto expr = expression();
-        consume(token_type::SEMI);
-        return std::make_unique<WritelnStatement>(std::move(expr));
-    }
-    if (match(token_type::IF))
-    {
-        return if_else();
+        case token_type::WRITE: {
+            consume(token_type::WRITE);
+            std::unique_ptr<Expression> expr = expression();
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<WriteStatement>(std::move(expr));
+        }
+        case token_type::WRITELN: {
+            consume(token_type::WRITELN);
+            std::unique_ptr<Expression> expr = expression();
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<WritelnStatement>(std::move(expr));
+        }
+        case token_type::IF: {
+            consume(token_type::IF);
+            return if_else();
+        }
+        case token_type::WHILE: {
+            consume(token_type::WHILE);
+            return while_statement();
+        }
+        case token_type::FOR: {
+            consume(token_type::FOR);
+            return for_statement();
+        }
     }
     return assigment_statement();
 }
 
-std::unique_ptr<Statement> Parser::assigment_statement()
+std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
 {
     // type name = 33; or type name;
     Token current = get(0);
@@ -64,7 +77,7 @@ std::unique_ptr<Statement> Parser::assigment_statement()
         if (match(token_type::EQ))
             expr = expression();
 
-        if (!match(token_type::SEMI))
+        if (!match(token_type::SEMI) && !no_semi)
             throw std::runtime_error("You miss the ;");
 
         return std::make_unique<AssigementStatement>(type, name, std::move(expr));
@@ -75,7 +88,7 @@ std::unique_ptr<Statement> Parser::assigment_statement()
         consume(token_type::EQ);
 
         std::unique_ptr<Expression> expr = expression();
-        if (!match(token_type::SEMI))
+        if (!match(token_type::SEMI) && !no_semi)
             throw std::runtime_error("You miss the ;");
 
         return std::make_unique<AssigementStatement>("", name, std::move(expr));
@@ -87,15 +100,43 @@ std::unique_ptr<Statement> Parser::assigment_statement()
 std::unique_ptr<Statement> Parser::if_else()
 {
     std::unique_ptr<Expression> condition = expression();
-    std::unique_ptr<Statement> if_statement = block();
+    std::unique_ptr<Statement> if_statement = statement_or_block();
     std::unique_ptr<Statement> else_statement = nullptr;
 
     if (match(token_type::ELSE))
-    {
-        else_statement = block();
-    }
+        else_statement = statement_or_block();
 
     return std::make_unique<IfStatement>(std::move(condition), std::move(if_statement), std::move(else_statement));
+}
+
+std::unique_ptr<Statement> Parser::while_statement()
+{
+    consume(token_type::LPARENT);
+    std::unique_ptr<Expression> expr = expression();
+    consume(token_type::RPARENT);
+    std::unique_ptr<Statement> while_statement = statement_or_block();
+
+    return std::make_unique<WhileStatement>(std::move(expr), std::move(while_statement));
+}
+
+std::unique_ptr<Statement> Parser::for_statement()
+{
+    consume(token_type::LPARENT);
+    std::unique_ptr<Statement> init = assigment_statement();
+    std::unique_ptr<Expression> expr = expression();
+    consume(token_type::SEMI);
+    std::unique_ptr<Statement> increment = assigment_statement(true);
+    consume(token_type::RPARENT);
+    std::unique_ptr<Statement> for_statement = statement_or_block();
+
+    return std::make_unique<ForStatement>(std::move(init), std::move(expr), std::move(increment), std::move(for_statement));
+}
+
+std::unique_ptr<Statement> Parser::statement_or_block()
+{
+    if (get(0).get_type() == token_type::LBRACKET)
+        return block();
+    return statement();
 }
 
 std::unique_ptr<Statement> Parser::block()
@@ -318,7 +359,7 @@ std::unique_ptr<Expression> Parser::primary()
         return result;
     }
 
-    throw std::runtime_error("Unknown expression!");
+    throw std::runtime_error("Unknown expression! " + current.get_text());
 }
 
 Token Parser::get(int relative_position)
