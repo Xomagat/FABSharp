@@ -18,7 +18,7 @@ public:
 
     std::variant<double, int> as_number() const override
     {
-        return (int)value;
+        return value == true || value == 1 ? 1 : 0;
     }
 
     std::string as_string() const override
