@@ -19,12 +19,12 @@ private:
 public:
     explicit UnaryExpression(char op, std::unique_ptr<Expression> expr) : op(op), expr(std::move(expr)) {}
 
-    std::unique_ptr<Value> eval() const override
+    std::unique_ptr<Value> eval(Environment& env) const override
     {
         switch (op)
         {
-        case '-': return std::make_unique<NumberValue>(std::visit([](auto a) -> std::variant<double, int> { return -a; }, expr->eval()->as_number()));
-            case '+': return std::make_unique<NumberValue>(expr->eval()->as_number());
+        case '-': return std::make_unique<NumberValue>(std::visit([](auto a) -> std::variant<double, int> { return -a; }, expr->eval(env)->as_number()));
+            case '+': return std::make_unique<NumberValue>(expr->eval(env)->as_number());
             default: throw std::runtime_error("Undefined behavior!");
         }
     }

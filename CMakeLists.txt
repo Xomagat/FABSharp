@@ -20,7 +20,7 @@ add_executable(FABSharp main.cpp
         Parser/AST/AssigementStatement.h
         Parser/AST/IOStatement.h
         libs/Value.h
-        libs/Variables.h
+        libs/Environment.h
         libs/StringValue.h
         libs/NumberValue.h
         libs/BooleanValue.h

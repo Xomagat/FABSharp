@@ -9,6 +9,8 @@
 #include "Expression.h"
 #include "Statement.h"
 
+#include "../../libs/Environment.h"
+
 class WritelnStatement : public Statement
 {
 private:
@@ -17,9 +19,9 @@ private:
 public:
     explicit WritelnStatement(std::unique_ptr<Expression> expr) : expr(std::move(expr)) {}
 
-    void execute() const override
+    void execute(Environment& env) const override
     {
-        std::cout << expr->eval()->as_string() << std::endl;
+        std::cout << expr->eval(env)->as_string() << std::endl;
     }
 };
 
@@ -31,8 +33,8 @@ private:
 public:
     explicit WriteStatement(std::unique_ptr<Expression> expr) : expr(std::move(expr)) {}
 
-    void execute() const override
+    void execute(Environment& env) const override
     {
-        std::cout << expr->eval()->as_string();
+        std::cout << expr->eval(env)->as_string();
     }
 };

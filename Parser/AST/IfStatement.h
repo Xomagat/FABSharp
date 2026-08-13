@@ -8,6 +8,8 @@
 #include "Expression.h"
 #include "Statement.h"
 
+#include "../../libs/Environment.h"
+
 class IfStatement : public Statement
 {
 private:
@@ -24,17 +26,17 @@ public:
 
     }
 
-    void execute() const override
+    void execute(Environment& env) const override
     {
-        bool result = condition->eval()->as_bool();
+        bool result = condition->eval(env)->as_bool();
 
         if (result)
         {
-            if_statement->execute();
+            if_statement->execute(env);
         }
         else if (else_statement != nullptr)
         {
-            else_statement->execute();
+            else_statement->execute(env);
         }
     }
 };
@@ -47,11 +49,12 @@ private:
 public:
     explicit BlockStatement(std::vector<std::unique_ptr<Statement>> statements) : statements(std::move(statements)) {}
 
-    void execute() const override
+    void execute(Environment& env) const override
     {
+        Environment local(&env);
         for (auto& s : statements)
         {
-            s->execute();
+            s->execute(local);
         }
     }
 };

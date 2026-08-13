@@ -7,6 +7,8 @@
 #include "Parser/Lexer.h"
 #include "Parser/Parser.h"
 
+#include "libs/Environment.h"
+
 int main()
 {
     std::ifstream file("D:/Projects/JustProgrammigProjects/C++ project/FABSharp/test.fab");
@@ -25,8 +27,10 @@ int main()
 
     auto expression = Parser(tokens).parse();
 
+    Environment global;
+
     for (auto& expr : expression)
     {
-        expr->execute();
+        expr->execute(global);
     }
 }

@@ -27,10 +27,10 @@ public:
 
     }
 
-    std::unique_ptr<Value> eval() const override
+    std::unique_ptr<Value> eval(Environment& env) const override
     {
-        std::unique_ptr<Value> value1 = expr1->eval();
-        std::unique_ptr<Value> value2 = expr2->eval();
+        std::unique_ptr<Value> value1 = expr1->eval(env);
+        std::unique_ptr<Value> value2 = expr2->eval(env);
 
         if (auto s1 = dynamic_cast<StringValue*>(value1.get()))
         {

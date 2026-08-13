@@ -36,7 +36,7 @@ public:
         this->value = std::make_unique<BooleanValue>(value);
     }
 
-    std::unique_ptr<Value> eval() const override
+    std::unique_ptr<Value> eval(Environment& env) const override
     {
         if (auto b = dynamic_cast<BooleanValue*>(value.get()))
             return std::make_unique<BooleanValue>(b->as_bool());
