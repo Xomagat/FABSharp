@@ -57,11 +57,8 @@ std::unique_ptr<Statement> Parser::assigment_statement()
 
     if (current.get_type() == token_type::TYPES && get(1).get_type() == token_type::WORD)
     {
-        Token type_token = consume(token_type::TYPES);
-        Token word_token = consume(token_type::WORD);
-
-        std::string type = type_token.get_text();
-        std::string name = word_token.get_text();
+        std::string type = consume(token_type::TYPES).get_text();
+        std::string name = consume(token_type::WORD).get_text();
         std::unique_ptr<Expression> expr = nullptr;
 
         if (match(token_type::EQ))
@@ -71,6 +68,17 @@ std::unique_ptr<Statement> Parser::assigment_statement()
             throw std::runtime_error("You miss the ;");
 
         return std::make_unique<AssigementStatement>(type, name, std::move(expr));
+    }
+    else if (current.get_type() == token_type::WORD && get(1).get_type() == token_type::EQ)
+    {
+        std::string name = consume(token_type::WORD).get_text();
+        consume(token_type::EQ);
+
+        std::unique_ptr<Expression> expr = expression();
+        if (!match(token_type::SEMI))
+            throw std::runtime_error("You miss the ;");
+
+        return std::make_unique<AssigementStatement>("", name, std::move(expr));
     }
 
     throw std::runtime_error("Variable does have name or type!");
@@ -288,12 +296,12 @@ std::unique_ptr<Expression> Parser::primary()
             }
             catch (std::exception&)
             {
-                goto naxui;
+                goto double_format;
             }
         }
         else
         {
-            naxui:
+            double_format:
             return std::make_unique<ValueExpression>(stod(current.get_text()));
         }
     }
