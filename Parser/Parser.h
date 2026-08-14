@@ -19,6 +19,8 @@
 #include "AST/Statement.h"
 #include "AST/IfStatement.h"
 #include "AST/LoopStatement.h"
+#include "AST/BreakStatement.h"
+#include "AST/ContinueStatement.h"
 #include "AST/AssigementStatement.h"
 
 #include "AST/IOStatement.h"
@@ -41,6 +43,7 @@ private:
     std::unique_ptr<Statement> assigment_statement(bool no_semi = false);
     std::unique_ptr<Statement> if_else();
     std::unique_ptr<Statement> while_statement();
+    std::unique_ptr<Statement> do_while_statement();
     std::unique_ptr<Statement> for_statement();
     std::unique_ptr<Statement> statement_or_block();
     std::unique_ptr<Statement> block();

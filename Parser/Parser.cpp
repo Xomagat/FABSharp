@@ -3,6 +3,8 @@
 //
 
 #include "Parser.h"
+
+#include "AST/BreakStatement.h"
 // vars
 
 // funcs
@@ -55,9 +57,25 @@ std::unique_ptr<Statement> Parser::statement()
             consume(token_type::WHILE);
             return while_statement();
         }
+        case token_type::DO: {
+            consume(token_type::DO);
+            return do_while_statement();
+        }
         case token_type::FOR: {
             consume(token_type::FOR);
             return for_statement();
+        }
+        case token_type::BREAK: {
+            consume(token_type::BREAK);
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<BreakStatement>();
+        }
+        case token_type::CONTINUE: {
+            consume(token_type::CONTINUE);
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<ContinueStatement>();
         }
     }
     return assigment_statement();
@@ -117,6 +135,18 @@ std::unique_ptr<Statement> Parser::while_statement()
     std::unique_ptr<Statement> while_statement = statement_or_block();
 
     return std::make_unique<WhileStatement>(std::move(expr), std::move(while_statement));
+}
+
+std::unique_ptr<Statement> Parser::do_while_statement()
+{
+    std::unique_ptr<Statement> while_statement = statement_or_block();
+    consume(token_type::WHILE);
+    consume(token_type::LPARENT);
+    std::unique_ptr<Expression> expr = expression();
+    consume(token_type::RPARENT);
+    consume(token_type::SEMI);
+
+    return std::make_unique<DoWhileStatement>(std::move(expr), std::move(while_statement));
 }
 
 std::unique_ptr<Statement> Parser::for_statement()

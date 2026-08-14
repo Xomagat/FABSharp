@@ -58,9 +58,8 @@ enum token_type
 // Tokens for error
 inline std::vector<std::string> tokens_string = {
     "number", "hex_number", "var_id", "text",
-    "write", "writeln", "if", "else",
-    "while", "for", "do",
-    "break", "continue", "type",
+    "write", "writeln", "if", "else","type",
+    "while", "for", "do", "break", "continue",
     "+", "-", "*", "/",
     "^", "=", "==", "!",
     "!=", ";", "<", ">",
