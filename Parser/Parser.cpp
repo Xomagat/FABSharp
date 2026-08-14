@@ -333,21 +333,18 @@ std::unique_ptr<Expression> Parser::primary()
         {
             try
             {
-                return std::make_unique<ValueExpression>(std::stoi(current.get_text()));
+                return std::make_unique<ValueExpression>(std::stoll(current.get_text()));
             }
-            catch (std::exception&)
+            catch (...)
             {
-                goto double_format;
+                goto ld_convert;
             }
         }
-        else
-        {
-            double_format:
-            return std::make_unique<ValueExpression>(stod(current.get_text()));
-        }
+        ld_convert:
+        return std::make_unique<ValueExpression>(std::stold(current.get_text()));
     }
     if (match(token_type::HEX_NUMBER))
-        return std::make_unique<ValueExpression>(static_cast<int>(std::stol(current.get_text(), nullptr, 16)));
+        return std::make_unique<ValueExpression>(static_cast<int>(std::stoll(current.get_text(), nullptr, 16)));
     if (match(token_type::TEXT))
         return std::make_unique<ValueExpression>(current.get_text());
     if (match(token_type::WORD))

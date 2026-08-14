@@ -15,7 +15,7 @@ private:
 public:
     explicit StringValue(std::string text) : text(text) {}
 
-    std::variant<double, int> as_number() const override
+    std::variant<char, short, int, long, long long, double, long double> as_number() const override
     {
         try
         {

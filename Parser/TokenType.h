@@ -22,8 +22,11 @@ enum token_type
     IF,             // Conditional command (if)
     ELSE,           // Conditional command (else)
     TYPES,          // Types: int, string, bool and another
-    WHILE,
-    FOR,
+    WHILE,          // Loop command (while)
+    FOR,            // Loop command (for)
+    DO,             // Loop command (do)
+    BREAK,          // For loop command (break)
+    CONTINUE,       // For loop command (continue)
 
     PLUS,           // +
     MINUS,          // -
@@ -56,7 +59,8 @@ enum token_type
 inline std::vector<std::string> tokens_string = {
     "number", "hex_number", "var_id", "text",
     "write", "writeln", "if", "else",
-    "while", "for", "type",
+    "while", "for", "do",
+    "break", "continue", "type",
     "+", "-", "*", "/",
     "^", "=", "==", "!",
     "!=", ";", "<", ">",

@@ -23,7 +23,7 @@ public:
     {
         switch (op)
         {
-        case '-': return std::make_unique<NumberValue>(std::visit([](auto a) -> std::variant<double, int> { return -a; }, expr->eval(env)->as_number()));
+        case '-': return std::make_unique<NumberValue>(std::visit([](auto a) -> std::variant<char, short, int, long, long long, double, long double> { return -a; }, expr->eval(env)->as_number()));
             case '+': return std::make_unique<NumberValue>(expr->eval(env)->as_number());
             default: throw std::runtime_error("Undefined behavior!");
         }

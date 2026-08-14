@@ -16,7 +16,7 @@ private:
 public:
     explicit BooleanValue(bool value) : value(value) {}
 
-    std::variant<double, int> as_number() const override
+    std::variant<char, short, int, long, long long, double, long double> as_number() const override
     {
         return value == true || value == 1 ? 1 : 0;
     }

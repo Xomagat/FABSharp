@@ -107,6 +107,10 @@ void Lexer::tokenize_word()
         {"for",     token_type::FOR},
         {"int",     token_type::TYPES},
         {"double",  token_type::TYPES},
+        {"float",   token_type::TYPES},
+        {"short",   token_type::TYPES},
+        {"long",    token_type::TYPES},
+        {"byte",    token_type::TYPES},
         {"string",  token_type::TYPES},
         {"bool",    token_type::TYPES},
     };

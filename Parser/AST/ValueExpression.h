@@ -7,11 +7,14 @@
 #include <variant>
 
 #include "../../libs/Value.h"
+
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
 #include "../../libs/BooleanValue.h"
 
 #include "Expression.h"
+
+struct BoolTag { bool b; };
 
 class ValueExpression : public Expression
 {
@@ -19,11 +22,7 @@ private:
     std::unique_ptr<Value> value;
 
 public:
-    explicit ValueExpression(double value)
-    {
-        this->value = std::make_unique<NumberValue>(value);
-    }
-    explicit ValueExpression(int value)
+    explicit ValueExpression(std::variant<char, short, int, long, long long, double, long double> value)
     {
         this->value = std::make_unique<NumberValue>(value);
     }
@@ -31,9 +30,9 @@ public:
     {
         this->value = std::make_unique<StringValue>(value);
     }
-    explicit ValueExpression(bool value)
+    explicit ValueExpression(BoolTag value)
     {
-        this->value = std::make_unique<BooleanValue>(value);
+        this->value = std::make_unique<BooleanValue>(value.b);
     }
 
     std::unique_ptr<Value> eval(Environment& env) const override

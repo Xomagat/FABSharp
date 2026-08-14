@@ -11,12 +11,12 @@
 class NumberValue : public Value
 {
 private:
-    std::variant<double, int> value;
+    std::variant<char, short, int, long, long long, double, long double> value;
 
 public:
-    explicit NumberValue(std::variant<double, int> val) : value(val) {}
+    explicit NumberValue(std::variant<char, short, int, long, long long, double, long double> val) : value(val) {}
 
-    std::variant<double, int> as_number() const override
+    std::variant<char, short, int, long, long long, double, long double> as_number() const override
     {
         return value;
     }

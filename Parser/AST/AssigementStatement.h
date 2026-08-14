@@ -31,6 +31,30 @@ inline std::unordered_map<std::string, std::function<std::unique_ptr<Value>(Valu
         double d = std::visit([](auto x) { return static_cast<double>(x); }, n->as_number());
         return std::make_unique<NumberValue>(d);
     }},
+    {"float", [](Value* v) -> std::unique_ptr<Value> {
+        auto n = dynamic_cast<NumberValue*>(v);
+        if (!n) return nullptr;
+        float f = std::visit([](auto x) { return static_cast<float>(x); }, n->as_number());
+        return std::make_unique<NumberValue>(f);
+    }},
+    {"short", [](Value* v) -> std::unique_ptr<Value> {
+        auto n = dynamic_cast<NumberValue*>(v);
+        if (!n) return nullptr;
+        short sh = std::visit([](auto x) { return static_cast<short>(x); }, n->as_number());
+        return std::make_unique<NumberValue>(sh);
+    }},
+    {"long", [](Value* v) -> std::unique_ptr<Value> {
+        auto n = dynamic_cast<NumberValue*>(v);
+        if (!n) return nullptr;
+        long l = std::visit([](auto x) { return static_cast<long>(x); }, n->as_number());
+        return std::make_unique<NumberValue>(l);
+    }},
+    {"byte", [](Value* v) -> std::unique_ptr<Value> {
+        auto n = dynamic_cast<NumberValue*>(v);
+        if (!n) return nullptr;
+        char ch = std::visit([](auto x) { return static_cast<char>(x); }, n->as_number());
+        return std::make_unique<NumberValue>(ch);
+    }},
     {"bool", [](Value* v) -> std::unique_ptr<Value> {
         auto n = dynamic_cast<BooleanValue*>(v);
         if (!n) return nullptr;
@@ -52,6 +76,10 @@ inline bool match_type(const std::string& type, Value* expr)
         {"bool",   dynamic_cast<BooleanValue*>(expr) != nullptr},
         {"int",    dynamic_cast<NumberValue*>(expr) != nullptr},
         {"double", dynamic_cast<NumberValue*>(expr) != nullptr},
+        {"float",  dynamic_cast<NumberValue*>(expr) != nullptr},
+        {"short",  dynamic_cast<NumberValue*>(expr) != nullptr},
+        {"long",   dynamic_cast<NumberValue*>(expr) != nullptr},
+        {"byte",   dynamic_cast<NumberValue*>(expr) != nullptr},
     };
 
     return match.at(type);

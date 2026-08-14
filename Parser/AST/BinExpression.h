@@ -15,12 +15,12 @@
 #include "Expression.h"
 
 template <typename Op>
-std::variant<double,int> apply_numeric(
-    const std::variant<double,int>& a,
-    const std::variant<double,int>& b,
+std::variant<char, short, int, long, long long, double, long double> apply_numeric(
+    const std::variant<char, short, int, long, long long, double, long double>& a,
+    const std::variant<char, short, int, long, long long, double, long double>& b,
     Op op)
 {
-    return std::visit([&](auto x, auto y) -> std::variant<double,int> {
+    return std::visit([&](auto x, auto y) -> std::variant<char, short, int, long, long long, double, long double> {
         return op(x, y);
     }, a, b);
 }
