@@ -4,7 +4,6 @@
 
 #include "Parser.h"
 
-#include "AST/BreakStatement.h"
 // vars
 
 // funcs
@@ -77,7 +76,19 @@ std::unique_ptr<Statement> Parser::statement()
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<ContinueStatement>();
         }
+        case token_type::WORD: {
+            if (get(1).get_type() == token_type::LPARENT)
+            {
+                std::unique_ptr<FunctionStatement> fn = std::make_unique<FunctionStatement>(function());
+
+                if (!match(token_type::SEMI))
+                    throw std::runtime_error("You miss the ;");
+
+                return fn;
+            }
+        }
     }
+
     return assigment_statement();
 }
 
@@ -180,6 +191,22 @@ std::unique_ptr<Statement> Parser::block()
     }
 
     return std::make_unique<BlockStatement>(std::move(statements));
+}
+
+std::unique_ptr<Expression> Parser::function()
+{
+    std::string name = consume(token_type::WORD).get_text();
+    consume(token_type::LPARENT);
+
+    std::unique_ptr<FunctionalExpression> function = std::make_unique<FunctionalExpression>(name);
+
+    while (!match(token_type::RPARENT))
+    {
+        function->add_arg(expression());
+        match(token_type::COMMA);
+    }
+
+    return function;
 }
 
 std::unique_ptr<Expression> Parser::expression()
@@ -375,6 +402,8 @@ std::unique_ptr<Expression> Parser::primary()
     }
     if (match(token_type::HEX_NUMBER))
         return std::make_unique<ValueExpression>(static_cast<int>(std::stoll(current.get_text(), nullptr, 16)));
+    if (current.get_type() == token_type::WORD && get(1).get_type() == token_type::LPARENT)
+        return function();
     if (match(token_type::TEXT))
         return std::make_unique<ValueExpression>(current.get_text());
     if (match(token_type::WORD))

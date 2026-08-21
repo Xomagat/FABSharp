@@ -38,6 +38,7 @@ enum token_type
     NOT,            // !
     NEQ,            // !=
     SEMI,           // ;
+    COMMA,          // .
     LT,             // <
     GT,             // >
     LTEQ,           // <=
@@ -62,7 +63,7 @@ inline std::vector<std::string> tokens_string = {
     "while", "for", "do", "break", "continue",
     "+", "-", "*", "/",
     "^", "=", "==", "!",
-    "!=", ";", "<", ">",
+    "!=", ";", ".", "<", ">",
     "<=", ">=", "&&", "||",
     "(", ")", "{", "}",
     "end of file",

@@ -15,12 +15,14 @@
 #include "AST/UnaryExpression.h"
 #include "AST/ValueExpression.h"
 #include "AST/VariableExpression.h"
+#include "AST/FunctionalExpression.h"
 
 #include "AST/Statement.h"
 #include "AST/IfStatement.h"
 #include "AST/LoopStatement.h"
 #include "AST/BreakStatement.h"
 #include "AST/ContinueStatement.h"
+#include "AST/FunctionStatement.h"
 #include "AST/AssigementStatement.h"
 
 #include "AST/IOStatement.h"
@@ -48,6 +50,7 @@ private:
     std::unique_ptr<Statement> statement_or_block();
     std::unique_ptr<Statement> block();
 
+    std::unique_ptr<Expression> function();
     std::unique_ptr<Expression> expression();
     std::unique_ptr<Expression> conditional();
     std::unique_ptr<Expression> additive();

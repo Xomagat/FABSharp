@@ -28,4 +28,8 @@ add_executable(FABSharp main.cpp
         Parser/AST/IfStatement.h
         Parser/AST/LoopStatement.h
         Parser/AST/BreakStatement.h
+        Parser/AST/FunctionalExpression.h
+        libs/Function.h
+        libs/Functions.h
+        Parser/AST/FunctionStatement.h
 )
