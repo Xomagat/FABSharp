@@ -109,6 +109,7 @@ void Lexer::tokenize_word()
         {"do",      token_type::DO},
         {"break",   token_type::BREAK},
         {"continue",token_type::CONTINUE},
+        {"define",  token_type::DEFINE},
         {"int",     token_type::TYPES},
         {"double",  token_type::TYPES},
         {"float",   token_type::TYPES},

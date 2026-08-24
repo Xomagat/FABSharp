@@ -1,3 +1,6 @@
-int x = 5;
+define add(a, b)
+{
+    writeln a + b;
+}
 
-writeln x;
+add(2, 2)      // Write in the console 4!

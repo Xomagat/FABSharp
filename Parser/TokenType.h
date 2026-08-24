@@ -27,6 +27,7 @@ enum token_type
     DO,             // Loop command (do)
     BREAK,          // For loop command (break)
     CONTINUE,       // For loop command (continue)
+    DEFINE,         // Functions command
 
     PLUS,           // +
     MINUS,          // -
@@ -38,7 +39,7 @@ enum token_type
     NOT,            // !
     NEQ,            // !=
     SEMI,           // ;
-    COMMA,          // .
+    COMMA,          // ,
     LT,             // <
     GT,             // >
     LTEQ,           // <=
@@ -63,7 +64,7 @@ inline std::vector<std::string> tokens_string = {
     "while", "for", "do", "break", "continue",
     "+", "-", "*", "/",
     "^", "=", "==", "!",
-    "!=", ";", ".", "<", ">",
+    "!=", ";", ",", "<", ">",
     "<=", ">=", "&&", "||",
     "(", ")", "{", "}",
     "end of file",

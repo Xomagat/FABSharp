@@ -1,21 +1,71 @@
 //
-// Created by Xomagat on 07.08.2026.
+// Created by Xomagat on 21.08.2026.
 //
 
 #pragma once
+#include <cmath>
+#include <iostream>
 #include <string>
-#include <variant>
+#include <unordered_map>
+#include <vector>
 
-class Value
+#include "Value.h"
+#include "Function.h"
+#include "NumberValue.h"
+
+class SinFunc : public Function
+{
+public:
+    std::unique_ptr<Value> execute(Environment& env, std::vector<std::unique_ptr<Value>> args) const override
+    {
+        if (args.size() != 1)
+            throw std::runtime_error("sin() expects exactly 1 argument!");
+
+        double n = std::visit([](auto x){ return static_cast<double>(x); }, args[0]->as_number());
+
+        return std::make_unique<NumberValue>(std::sin(n));
+    }
+};
+
+class InputFunc : public Function
+{
+public:
+    std::unique_ptr<Value> execute(Environment& env, std::vector<std::unique_ptr<Value>> args) const override
+    {
+        std::string input;
+        std::getline(std::cin, input);
+
+        return std::make_unique<StringValue>(input);
+    }
+};
+
+class Functions
 {
 private:
+    inline static std::unordered_map<std::string, Function*> functions = {
+        {"sin", new SinFunc()},
+        {"input", new InputFunc()},
+    };
 
 public:
-    virtual ~Value() = default;
+    static bool is_exist(std::string name)
+    {
+        std::vector<std::string> names;
 
-    virtual std::variant<char, short, int, long, long long, double, long double> as_number() const = 0;
-    virtual std::string as_string() const = 0;
-    virtual bool as_bool() const = 0;
+        for (const auto& name : functions)
+            names.push_back(name.first);
 
-    virtual std::unique_ptr<Value> clone() const = 0;
+        return functions.contains(name);
+    }
+
+    static Function* get(std::string name)
+    {
+        if (!is_exist(name)) throw std::runtime_error("Unknown function: " + name + '!');
+        return functions[name];
+    }
+
+    static void define(std::string name, Function* function)
+    {
+        functions[name] = function;
+    }
 };

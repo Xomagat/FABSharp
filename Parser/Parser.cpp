@@ -76,6 +76,10 @@ std::unique_ptr<Statement> Parser::statement()
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<ContinueStatement>();
         }
+        case token_type::DEFINE: {
+            consume(token_type::DEFINE);
+            return define_function();
+        }
         case token_type::WORD: {
             if (get(1).get_type() == token_type::LPARENT)
             {
@@ -86,10 +90,16 @@ std::unique_ptr<Statement> Parser::statement()
 
                 return fn;
             }
+
+            return assigment_statement();
+        }
+        case token_type::TYPES: {
+            return assigment_statement();
+        }
+        default: {
+            throw std::runtime_error("Unexpected token: " + tokens_string[get(0).get_type()]);
         }
     }
-
-    return assigment_statement();
 }
 
 std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
@@ -191,6 +201,25 @@ std::unique_ptr<Statement> Parser::block()
     }
 
     return std::make_unique<BlockStatement>(std::move(statements));
+}
+
+std::unique_ptr<FunctionDefineStatement> Parser::define_function()
+{
+    std::string name = consume(token_type::WORD).get_text();
+    consume(token_type::LPARENT);
+
+    std::vector<std::string> arg_name;
+
+    Environment env;
+
+    while (!match(token_type::RPARENT))
+    {
+        arg_name.push_back(consume(token_type::WORD).get_text());
+        match(token_type::COMMA);
+    }
+    std::unique_ptr<Statement> body = statement_or_block();
+
+    return std::make_unique<FunctionDefineStatement>(name, arg_name, std::move(body));
 }
 
 std::unique_ptr<Expression> Parser::function()

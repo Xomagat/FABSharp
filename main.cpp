@@ -46,15 +46,22 @@ int main(int argc, char** argv)
 
         std::string input = buffer.str();
 
-        auto tokens = Lexer(input).tokenize();
-
-        auto expression = Parser(tokens).parse();
-
-        Environment global;
-
-        for (auto& expr : expression)
+        try
         {
-            expr->execute(global);
+            auto tokens = Lexer(input).tokenize();
+
+            auto expression = Parser(tokens).parse();
+
+            Environment global;
+
+            for (auto& expr : expression)
+            {
+                expr->execute(global);
+            }
+        }
+        catch (std::exception& e)
+        {
+            std::cout << "Runtime error: " << e.what() << std::endl;
         }
 
         return 0;

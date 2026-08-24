@@ -25,7 +25,7 @@ public:
         args.push_back(std::move(arg));
     }
 
-    std::unique_ptr<Value> eval(Environment &env) const override
+    std::unique_ptr<Value> eval(Environment& env) const override
     {
         std::vector<std::unique_ptr<Value>> values;
 
@@ -34,7 +34,23 @@ public:
             values.push_back(arg->eval(env));
         }
 
-        return Functions().get(name)->execute(&env, std::move(values));
+        Function* function = Functions::get(name);
+
+        if (auto f = dynamic_cast<UserDefineFunction*>(function))
+        {
+            std::unique_ptr<UserDefineFunction> user_func = std::make_unique<UserDefineFunction>(*f);
+            if (args.size() != user_func->get_names_size()) throw std::runtime_error("Argument count mismatch!");
+
+            Environment local(&env);
+
+            for (int i = 0; i < user_func->get_names_size(); i++)
+                local.define("", user_func->get_name_index(i), std::move(values[i]));
+
+            std::unique_ptr<Value> result = user_func->execute(local, {});
+            return result;
+        }
+
+        return function->execute(env, std::move(values));
     }
 
     std::string to_str() const override

@@ -50,6 +50,8 @@ private:
     std::unique_ptr<Statement> statement_or_block();
     std::unique_ptr<Statement> block();
 
+    std::unique_ptr<FunctionDefineStatement> define_function();
+
     std::unique_ptr<Expression> function();
     std::unique_ptr<Expression> expression();
     std::unique_ptr<Expression> conditional();
