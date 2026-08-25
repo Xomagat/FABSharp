@@ -1,12 +1,12 @@
 # FAB# is a programming language written in C++!
 
 ## Sections:
-- [HelloWorld](##hello-world)
-- [Typing](##typing)
-- [Conditions](##conditions)
-- [Arithmetic](##arithmetic)
-- [Loops](##loops)
-- [Functions](##functions)
+- [HelloWorld](#hello-world)
+- [Typing](#typing)
+- [Conditions](#conditions)
+- [Arithmetic](#arithmetic)
+- [Loops](#loops)
+- [Functions](#functions)
 
 ## Hello World
 ``` c++
@@ -129,24 +129,31 @@ writeln i;
 i = i + 1;
 } while (i <= 0); // Output: 1
 ```
+- The following commands are also supported: *continue* and *break*.
 
 ## Functions
 - Functions are predefined commands that can be called any number of times during program execution.
 
 Here's how functions are declared in FAB#:
 ``` c++
-define name(arg)
+define name(type arg)
 {
 // body
 }
 ```
 Usage example:
 ``` c++
-define cool_print(name, text)
+define cool_print(string name, string text)
 {
 writeln name + " = " + text;
 }
 
 cool_print("2 ^ 8 * 3", 2 ^ 8 * 3); // Output: 2 ^ 8 * 3 = 768.000000
+```
+``` c++
+define pow(double x, double n)
+return x ^ n;
+
+writeln pow(2, 5); // Output: 32.000000
 ```
 - The language is still under development! *Argument passing* and *syntax* may *change*!
