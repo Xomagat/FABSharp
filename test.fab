@@ -1,6 +1,6 @@
-define add(a, b)
+define add(int a, int b)
 {
-    writeln a + b;
+    return a + b;
 }
 
-add(2, 2)      // Write in the console 4!
+writeln add(2, 2);

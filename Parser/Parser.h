@@ -22,6 +22,7 @@
 #include "AST/LoopStatement.h"
 #include "AST/BreakStatement.h"
 #include "AST/ContinueStatement.h"
+#include "AST/ReturnStatement.h"
 #include "AST/FunctionStatement.h"
 #include "AST/AssigementStatement.h"
 

@@ -29,14 +29,15 @@ class FunctionDefineStatement : public Statement
 private:
     std::string name;
     std::vector<std::string> arg_names;
+    std::vector<std::string> arg_types;
     std::shared_ptr<Statement> body;
 
 public:
-    explicit FunctionDefineStatement(std::string name, std::vector<std::string> arg_names, std::unique_ptr<Statement> body)
-        : name(std::move(name)), arg_names(std::move(arg_names)), body(std::move(body)) {}
+    explicit FunctionDefineStatement(std::string name, std::vector<std::string> arg_types, std::vector<std::string> arg_names, std::unique_ptr<Statement> body)
+        : name(name), arg_types(arg_types), arg_names(arg_names), body(std::move(body)) {}
 
     void execute(Environment &env) const override
     {
-        Functions::define(name, new UserDefineFunction(arg_names, body));
+        Functions::define(name, new UserDefineFunction(arg_types, arg_names, body));
     }
 };

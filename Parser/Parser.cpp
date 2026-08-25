@@ -76,6 +76,13 @@ std::unique_ptr<Statement> Parser::statement()
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<ContinueStatement>();
         }
+        case token_type::RETURN: {
+            consume(token_type::RETURN);
+            std::unique_ptr<Expression> expr = expression();
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<ReturnStatement>(std::move(expr));
+        }
         case token_type::DEFINE: {
             consume(token_type::DEFINE);
             return define_function();
@@ -208,18 +215,20 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function()
     std::string name = consume(token_type::WORD).get_text();
     consume(token_type::LPARENT);
 
+    std::vector<std::string> arg_type;
     std::vector<std::string> arg_name;
 
     Environment env;
 
     while (!match(token_type::RPARENT))
     {
+        arg_type.push_back(consume(token_type::TYPES).get_text());
         arg_name.push_back(consume(token_type::WORD).get_text());
         match(token_type::COMMA);
     }
     std::unique_ptr<Statement> body = statement_or_block();
 
-    return std::make_unique<FunctionDefineStatement>(name, arg_name, std::move(body));
+    return std::make_unique<FunctionDefineStatement>(name, arg_type, arg_name, std::move(body));
 }
 
 std::unique_ptr<Expression> Parser::function()

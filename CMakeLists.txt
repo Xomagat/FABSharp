@@ -32,4 +32,5 @@ add_executable(FABSharp main.cpp
         libs/Function.h
         libs/Functions.h
         Parser/AST/FunctionStatement.h
+        Parser/AST/ReturnStatement.h
 )

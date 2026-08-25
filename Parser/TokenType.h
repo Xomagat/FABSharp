@@ -27,7 +27,8 @@ enum token_type
     DO,             // Loop command (do)
     BREAK,          // For loop command (break)
     CONTINUE,       // For loop command (continue)
-    DEFINE,         // Functions command
+    DEFINE,         // Functions command (define)
+    RETURN,         // Functions command (return)
 
     PLUS,           // +
     MINUS,          // -

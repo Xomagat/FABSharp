@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "AssigementStatement.h"
+
 #include "Expression.h"
 #include "../../libs/Functions.h"
 
@@ -44,7 +46,12 @@ public:
             Environment local(&env);
 
             for (int i = 0; i < user_func->get_names_size(); i++)
-                local.define("", user_func->get_name_index(i), std::move(values[i]));
+            {
+                if (!match_type(user_func->get_type_index(i), values[i].get()))
+                    throw std::runtime_error("Uncorrected expression type!");
+
+                local.define(user_func->get_type_index(i), user_func->get_name_index(i), std::move(values[i]));
+            }
 
             std::unique_ptr<Value> result = user_func->execute(local, {});
             return result;
