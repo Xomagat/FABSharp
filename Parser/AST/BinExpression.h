@@ -3,10 +3,10 @@
 //
 
 #pragma once
+#include <cmath>
 #include <memory>
 #include <string>
 #include <variant>
-#include <cmath>
 
 #include "../../libs/Environment.h"
 #include "../../libs/NumberValue.h"

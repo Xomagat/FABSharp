@@ -5,12 +5,19 @@
 #pragma once
 #include "Statement.h"
 
-class BreakStatement : public Statement
+class ControlFlowSignal : public std::runtime_error
+{
+    public:
+    explicit ControlFlowSignal(const std::string& what)
+        : std::runtime_error(what) {}
+};
+
+class BreakStatement : public Statement, public ControlFlowSignal
 {
 private:
 
 public:
-    explicit BreakStatement() {}
+    explicit BreakStatement() : ControlFlowSignal("'break' outside of a loop!") {}
 
     void execute(Environment &env) const override
     {

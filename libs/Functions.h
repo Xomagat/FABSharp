@@ -13,38 +13,10 @@
 #include "Function.h"
 #include "NumberValue.h"
 
-class SinFunc : public Function
-{
-public:
-    std::unique_ptr<Value> execute(Environment& env, std::vector<std::unique_ptr<Value>> args) const override
-    {
-        if (args.size() != 1)
-            throw std::runtime_error("sin() expects exactly 1 argument!");
-
-        double n = std::visit([](auto x){ return static_cast<double>(x); }, args[0]->as_number());
-
-        return std::make_unique<NumberValue>(std::sin(n));
-    }
-};
-
-class InputFunc : public Function
-{
-public:
-    std::unique_ptr<Value> execute(Environment& env, std::vector<std::unique_ptr<Value>> args) const override
-    {
-        std::string input;
-        std::getline(std::cin, input);
-
-        return std::make_unique<StringValue>(input);
-    }
-};
-
 class Functions
 {
 private:
     inline static std::unordered_map<std::string, Function*> functions = {
-        {"sin", new SinFunc()},
-        {"input", new InputFunc()},
     };
 
 public:

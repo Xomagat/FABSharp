@@ -1,6 +1,5 @@
-define add(int a, int b)
-{
-    return a + b;
-}
+int x = 1;
 
-writeln add(2, 2);
+input_in x;
+
+writeln x;

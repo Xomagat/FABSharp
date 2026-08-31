@@ -42,7 +42,7 @@ public:
         return false;
     }
 
-    Val* revolve(std::string name)
+    Val* revolve(const std::string& name)
     {
         auto it = variables.find(name);
         if (it != variables.end())
@@ -52,5 +52,11 @@ public:
             return parent->revolve(name);
 
         return nullptr;
+    }
+
+    std::string get_type(const std::string& name)
+    {
+        auto it = variables.find(name);
+        return it->first;
     }
 };

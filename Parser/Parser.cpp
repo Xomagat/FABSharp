@@ -48,6 +48,13 @@ std::unique_ptr<Statement> Parser::statement()
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<WritelnStatement>(std::move(expr));
         }
+        case token_type::INPUT_IN: {
+            consume(token_type::INPUT_IN);
+            std::string name = consume(token_type::WORD).get_text();
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<InputInStatement>(name);
+        }
         case token_type::IF: {
             consume(token_type::IF);
             return if_else();

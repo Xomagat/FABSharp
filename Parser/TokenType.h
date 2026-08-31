@@ -19,6 +19,7 @@ enum token_type
     // keywords
     WRITE,          // Output command
     WRITELN,        // Output command whit newline
+    INPUT_IN,       // Input command
     IF,             // Conditional command (if)
     ELSE,           // Conditional command (else)
     TYPES,          // Types: int, string, bool and another
@@ -61,7 +62,7 @@ enum token_type
 // Tokens for error
 inline std::vector<std::string> tokens_string = {
     "number", "hex_number", "var_id", "text",
-    "write", "writeln", "if", "else","type",
+    "write", "writeln", "input_in", "if", "else","type",
     "while", "for", "do", "break", "continue",
     "+", "-", "*", "/",
     "^", "=", "==", "!",
