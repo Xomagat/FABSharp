@@ -57,6 +57,10 @@ public:
     std::string get_type(const std::string& name)
     {
         auto it = variables.find(name);
-        return it->first;
+        if (it != variables.end())
+            return it->second.type;
+        if (parent != nullptr)
+            return parent->get_type(name);
+        return "";
     }
 };

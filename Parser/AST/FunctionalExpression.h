@@ -40,20 +40,21 @@ public:
 
         if (auto f = dynamic_cast<UserDefineFunction*>(function))
         {
-            std::unique_ptr<UserDefineFunction> user_func = std::make_unique<UserDefineFunction>(*f);
-            if (args.size() != user_func->get_names_size()) throw std::runtime_error("Argument count mismatch!");
+            if (args.size() != f->get_names_size()) throw std::runtime_error("Argument count mismatch!");
 
             Environment local(&env);
 
-            for (int i = 0; i < user_func->get_names_size(); i++)
+            for (int i = 0; i < f->get_names_size(); i++)
             {
-                if (!match_type(user_func->get_type_index(i), values[i].get()))
+                if (!match_type(f->get_type_index(i), values[i].get()))
                     throw std::runtime_error("Uncorrected expression type!");
 
-                local.define(user_func->get_type_index(i), user_func->get_name_index(i), std::move(values[i]));
+                local.define(f->get_type_index(i), f->get_name_index(i), std::move(values[i]));
             }
 
-            std::unique_ptr<Value> result = user_func->execute(local, {});
+            std::unique_ptr<Value> result = f->execute(local, {});
+            if (!result)
+                throw std::runtime_error("Function '" + name + "' did not return a value!");
             return result;
         }
 
@@ -62,6 +63,6 @@ public:
 
     std::string to_str() const override
     {
-
+        return "define " + name + "(args count: " + std::to_string(args.size()) + ")";
     }
 };

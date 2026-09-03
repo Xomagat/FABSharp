@@ -28,8 +28,7 @@ public:
 
     bool as_bool() const override
     {
-        if (value.valueless_by_exception() == 0) return false;
-        return true;
+        return std::visit([](auto v){ return v != 0; }, value); 
     }
 
     std::unique_ptr<Value> clone() const override

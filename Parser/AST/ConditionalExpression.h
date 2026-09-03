@@ -32,6 +32,19 @@ public:
         std::unique_ptr<Value> value1 = expr1->eval(env);
         std::unique_ptr<Value> value2 = expr2->eval(env);
 
+        if (op == "&&")
+        {
+            auto v1 = expr1->eval(env);
+            if (!v1->as_bool()) return std::make_unique<BooleanValue>(false);
+            return std::make_unique<BooleanValue>(expr2->eval(env)->as_bool());
+        }
+        if (op == "||")
+        {
+            auto v1 = expr1->eval(env);
+            if (v1->as_bool()) return std::make_unique<BooleanValue>(true);
+            return std::make_unique<BooleanValue>(expr2->eval(env)->as_bool());
+        }
+
         if (auto s1 = dynamic_cast<StringValue*>(value1.get()))
         {
             std::string s2 = value2->as_string();
@@ -58,13 +71,12 @@ public:
             {">=", n1 >= n2},
             {"<", n1 < n2},
             {">", n1 > n2},
-            {"&&", std::visit([](auto x) -> bool { return x != 0; }, n1) && std::visit([](auto x) -> bool { return x != 0; }, n2)},
-            {"||", std::visit([](auto x) -> bool { return x != 0; }, n1) || std::visit([](auto x) -> bool { return x != 0; }, n2)},
         };
 
-        return std::make_unique<BooleanValue>(operators[op]);
-
-        throw std::runtime_error("Unknown operation!");
+        auto it = operators.find(op);
+        if (it == operators.end())
+            throw std::runtime_error("Unknown operation!");
+        return std::make_unique<BooleanValue>(it->second);
     }
 
     std::string to_str() const override

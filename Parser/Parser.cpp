@@ -125,10 +125,12 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
     {
         std::string type = consume(token_type::TYPES).get_text();
         std::string name = consume(token_type::WORD).get_text();
-        std::unique_ptr<Expression> expr = nullptr;
+        std::unique_ptr<Expression> expr;
 
         if (match(token_type::EQ))
             expr = expression();
+        else
+            expr = std::make_unique<ValueExpression>(std::make_unique<NullValue>());
 
         if (!match(token_type::SEMI) && !no_semi)
             throw std::runtime_error("You miss the ;");

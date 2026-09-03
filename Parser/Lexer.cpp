@@ -174,7 +174,7 @@ void Lexer::tokenize_number()
     {
         if (current == '.')
         {
-            if (buffer.find('.') != -1)
+            if (buffer.find('.') != std::string::npos)
                 throw std::runtime_error("Incorrect notation of a real number!");
         }
         else if (!isdigit(current))
@@ -191,7 +191,7 @@ void Lexer::tokenize_hex_number()
     std::string buffer, chars = "abcdef";
     char current = peek(0);
 
-    while (isdigit(current) || chars.find(tolower(current)) != -1)
+    while (isdigit(current) || chars.find(tolower(current)) != std::string::npos)
     {
         buffer.push_back(current);
         current = next();

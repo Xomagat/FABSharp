@@ -16,11 +16,11 @@
 class Functions
 {
 private:
-    inline static std::unordered_map<std::string, Function*> functions = {
+    inline static std::unordered_map<std::string, std::unique_ptr<Function>> functions = {
     };
 
 public:
-    static bool is_exist(std::string name)
+    static bool is_exist(const std::string& name)
     {
         std::vector<std::string> names;
 
@@ -30,14 +30,14 @@ public:
         return functions.contains(name);
     }
 
-    static Function* get(std::string name)
+    static Function* get(const std::string& name)
     {
         if (!is_exist(name)) throw std::runtime_error("Unknown function: " + name + '!');
-        return functions[name];
+        return functions.at(name).get();
     }
 
-    static void define(std::string name, Function* function)
+    static void define(const std::string& name, std::unique_ptr<Function> function)
     {
-        functions[name] = function;
+        functions[name] = std::move(function);
     }
 };

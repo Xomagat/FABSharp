@@ -61,7 +61,11 @@ public:
             case '+': return std::make_unique<NumberValue>(apply_numeric(n1, n2, std::plus<>()));
             case '-': return std::make_unique<NumberValue>(apply_numeric(n1, n2, std::minus<>()));
             case '*': return std::make_unique<NumberValue>(apply_numeric(n1, n2, std::multiplies<>()));
-            case '/': return std::make_unique<NumberValue>(apply_numeric(n1, n2, std::divides<>()));
+            case '/': return std::make_unique<NumberValue>(apply_numeric(n1, n2, [](auto x, auto y) {
+                if (y == 0)
+                    throw std::runtime_error("Division by zero!");
+                return x / y;
+            }));
             case '^': return std::make_unique<NumberValue>(apply_numeric(n1, n2, [](auto x, auto y) { return std::pow(x, y); }));
             default: throw std::runtime_error("Unknown operation!");
         }

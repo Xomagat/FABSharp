@@ -4,6 +4,7 @@
 
 #pragma once
 #include "Statement.h"
+#include "BreakStatement.h"
 
 class ContinueStatement : public Statement, public ControlFlowSignal
 {

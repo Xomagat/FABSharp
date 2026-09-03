@@ -12,6 +12,7 @@
 #include "../../libs/BooleanValue.h"
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
+#include "../../libs/NullValue.h"
 
 #include <functional>
 #include <memory>
@@ -92,20 +93,33 @@ private:
     std::unique_ptr<Expression> expression;
 
 public:
-    explicit AssigementStatement(std::string type, std::string name, std::unique_ptr<Expression> expr) : type(std::move(type)), name(std::move(name)), expression(std::move(expr)) {}
+    explicit AssigementStatement(std::string type, std::string name, std::unique_ptr<Expression> expr) : type(std::move(type)), name(std::move(name)), expression(std::move(expr)) {
+    }
 
     void execute(Environment& env) const override
     {
-        std::unique_ptr<Value> result = expression->eval(env);
+        std::unique_ptr<Value> result;
+
+        if (expression)
+        {
+            result = expression->eval(env);
+            if (!type.empty() && !match_type(type, result.get()))
+                throw std::runtime_error("Uncorrected expression type!");
+        }
+        else
+        {
+            result = std::make_unique<NullValue>();
+        }
 
         if (type.empty())
         {
-            env.assign(name, std::move(result));
+            if (!env.assign(name, std::move(result)))
+                throw std::runtime_error("Variable" + name + " not found!");
             return;
         }
 
         if (!match_type(type, result.get()))
-            throw std::runtime_error("Uncorrected expression type");
+            throw std::runtime_error("Uncorrected expression type!");
 
         env.define(type, name, std::move(coercers.at(type)(result.get())));
     }

@@ -11,6 +11,7 @@
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
 #include "../../libs/BooleanValue.h"
+#include "../../libs/NullValue.h"
 
 #include "Expression.h"
 
@@ -33,6 +34,10 @@ public:
     explicit ValueExpression(BoolTag value)
     {
         this->value = std::make_unique<BooleanValue>(value.b);
+    }
+    explicit ValueExpression(std::unique_ptr<NullValue> value)
+    {
+        this->value = std::make_unique<NullValue>();
     }
 
     std::unique_ptr<Value> eval(Environment& env) const override

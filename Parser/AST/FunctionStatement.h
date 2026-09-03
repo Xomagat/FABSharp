@@ -38,6 +38,6 @@ public:
 
     void execute(Environment &env) const override
     {
-        Functions::define(name, new UserDefineFunction(arg_types, arg_names, body));
+        Functions::define(name, std::make_unique<UserDefineFunction>(arg_types, arg_names, body));
     }
 };
