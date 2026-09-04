@@ -30,6 +30,7 @@ enum token_type
     CONTINUE,       // For loop command (continue)
     DEFINE,         // Functions command (define)
     RETURN,         // Functions command (return)
+    NULLVAL,        // Value null
 
     PLUS,           // +
     MINUS,          // -
@@ -63,7 +64,8 @@ enum token_type
 inline std::vector<std::string> tokens_string = {
     "number", "hex_number", "var_id", "text",
     "write", "writeln", "input_in", "if", "else","type",
-    "while", "for", "do", "break", "continue",
+    "while", "for", "do", "break", "continue", "define",
+    "return", "null",
     "+", "-", "*", "/",
     "^", "=", "==", "!",
     "!=", ";", ",", "<", ">",

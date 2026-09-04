@@ -112,6 +112,7 @@ void Lexer::tokenize_word()
         {"continue",token_type::CONTINUE},
         {"define",  token_type::DEFINE},
         {"return",  token_type::RETURN},
+        {"null",    token_type::NULLVAL},
         {"int",     token_type::TYPES},
         {"double",  token_type::TYPES},
         {"float",   token_type::TYPES},

@@ -15,6 +15,7 @@
 
 #include "Expression.h"
 
+struct NullTag {};
 struct BoolTag { bool b; };
 
 class ValueExpression : public Expression
@@ -35,13 +36,15 @@ public:
     {
         this->value = std::make_unique<BooleanValue>(value.b);
     }
-    explicit ValueExpression(std::unique_ptr<NullValue> value)
+    explicit ValueExpression(NullTag value)
     {
         this->value = std::make_unique<NullValue>();
     }
 
     std::unique_ptr<Value> eval(Environment& env) const override
     {
+        if (auto null = dynamic_cast<NullValue*>(value.get()))
+            return std::make_unique<NullValue>();
         if (auto b = dynamic_cast<BooleanValue*>(value.get()))
             return std::make_unique<BooleanValue>(b->as_bool());
         if (auto s = dynamic_cast<StringValue*>(value.get()))

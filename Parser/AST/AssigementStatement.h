@@ -21,48 +21,56 @@
 
 inline std::unordered_map<std::string, std::function<std::unique_ptr<Value>(Value*)>> coercers = {
     {"int", [](Value* v) -> std::unique_ptr<Value> {
+        if (dynamic_cast<NullValue*>(v)) return std::make_unique<NullValue>();
         auto n = dynamic_cast<NumberValue*>(v);
         if (!n) return nullptr;
         int i = std::visit([](auto x) { return static_cast<int>(x); }, n->as_number());
         return std::make_unique<NumberValue>(i);
     }},
     {"double", [](Value* v) -> std::unique_ptr<Value> {
+        if (dynamic_cast<NullValue*>(v)) return std::make_unique<NullValue>();
         auto n = dynamic_cast<NumberValue*>(v);
         if (!n) return nullptr;
         double d = std::visit([](auto x) { return static_cast<double>(x); }, n->as_number());
         return std::make_unique<NumberValue>(d);
     }},
     {"float", [](Value* v) -> std::unique_ptr<Value> {
+        if (dynamic_cast<NullValue*>(v)) return std::make_unique<NullValue>();
         auto n = dynamic_cast<NumberValue*>(v);
         if (!n) return nullptr;
         float f = std::visit([](auto x) { return static_cast<float>(x); }, n->as_number());
         return std::make_unique<NumberValue>(f);
     }},
     {"short", [](Value* v) -> std::unique_ptr<Value> {
+        if (dynamic_cast<NullValue*>(v)) return std::make_unique<NullValue>();
         auto n = dynamic_cast<NumberValue*>(v);
         if (!n) return nullptr;
         short sh = std::visit([](auto x) { return static_cast<short>(x); }, n->as_number());
         return std::make_unique<NumberValue>(sh);
     }},
     {"long", [](Value* v) -> std::unique_ptr<Value> {
+        if (dynamic_cast<NullValue*>(v)) return std::make_unique<NullValue>();
         auto n = dynamic_cast<NumberValue*>(v);
         if (!n) return nullptr;
         long l = std::visit([](auto x) { return static_cast<long>(x); }, n->as_number());
         return std::make_unique<NumberValue>(l);
     }},
     {"byte", [](Value* v) -> std::unique_ptr<Value> {
+        if (dynamic_cast<NullValue*>(v)) return std::make_unique<NullValue>();
         auto n = dynamic_cast<NumberValue*>(v);
         if (!n) return nullptr;
         char ch = std::visit([](auto x) { return static_cast<char>(x); }, n->as_number());
         return std::make_unique<NumberValue>(ch);
     }},
     {"bool", [](Value* v) -> std::unique_ptr<Value> {
+        if (dynamic_cast<NullValue*>(v)) return std::make_unique<NullValue>();
         auto n = dynamic_cast<BooleanValue*>(v);
         if (!n) return nullptr;
         bool b = n->as_bool();
         return std::make_unique<BooleanValue>(b);
     }},
     {"string", [](Value* v) -> std::unique_ptr<Value> {
+        if (dynamic_cast<NullValue*>(v)) return std::make_unique<NullValue>();
         auto n = dynamic_cast<StringValue*>(v);
         if (!n) return nullptr;
         std::string str = n->as_string();
@@ -72,6 +80,9 @@ inline std::unordered_map<std::string, std::function<std::unique_ptr<Value>(Valu
 
 inline bool match_type(const std::string& type, Value* expr)
 {
+    if (dynamic_cast<NullValue*>(expr) != nullptr)
+        return true;
+
     std::unordered_map<std::string, bool> match = {
         {"string", dynamic_cast<StringValue*>(expr) != nullptr},
         {"bool",   dynamic_cast<BooleanValue*>(expr) != nullptr},

@@ -130,7 +130,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
         if (match(token_type::EQ))
             expr = expression();
         else
-            expr = std::make_unique<ValueExpression>(std::make_unique<NullValue>());
+            expr = std::make_unique<ValueExpression>(NullTag{});
 
         if (!match(token_type::SEMI) && !no_semi)
             throw std::runtime_error("You miss the ;");
@@ -447,6 +447,8 @@ std::unique_ptr<Expression> Parser::primary()
         ld_convert:
         return std::make_unique<ValueExpression>(std::stold(current.get_text()));
     }
+    if (match(token_type::NULLVAL))
+        return std::make_unique<ValueExpression>(NullTag{});
     if (match(token_type::HEX_NUMBER))
         return std::make_unique<ValueExpression>(static_cast<int>(std::stoll(current.get_text(), nullptr, 16)));
     if (current.get_type() == token_type::WORD && get(1).get_type() == token_type::LPARENT)
