@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include "../../CodeGen/CodegenContext.h"
 #include "../../libs/Environment.h"
 #include "../../libs/Value.h"
 
@@ -15,5 +16,11 @@ public:
     virtual ~Expression() = default;
 
     virtual std::unique_ptr<Value> eval(Environment& env) const = 0;
+
+    virtual llvm::Value* codegen(CodegenContext& ctx) const
+    {
+        throw std::runtime_error("Codegen not implemented for this expression!");
+    }
+
     virtual std::string to_str() const = 0;
 };

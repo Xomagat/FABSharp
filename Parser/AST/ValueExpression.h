@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "../../libs/Value.h"
+#include "../../CodeGen/CodegenContext.h"
 
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
@@ -50,6 +51,14 @@ public:
         if (auto s = dynamic_cast<StringValue*>(value.get()))
             return std::make_unique<StringValue>(s->as_string());
         return std::make_unique<NumberValue>(value->as_number());
+    }
+
+    llvm::Value* codegen(CodegenContext& ctx) const override
+    {
+        if (auto s = dynamic_cast<StringValue*>(value.get()))
+            return ctx.builder.CreateGlobalStringPtr(s->as_string());
+
+        throw std::runtime_error("Codegen for this value type not implemented yet!");
     }
 
     std::string to_str() const override

@@ -3,6 +3,12 @@ project(FABSharp)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(LLVM_DIR "D:/Projects/JustProgrammigProjects/llvm/lib/cmake/llvm")
+find_package(LLVM REQUIRED CONFIG)
+
+include_directories(${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
+
 add_executable(FABSharp main.cpp
         Parser/Lexer.cpp
         Parser/Lexer.h
@@ -33,4 +39,10 @@ add_executable(FABSharp main.cpp
         libs/Functions.h
         Parser/AST/FunctionStatement.h
         Parser/AST/ReturnStatement.h
+        CodeGen/CodegenContext.h
+        CodeGen/Compile.cpp
+        CodeGen/Compile.h
 )
+
+llvm_map_components_to_libnames(llvm_libs core support target x86asmparser x86codegen)
+target_link_libraries(FABSharp ${llvm_libs})

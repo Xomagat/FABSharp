@@ -10,6 +10,7 @@
 #include "Statement.h"
 
 #include "../../libs/Environment.h"
+#include "../../CodeGen/CodegenContext.h"
 
 class WritelnStatement : public Statement
 {
@@ -22,6 +23,19 @@ public:
     void execute(Environment& env) const override
     {
         std::cout << expr->eval(env)->as_string() << std::endl;
+    }
+
+    void codegen(CodegenContext &context) const override
+    {
+        auto printfType = llvm::FunctionType::get(
+            context.builder.getInt32Ty(), {context.builder.getInt8Ty()->getPointerTo()}, true);
+        auto printfFunc = context.module.getOrInsertFunction("printf", printfType);
+
+        llvm::Value* str = expr->codegen(context);
+        context.builder.CreateCall(printfFunc, {str});
+
+        llvm::Value* str2 = context.builder.CreateGlobalStringPtr("\n");
+        context.builder.CreateCall(printfFunc, {str2});
     }
 };
 
@@ -36,6 +50,16 @@ public:
     void execute(Environment& env) const override
     {
         std::cout << expr->eval(env)->as_string();
+    }
+
+    void codegen(CodegenContext& context) const override
+    {
+        auto printfType = llvm::FunctionType::get(
+            context.builder.getInt32Ty(), {context.builder.getInt8Ty()->getPointerTo()}, true);
+        auto printfFunc = context.module.getOrInsertFunction("printf", printfType);
+
+        llvm::Value* str = expr->codegen(context);
+        context.builder.CreateCall(printfFunc, {str});
     }
 };
 

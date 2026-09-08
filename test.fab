@@ -1,5 +1,2 @@
-int x = 1;
-
-input_in x;
-
-writeln x;
+writeln "Hello World!";
+write   "Hello World!";
