@@ -71,6 +71,18 @@ public:
         }
     }
 
+    llvm::Value *codegen(CodegenContext &context) const override
+    {
+        switch (op)
+        {
+            case '+': return context.builder.CreateAdd(expr1->codegen(context), expr2->codegen(context));
+            case '-': return context.builder.CreateSub(expr1->codegen(context), expr2->codegen(context));
+            case '*': return context.builder.CreateMul(expr1->codegen(context), expr2->codegen(context));
+            case '/': return context.builder.CreateSDiv(expr1->codegen(context), expr2->codegen(context));
+            default: throw std::runtime_error("Unknown operation!");
+        }
+    }
+
     std::string to_str() const override
     {
         return expr1->to_str() + " " + op + " " + expr2->to_str();

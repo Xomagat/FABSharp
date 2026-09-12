@@ -1,7 +1,9 @@
-int x = 55;
+int x = 5 + 5;
+int c = 5 - 5;
+int v = 5 * 5;
+int b = 5 / 5;
 
 writeln x;
-
-x = 22;
-
-writeln x;
+writeln c;
+writeln v;
+writeln b;
