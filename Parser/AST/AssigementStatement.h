@@ -97,6 +97,15 @@ inline bool match_type(const std::string& type, Value* expr)
     return match.at(type);
 }
 
+inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& builder)
+{
+    if (type == "int")    return builder.getInt32Ty();
+    if (type == "string") return builder.getInt8Ty()->getPointerTo();
+    if (type == "bool")   return builder.getInt1Ty();
+
+    throw std::runtime_error("Unknow type for codegen: " + type);
+}
+
 class AssigementStatement : public Statement
 {
 private:
@@ -137,7 +146,7 @@ public:
 
     void codegen(CodegenContext &context) const override
     {
-        llvm::Type* llvmType = context.builder.getInt32Ty();
+        llvm::Type* llvmType = type_to_llvm(type, context.builder);
 
         llvm::AllocaInst* alloc = context.builder.CreateAlloca(llvmType, nullptr, name);
         context.variables[name] = alloc;

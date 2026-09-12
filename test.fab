@@ -1,9 +1,3 @@
-int x = 5 + 5;
-int c = 5 - 5;
-int v = 5 * 5;
-int b = 5 / 5;
+string x = "Hello World!";
 
 writeln x;
-writeln c;
-writeln v;
-writeln b;
