@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 4.3)
-project(FABSharp)
+project(fab)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -9,7 +9,7 @@ find_package(LLVM REQUIRED CONFIG)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-add_executable(FABSharp main.cpp
+add_executable(fab main.cpp
         Parser/Lexer.cpp
         Parser/Lexer.h
         Parser/Token.cpp
@@ -45,4 +45,4 @@ add_executable(FABSharp main.cpp
 )
 
 llvm_map_components_to_libnames(llvm_libs core support target x86asmparser x86codegen)
-target_link_libraries(FABSharp ${llvm_libs})
+target_link_libraries(fab ${llvm_libs})

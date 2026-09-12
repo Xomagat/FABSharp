@@ -63,21 +63,24 @@ int main(int argc, char** argv)
 
             if (is_compiled)
             {
-                std::string name = std::filesystem::directory_entry(argv[1]).path().filename().string();
+                auto name = std::filesystem::directory_entry(argv[1]);
 
-                compile(expression, name);
+                compile(expression, name.path().filename().string());
 
                 std::string cmd = "\"\"C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.exe\" "
-                                "" + name + ".obj /out:" + name.substr(0, name.find('.')) + ".exe /subsystem:console /defaultlib:libcmt "
+                                "" + name.path().filename().string() + ".obj /out:" + name.path().string().substr(0, name.path().string().rfind('.'))
+                                + ".exe /subsystem:console /defaultlib:libcmt "
                                 "/LIBPATH:\"C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/lib/x64\" "
                                 "/LIBPATH:\"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/um/x64\" "
                                 "/LIBPATH:\"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/ucrt/x64\"\"";
 
                 system(cmd.c_str());
 
-                cmd = "\".\\" + name.substr(0, name.find('.')) + ".exe\"";
+                cmd = "\".\\" + name.path().string().substr(0, name.path().string().rfind('.')) + ".exe\"";
 
                 system(cmd.c_str());
+
+                std::filesystem::remove(name.path().filename().string() + ".obj");
             }
             else
             {
