@@ -17,7 +17,7 @@ public:
 
     virtual std::unique_ptr<Value> eval(Environment& env) const = 0;
 
-    virtual llvm::Value* codegen(CodegenContext& ctx) const
+    virtual llvm::Value* codegen(CodegenContext& context) const
     {
         throw std::runtime_error("Codegen not implemented for this expression!");
     }

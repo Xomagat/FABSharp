@@ -5,6 +5,7 @@
 #pragma once
 #include <string>
 #include <variant>
+#include <iostream>
 
 #include "../../libs/Value.h"
 #include "../../CodeGen/CodegenContext.h"
@@ -57,6 +58,12 @@ public:
     {
         if (auto s = dynamic_cast<StringValue*>(value.get()))
             return ctx.builder.CreateGlobalStringPtr(s->as_string());
+        if (auto n = dynamic_cast<NumberValue*>(value.get()))
+        {
+            auto num = n->as_number();
+            long long i = std::visit([](auto x) -> long long { return static_cast<long long>(x); }, num);
+            return llvm::ConstantInt::get(ctx.builder.getInt32Ty(), i);
+        }
 
         throw std::runtime_error("Codegen for this value type not implemented yet!");
     }

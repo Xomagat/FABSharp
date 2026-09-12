@@ -3,7 +3,7 @@ project(FABSharp)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(LLVM_DIR "D:/Projects/JustProgrammigProjects/llvm/lib/cmake/llvm")
+set(LLVM_DIR "llvm/lib/cmake/llvm")
 find_package(LLVM REQUIRED CONFIG)
 
 include_directories(${LLVM_INCLUDE_DIRS})

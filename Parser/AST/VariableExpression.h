@@ -27,6 +27,16 @@ public:
         return val->value->clone();
     }
 
+    llvm::Value *codegen(CodegenContext &context) const override
+    {
+        auto it = context.variables.find(name);
+        if (it == context.variables.end())
+            throw std::runtime_error("Variable {" + name + "} not found!");
+
+        llvm::AllocaInst* alloc = it->second;
+        return context.builder.CreateLoad(alloc->getAllocatedType(), alloc, name);
+    }
+
     std::string to_str() const override
     {
         return name;

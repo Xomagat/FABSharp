@@ -31,11 +31,18 @@ public:
             context.builder.getInt32Ty(), {context.builder.getInt8Ty()->getPointerTo()}, true);
         auto printfFunc = context.module.getOrInsertFunction("printf", printfType);
 
-        llvm::Value* str = expr->codegen(context);
-        context.builder.CreateCall(printfFunc, {str});
+        llvm::Value* val = expr->codegen(context);
 
-        llvm::Value* str2 = context.builder.CreateGlobalStringPtr("\n");
-        context.builder.CreateCall(printfFunc, {str2});
+        if (val->getType()->isIntegerTy())
+        {
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d\n");
+            context.builder.CreateCall(printfFunc, {fmt, val});
+        }
+        else
+        {
+            context.builder.CreateCall(printfFunc, {val});
+            context.builder.CreateCall(printfFunc, {context.builder.CreateGlobalStringPtr("\n")});
+        }
     }
 };
 
@@ -58,8 +65,17 @@ public:
             context.builder.getInt32Ty(), {context.builder.getInt8Ty()->getPointerTo()}, true);
         auto printfFunc = context.module.getOrInsertFunction("printf", printfType);
 
-        llvm::Value* str = expr->codegen(context);
-        context.builder.CreateCall(printfFunc, {str});
+        llvm::Value* val = expr->codegen(context);
+
+        if (val->getType()->isIntegerTy())
+        {
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d");
+            context.builder.CreateCall(printfFunc, {fmt, val});
+        }
+        else
+        {
+            context.builder.CreateCall(printfFunc, {val});
+        }
     }
 };
 

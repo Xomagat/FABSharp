@@ -134,4 +134,18 @@ public:
 
         env.define(type, name, std::move(coercers.at(type)(result.get())));
     }
+
+    void codegen(CodegenContext &context) const override
+    {
+        llvm::Type* llvmType = context.builder.getInt32Ty();
+
+        llvm::AllocaInst* alloc = context.builder.CreateAlloca(llvmType, nullptr, name);
+        context.variables[name] = alloc;
+
+        if (expression)
+        {
+            llvm::Value* val = expression->codegen(context);
+            context.builder.CreateStore(val, alloc);
+        }
+    }
 };

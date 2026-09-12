@@ -1,2 +1,7 @@
-writeln "Hello World!";
-write   "Hello World!";
+int x = 55;
+
+writeln x;
+
+x = 22;
+
+writeln x;
