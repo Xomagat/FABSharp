@@ -79,6 +79,27 @@ public:
         return std::make_unique<BooleanValue>(it->second);
     }
 
+    llvm::Value *codegen(CodegenContext &context) const override
+    {
+        llvm::Value* left = expr1->codegen(context);
+        llvm::Value* right = expr2->codegen(context);
+
+        std::unordered_map<std::string, llvm::Value*> operators = {
+            {"==", context.builder.CreateICmpEQ(left, right)},
+            {"!=", context.builder.CreateICmpNE(left, right)},
+            {"<",  context.builder.CreateICmpSLT(left, right)},
+            {">",  context.builder.CreateICmpSGT(left, right)},
+            {"<=", context.builder.CreateICmpSLE(left, right)},
+            {">=", context.builder.CreateICmpSGE(left, right)},
+        };
+
+        auto it = operators.find(op);
+        if (it->first.compare(op) != 0)
+            throw std::runtime_error("Unknown operation for codegen: " + op + "!");
+
+        return it->second;
+    }
+
     std::string to_str() const override
     {
         return expr1->to_str() + " " + op + " " + expr2->to_str();

@@ -39,6 +39,41 @@ public:
             else_statement->execute(env);
         }
     }
+
+    void codegen(CodegenContext &context) const override
+    {
+        auto condVal = condition->codegen(context);
+
+        if (!condVal->getType()->isIntegerTy(1))
+        {
+            condVal = context.builder.CreateICmpNE(
+                condVal, llvm::ConstantInt::get(condVal->getType(), 0), "ifcond");
+        }
+
+        llvm::Function* function = context.builder.GetInsertBlock()->getParent();
+
+        llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context.context, "then", function);
+        llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(context.context, "else");
+        llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context.context, "ifcont");
+
+        context.builder.CreateCondBr(condVal, thenBB, elseBB);
+
+        // then tree
+        context.builder.SetInsertPoint(thenBB);
+        if_statement->codegen(context);
+        context.builder.CreateBr(mergeBB);
+
+        // else tree
+        function->insert(function->end(), elseBB);
+        context.builder.SetInsertPoint(elseBB);
+        if (else_statement)
+            else_statement->codegen(context);
+        context.builder.CreateBr(mergeBB);
+
+        // continue after if
+        function->insert(function->end(), mergeBB);
+        context.builder.SetInsertPoint(mergeBB);
+    }
 };
 
 class BlockStatement : public Statement
@@ -56,5 +91,15 @@ public:
         {
             s->execute(local);
         }
+    }
+
+    void codegen(CodegenContext &context) const override
+    {
+        auto saveVar = context.variables;
+
+        for (auto& s : statements)
+            s->codegen(context);
+
+        context.variables = saveVar;
     }
 };
