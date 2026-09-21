@@ -34,6 +34,7 @@ add_executable(fab main.cpp
         Parser/AST/IfStatement.h
         Parser/AST/LoopStatement.h
         Parser/AST/BreakStatement.h
+        Parser/AST/ContinueStatement.h
         Parser/AST/FunctionalExpression.h
         libs/Function.h
         libs/Functions.h
