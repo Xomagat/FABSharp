@@ -1,12 +1,9 @@
-int x = 6;
+int x = 0;
 
-if x == 5
+while (x < 10)
 {
-    writeln "x == 5";
-}
-else
-{
-    writeln "x != 5";
-}
+    write x + 1;
+    writeln ". Hello World!";
 
-writeln "End!";
+    x = x + 1;
+}

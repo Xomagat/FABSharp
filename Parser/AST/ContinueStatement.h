@@ -11,7 +11,7 @@ class ContinueStatement : public Statement, public ControlFlowSignal
 private:
 
 public:
-    explicit ContinueStatement() : ControlFlowSignal("'break' outside of a loop!") {}
+    explicit ContinueStatement() : ControlFlowSignal("'continue' outside of a loop!") {}
 
     void execute(Environment &env) const override
     {

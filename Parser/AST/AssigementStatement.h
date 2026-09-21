@@ -146,6 +146,17 @@ public:
 
     void codegen(CodegenContext &context) const override
     {
+        if (type.empty())
+        {
+            auto it = context.variables.find(name);
+            if (it == context.variables.end())
+                std::runtime_error("Variable " + name + " not found!");
+
+            llvm::Value* val = expression->codegen(context);
+            context.builder.CreateStore(val, it->second);
+            return;
+        }
+
         llvm::Type* llvmType = type_to_llvm(type, context.builder);
 
         llvm::AllocaInst* alloc = context.builder.CreateAlloca(llvmType, nullptr, name);
