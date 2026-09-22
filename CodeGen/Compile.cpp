@@ -8,16 +8,30 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, std::string na
 
     CodegenContext ctx{context, module, builder};
 
-    auto mainType = llvm::FunctionType::get(builder.getInt32Ty(), false);
-    auto mainFunc = llvm::Function::Create(
-        mainType, llvm::Function::ExternalLinkage, "main", module);
-    auto entry = llvm::BasicBlock::Create(context, "entry", mainFunc);
-    builder.SetInsertPoint(entry);
-
+    bool has_user_main = false;
     for (auto& stmt : statements)
-        stmt->codegen(ctx);
+        if (auto fn = dynamic_cast<FunctionDefineStatement*>(stmt.get()))
+            if (fn->get_name() == "main")
+                has_user_main = true;
 
-    builder.CreateRet(builder.getInt32(0));
+    if (!has_user_main)
+    {
+        auto mainType = llvm::FunctionType::get(builder.getInt32Ty(), false);
+        auto mainFunc = llvm::Function::Create(
+            mainType, llvm::Function::ExternalLinkage, "main", module);
+        auto entry = llvm::BasicBlock::Create(context, "entry", mainFunc);
+        builder.SetInsertPoint(entry);
+
+        for (auto& stmt : statements)
+            stmt->codegen(ctx);
+
+        builder.CreateRet(builder.getInt32(0));
+    }
+    else
+    {
+        for (auto& stmt : statements)
+            stmt->codegen(ctx);
+    }
 
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();

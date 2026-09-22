@@ -16,6 +16,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/FileSystem.h"
 
+#include "../Parser/AST/FunctionStatement.h"
 #include "../Parser/AST/Statement.h"
 #include "CodegenContext.h"
 

@@ -16,4 +16,5 @@ struct CodegenContext
     llvm::Module& module;
     llvm::IRBuilder<>& builder;
     std::unordered_map<std::string, llvm::AllocaInst*> variables;
+    std::unordered_map<std::string, llvm::Function*>   functions;
 };

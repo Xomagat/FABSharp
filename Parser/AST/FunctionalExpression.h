@@ -61,6 +61,19 @@ public:
         return function->execute(env, std::move(values));
     }
 
+    llvm::Value *codegen(CodegenContext &context) const override
+    {
+        auto it = context.functions.find(name);
+        if (it == context.functions.end())
+            throw std::runtime_error("Function {" + name + "} not found (codegen)!");
+
+        std::vector<llvm::Value*> args_values;
+        for (auto& arg : args)
+            args_values.push_back(arg->codegen(context));
+
+        return context.builder.CreateCall(it->second, args_values);
+    }
+
     std::string to_str() const override
     {
         return "define " + name + "(args count: " + std::to_string(args.size()) + ")";

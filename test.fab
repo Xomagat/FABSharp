@@ -1,6 +1,9 @@
-int i = 1;
-do
+define add(int a, int b)
 {
-    writeln i;
-    i = i + 1;
-} while (i <= 0);    // Output: 1
+    return a + b;
+}
+
+define main()
+{
+    writeln add(6, 4);
+}

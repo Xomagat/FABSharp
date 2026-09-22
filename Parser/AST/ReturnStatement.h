@@ -35,4 +35,10 @@ public:
     {
         throw ReturnException(expr->eval(env));
     }
+
+    void codegen(CodegenContext &context) const override
+    {
+        llvm::Value* val = expr->codegen(context);
+        context.builder.CreateRet(val);
+    }
 };
