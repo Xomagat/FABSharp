@@ -1,9 +1,4 @@
-int x = 0;
-
-while (x < 10)
+for (int i = 0; i < 100; i = i + 1)
 {
-    write x + 1;
-    writeln ". Hello World!";
-
-    x = x + 1;
+    writeln i + 1;
 }

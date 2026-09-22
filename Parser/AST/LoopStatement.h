@@ -131,4 +131,35 @@ public:
             }
         }
     }
+
+    void codegen(CodegenContext &context) const override
+    {
+        initialization->codegen(context);
+
+        llvm::Function* function = context.builder.GetInsertBlock()->getParent();
+
+        llvm::BasicBlock* condBB = llvm::BasicBlock::Create(context.context, "loopcond", function);
+        llvm::BasicBlock* bodyBB = llvm::BasicBlock::Create(context.context, "loopbody", function);
+        llvm::BasicBlock* endBB = llvm::BasicBlock::Create(context.context, "loopend", function);
+
+        context.builder.CreateBr(condBB);
+
+        context.builder.SetInsertPoint(condBB);
+        llvm::Value* condVal = condition->codegen(context);
+
+        if (!condVal->getType()->isIntegerTy(1))
+        {
+            condVal = context.builder.CreateICmpNE(
+                condVal, llvm::ConstantInt::get(condVal->getType(), 0), "forcondval");
+        }
+
+        context.builder.CreateCondBr(condVal, bodyBB, endBB);
+
+        context.builder.SetInsertPoint(bodyBB);
+        for_statement->codegen(context);
+        increment->codegen(context);
+        context.builder.CreateBr(condBB);
+
+        context.builder.SetInsertPoint(endBB);
+    }
 };
