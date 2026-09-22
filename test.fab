@@ -1,4 +1,6 @@
-for (int i = 0; i < 100; i = i + 1)
+int i = 1;
+do
 {
-    writeln i + 1;
-}
+    writeln i;
+    i = i + 1;
+} while (i <= 0);    // Output: 1

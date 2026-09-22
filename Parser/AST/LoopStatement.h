@@ -96,6 +96,37 @@ public:
             }
         } while (condition->eval(env)->as_bool());
     }
+
+    void codegen(CodegenContext &context) const override
+    {
+        llvm::Function* function = context.builder.GetInsertBlock()->getParent();
+
+        llvm::BasicBlock* condBB = llvm::BasicBlock::Create(context.context, "loopcond", function);
+        llvm::BasicBlock* bodyBB = llvm::BasicBlock::Create(context.context, "loopbody", function);
+        llvm::BasicBlock* endBB  = llvm::BasicBlock::Create(context.context, "loopend", function);
+
+        // body loop
+        context.builder.CreateBr(bodyBB);
+
+        context.builder.SetInsertPoint(bodyBB);
+        while_statement->codegen(context);
+        context.builder.CreateBr(condBB);
+
+        // condition block
+        context.builder.SetInsertPoint(condBB);
+        llvm::Value* condVal = condition->codegen(context);
+
+        if (!condVal->getType()->isIntegerTy(1))
+        {
+            condVal = context.builder.CreateICmpNE(
+                condVal, llvm::ConstantInt::get(condVal->getType(), 0), "dowhilecondval");
+        }
+
+        context.builder.CreateCondBr(condVal, bodyBB, endBB);
+
+        // continue after while-loop
+        context.builder.SetInsertPoint(endBB);
+    }
 };
 
 class ForStatement : public Statement
