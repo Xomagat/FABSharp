@@ -53,25 +53,22 @@ public:
         llvm::Function* function = context.builder.GetInsertBlock()->getParent();
 
         llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context.context, "then", function);
-        llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(context.context, "else");
-        llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context.context, "ifcont");
+        llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(context.context, "else", function);
+        llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context.context, "ifcont", function);
 
         context.builder.CreateCondBr(condVal, thenBB, elseBB);
 
-        // then tree
         context.builder.SetInsertPoint(thenBB);
         if_statement->codegen(context);
-        context.builder.CreateBr(mergeBB);
+        if (!context.builder.GetInsertBlock()->getTerminator())
+            context.builder.CreateBr(mergeBB);
 
-        // else tree
-        function->insert(function->end(), elseBB);
         context.builder.SetInsertPoint(elseBB);
         if (else_statement)
             else_statement->codegen(context);
-        context.builder.CreateBr(mergeBB);
+        if (!context.builder.GetInsertBlock()->getTerminator())
+            context.builder.CreateBr(mergeBB);
 
-        // continue after if
-        function->insert(function->end(), mergeBB);
         context.builder.SetInsertPoint(mergeBB);
     }
 };

@@ -107,4 +107,28 @@ public:
 
         env.assign(name, std::move(converted));
     }
+
+    void codegen(CodegenContext& context) const override
+    {
+        auto it = context.variables.find(name);
+        if (it == context.variables.end())
+            throw std::runtime_error("Variable {" + name + "} not found (codegen)!");
+
+        llvm::AllocaInst* alloc = it->second;
+        llvm::Type* varType = alloc->getAllocatedType();
+
+        auto scanfType = llvm::FunctionType::get(
+            context.builder.getInt32Ty(), {context.builder.getInt8Ty()->getPointerTo()}, true);
+        auto scanfFunc = context.module.getOrInsertFunction("scanf", scanfType);
+
+        if (varType->isIntegerTy(32))
+        {
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d");
+            context.builder.CreateCall(scanfFunc, {fmt, alloc});
+        }
+        else
+        {
+            throw std::runtime_error("input_in codegen only supports int for now!");
+        }
+    }
 };

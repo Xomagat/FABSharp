@@ -23,4 +23,12 @@ public:
     {
         throw BreakStatement();
     }
+
+    void codegen(CodegenContext &context) const override
+    {
+        if (context.loop_stack.empty())
+            std::runtime_error("'break' outside of a loop!");
+
+        context.builder.CreateBr(context.loop_stack.back().breakTarget);
+    }
 };

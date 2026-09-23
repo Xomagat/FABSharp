@@ -17,4 +17,12 @@ public:
     {
         throw ContinueStatement();
     }
+
+    void codegen(CodegenContext &context) const override
+    {
+        if (context.loop_stack.empty())
+            std::runtime_error("'continue' outside of a loop!");
+
+        context.builder.CreateBr(context.loop_stack.back().continueTarget);
+    }
 };

@@ -47,24 +47,20 @@ public:
 
         context.builder.CreateBr(condBB);
 
-        // condition block
         context.builder.SetInsertPoint(condBB);
         llvm::Value* condVal = condition->codegen(context);
-
         if (!condVal->getType()->isIntegerTy(1))
-        {
-            condVal = context.builder.CreateICmpNE(
-                condVal, llvm::ConstantInt::get(condVal->getType(), 0), "loopcondval");
-        }
-
+            condVal = context.builder.CreateICmpNE(condVal, llvm::ConstantInt::get(condVal->getType(), 0), "loopcondval");
         context.builder.CreateCondBr(condVal, bodyBB, endBB);
 
-        // body loop
         context.builder.SetInsertPoint(bodyBB);
+        context.loop_stack.push_back({condBB, endBB});
         while_statement->codegen(context);
-        context.builder.CreateBr(condBB);
+        context.loop_stack.pop_back();
 
-        // continue after while-loop
+        if (!context.builder.GetInsertBlock()->getTerminator())
+            context.builder.CreateBr(condBB);
+
         context.builder.SetInsertPoint(endBB);
     }
 };
@@ -97,34 +93,30 @@ public:
         } while (condition->eval(env)->as_bool());
     }
 
-    void codegen(CodegenContext &context) const override
+    void codegen(CodegenContext& context) const override
     {
         llvm::Function* function = context.builder.GetInsertBlock()->getParent();
 
-        llvm::BasicBlock* condBB = llvm::BasicBlock::Create(context.context, "loopcond", function);
         llvm::BasicBlock* bodyBB = llvm::BasicBlock::Create(context.context, "loopbody", function);
+        llvm::BasicBlock* condBB = llvm::BasicBlock::Create(context.context, "loopcond", function);
         llvm::BasicBlock* endBB  = llvm::BasicBlock::Create(context.context, "loopend", function);
 
-        // body loop
         context.builder.CreateBr(bodyBB);
 
         context.builder.SetInsertPoint(bodyBB);
+        context.loop_stack.push_back({condBB, endBB});
         while_statement->codegen(context);
-        context.builder.CreateBr(condBB);
+        context.loop_stack.pop_back();
 
-        // condition block
+        if (!context.builder.GetInsertBlock()->getTerminator())
+            context.builder.CreateBr(condBB);
+
         context.builder.SetInsertPoint(condBB);
         llvm::Value* condVal = condition->codegen(context);
-
         if (!condVal->getType()->isIntegerTy(1))
-        {
-            condVal = context.builder.CreateICmpNE(
-                condVal, llvm::ConstantInt::get(condVal->getType(), 0), "dowhilecondval");
-        }
-
+            condVal = context.builder.CreateICmpNE(condVal, llvm::ConstantInt::get(condVal->getType(), 0), "dowhilecondval");
         context.builder.CreateCondBr(condVal, bodyBB, endBB);
 
-        // continue after while-loop
         context.builder.SetInsertPoint(endBB);
     }
 };
@@ -163,7 +155,7 @@ public:
         }
     }
 
-    void codegen(CodegenContext &context) const override
+    void codegen(CodegenContext& context) const override
     {
         initialization->codegen(context);
 
@@ -171,23 +163,26 @@ public:
 
         llvm::BasicBlock* condBB = llvm::BasicBlock::Create(context.context, "loopcond", function);
         llvm::BasicBlock* bodyBB = llvm::BasicBlock::Create(context.context, "loopbody", function);
-        llvm::BasicBlock* endBB = llvm::BasicBlock::Create(context.context, "loopend", function);
+        llvm::BasicBlock* incrBB = llvm::BasicBlock::Create(context.context, "loopincr", function);
+        llvm::BasicBlock* endBB  = llvm::BasicBlock::Create(context.context, "loopend", function);
 
         context.builder.CreateBr(condBB);
 
         context.builder.SetInsertPoint(condBB);
         llvm::Value* condVal = condition->codegen(context);
-
         if (!condVal->getType()->isIntegerTy(1))
-        {
-            condVal = context.builder.CreateICmpNE(
-                condVal, llvm::ConstantInt::get(condVal->getType(), 0), "forcondval");
-        }
-
+            condVal = context.builder.CreateICmpNE(condVal, llvm::ConstantInt::get(condVal->getType(), 0), "forcondval");
         context.builder.CreateCondBr(condVal, bodyBB, endBB);
 
         context.builder.SetInsertPoint(bodyBB);
+        context.loop_stack.push_back({incrBB, endBB});   // continue -> incrBB, не condBB!
         for_statement->codegen(context);
+        context.loop_stack.pop_back();
+
+        if (!context.builder.GetInsertBlock()->getTerminator())
+            context.builder.CreateBr(incrBB);
+
+        context.builder.SetInsertPoint(incrBB);
         increment->codegen(context);
         context.builder.CreateBr(condBB);
 
