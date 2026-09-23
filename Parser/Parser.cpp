@@ -392,6 +392,11 @@ std::unique_ptr<Expression> Parser::multiply()
             expr = std::make_unique<BinExpression>('/', std::move(expr), pow());
             continue;
         }
+        if (match(token_type::MOD))
+        {
+            expr = std::make_unique<BinExpression>('%', std::move(expr), pow());
+            continue;
+        }
         break;
     }
 

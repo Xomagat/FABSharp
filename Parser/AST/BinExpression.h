@@ -68,6 +68,10 @@ public:
                     throw std::runtime_error("Division by zero!");
                 return x / y;
             }));
+            case '%': return std::make_unique<NumberValue>(apply_numeric(n1, n2, [](auto x, auto y) {
+                if (y == 0) throw std::runtime_error("Division by zero!");
+                return std::fmod(static_cast<double>(x), static_cast<double>(y));
+            }));
             case '^': return std::make_unique<NumberValue>(apply_numeric(n1, n2, [](auto x, auto y) { return std::pow(x, y); }));
             default: throw std::runtime_error("Unknown operation!");
         }
@@ -91,6 +95,7 @@ public:
             case '-': return context.builder.CreateFSub(left, right);
             case '*': return context.builder.CreateFMul(left, right);
             case '/': return context.builder.CreateFDiv(left, right);
+            case '%': return context.builder.CreateFRem(left, right);
             default: throw std::runtime_error("Codegen for this operator not implemented yet!");
             }
         }
@@ -104,6 +109,7 @@ public:
         case '-': return context.builder.CreateSub(left, right);
         case '*': return context.builder.CreateMul(left, right);
         case '/': return context.builder.CreateSDiv(left, right);
+        case '%': return context.builder.CreateSRem(left, right);
         default: throw std::runtime_error("Codegen for this operator not implemented yet!");
         }
     }

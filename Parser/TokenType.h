@@ -37,6 +37,7 @@ enum token_type
     MULT,           // *
     DIV,            // /
     POW,            // ^
+    MOD,            // %
     EQ,             // =
     CEQ,            // ==
     NOT,            // !
