@@ -33,7 +33,12 @@ public:
 
         llvm::Value* val = expr->codegen(context);
 
-        if (val->getType()->isIntegerTy())
+        if (val->getType()->isDoubleTy())
+        {
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%f\n");
+            context.builder.CreateCall(printfFunc, {fmt, val});
+        }
+        else if (val->getType()->isIntegerTy())
         {
             llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d\n");
             context.builder.CreateCall(printfFunc, {fmt, val});
@@ -67,7 +72,12 @@ public:
 
         llvm::Value* val = expr->codegen(context);
 
-        if (val->getType()->isIntegerTy())
+        if (val->getType()->isDoubleTy())
+        {
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%f");
+            context.builder.CreateCall(printfFunc, {fmt, val});
+        }
+        else if (val->getType()->isIntegerTy())
         {
             llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d");
             context.builder.CreateCall(printfFunc, {fmt, val});

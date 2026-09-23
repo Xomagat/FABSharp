@@ -23,9 +23,32 @@ public:
     {
         switch (op)
         {
-        case '-': return std::make_unique<NumberValue>(std::visit([](auto a) -> std::variant<char, short, int, long, long long, double, long double> { return -a; }, expr->eval(env)->as_number()));
+            case '-': return std::make_unique<NumberValue>(std::visit([](auto a) -> std::variant<char, short, int, long, long long, double, long double> { return -a; }, expr->eval(env)->as_number()));
             case '+': return std::make_unique<NumberValue>(expr->eval(env)->as_number());
             default: throw std::runtime_error("Undefined behavior!");
+        }
+    }
+
+    llvm::Value* codegen(CodegenContext& ctx) const override
+    {
+        llvm::Value* val = expr->codegen(ctx);
+
+        switch (op)
+        {
+        case '-':
+            if (val->getType()->isDoubleTy())
+                return ctx.builder.CreateFNeg(val);
+            if (val->getType()->isIntegerTy())
+                return ctx.builder.CreateNeg(val);
+            throw std::runtime_error("Codegen unary '-' not supported for this type!");
+
+        case '+':
+            if (val->getType()->isDoubleTy() || val->getType()->isIntegerTy())
+                return val;
+            throw std::runtime_error("Codegen unary '+' not supported for this type!");
+
+        default:
+            throw std::runtime_error("Codegen for this unary operator not implemented yet!");
         }
     }
 

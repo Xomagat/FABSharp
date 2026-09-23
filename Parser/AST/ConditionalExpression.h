@@ -79,25 +79,34 @@ public:
         return std::make_unique<BooleanValue>(it->second);
     }
 
-    llvm::Value *codegen(CodegenContext &context) const override
+    llvm::Value* codegen(CodegenContext& ctx) const override
     {
-        llvm::Value* left = expr1->codegen(context);
-        llvm::Value* right = expr2->codegen(context);
+        llvm::Value* left = expr1->codegen(ctx);
+        llvm::Value* right = expr2->codegen(ctx);
 
-        std::unordered_map<std::string, llvm::Value*> operators = {
-            {"==", context.builder.CreateICmpEQ(left, right)},
-            {"!=", context.builder.CreateICmpNE(left, right)},
-            {"<",  context.builder.CreateICmpSLT(left, right)},
-            {">",  context.builder.CreateICmpSGT(left, right)},
-            {"<=", context.builder.CreateICmpSLE(left, right)},
-            {">=", context.builder.CreateICmpSGE(left, right)},
-        };
+        bool isFloat = left->getType()->isDoubleTy() || right->getType()->isDoubleTy();
 
-        auto it = operators.find(op);
-        if (it->first.compare(op) != 0)
-            throw std::runtime_error("Unknown operation for codegen: " + op + "!");
+        if (isFloat)
+        {
+            left  = coerceToType(left,  ctx.builder.getDoubleTy(), ctx.builder);
+            right = coerceToType(right, ctx.builder.getDoubleTy(), ctx.builder);
 
-        return it->second;
+            if (op == "==") return ctx.builder.CreateFCmpOEQ(left, right);
+            if (op == "!=") return ctx.builder.CreateFCmpONE(left, right);
+            if (op == "<")  return ctx.builder.CreateFCmpOLT(left, right);
+            if (op == ">")  return ctx.builder.CreateFCmpOGT(left, right);
+            if (op == "<=") return ctx.builder.CreateFCmpOLE(left, right);
+            if (op == ">=") return ctx.builder.CreateFCmpOGE(left, right);
+            throw std::runtime_error("Codegen for this conditional operator not implemented yet!");
+        }
+
+        if (op == "==") return ctx.builder.CreateICmpEQ(left, right);
+        if (op == "!=") return ctx.builder.CreateICmpNE(left, right);
+        if (op == "<")  return ctx.builder.CreateICmpSLT(left, right);
+        if (op == ">")  return ctx.builder.CreateICmpSGT(left, right);
+        if (op == "<=") return ctx.builder.CreateICmpSLE(left, right);
+        if (op == ">=") return ctx.builder.CreateICmpSGE(left, right);
+        throw std::runtime_error("Codegen for this conditional operator not implemented yet!");
     }
 
     std::string to_str() const override

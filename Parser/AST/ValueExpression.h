@@ -58,11 +58,20 @@ public:
     {
         if (auto s = dynamic_cast<StringValue*>(value.get()))
             return ctx.builder.CreateGlobalStringPtr(s->as_string());
+
+        if (auto b = dynamic_cast<BooleanValue*>(value.get()))
+            return llvm::ConstantInt::get(ctx.builder.getInt1Ty(), b->as_bool());
+
         if (auto n = dynamic_cast<NumberValue*>(value.get()))
         {
             auto num = n->as_number();
-            long long i = std::visit([](auto x) -> long long { return static_cast<long long>(x); }, num);
-            return llvm::ConstantInt::get(ctx.builder.getInt32Ty(), i);
+            return std::visit([&](auto x) -> llvm::Value* {
+                using T = decltype(x);
+                if constexpr (std::is_floating_point_v<T>)
+                    return llvm::ConstantFP::get(ctx.builder.getDoubleTy(), static_cast<double>(x));
+                else
+                    return llvm::ConstantInt::get(ctx.builder.getInt32Ty(), static_cast<long long>(x));
+            }, num);
         }
 
         throw std::runtime_error("Codegen for this value type not implemented yet!");

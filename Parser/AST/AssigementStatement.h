@@ -97,13 +97,33 @@ inline bool match_type(const std::string& type, Value* expr)
     return match.at(type);
 }
 
+inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm::IRBuilder<>& builder)
+{
+    llvm::Type* srcType = val->getType();
+    if (srcType == targetType) return val;
+
+    if (srcType->isIntegerTy() && targetType->isDoubleTy())
+        return builder.CreateSIToFP(val, targetType);      // int -> double
+    if (srcType->isDoubleTy() && targetType->isIntegerTy())
+        return builder.CreateFPToSI(val, targetType);      // double -> int
+    if (srcType->isIntegerTy() && targetType->isIntegerTy())
+        return builder.CreateIntCast(val, targetType, true); // int16 <-> int32 <-> int64
+
+    throw std::runtime_error("Cannot coerce between these types in codegen!");
+}
+
 inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& builder)
 {
     if (type == "int")    return builder.getInt32Ty();
-    if (type == "string") return builder.getInt8Ty()->getPointerTo();
+    if (type == "short")  return builder.getInt16Ty();
+    if (type == "long")   return builder.getInt64Ty();
+    if (type == "byte")   return builder.getInt8Ty();
+    if (type == "double") return builder.getDoubleTy();
+    if (type == "float")  return builder.getFloatTy();
     if (type == "bool")   return builder.getInt1Ty();
+    if (type == "string") return builder.getInt8Ty()->getPointerTo();
 
-    throw std::runtime_error("Unknow type for codegen: " + type);
+    throw std::runtime_error("Unknown type for codegen: " + type);
 }
 
 class AssigementStatement : public Statement
@@ -153,6 +173,7 @@ public:
                 std::runtime_error("Variable " + name + " not found!");
 
             llvm::Value* val = expression->codegen(context);
+            val = coerceToType(val, it->second->getAllocatedType(), context.builder);
             context.builder.CreateStore(val, it->second);
             return;
         }
@@ -165,6 +186,7 @@ public:
         if (expression)
         {
             llvm::Value* val = expression->codegen(context);
+            val = coerceToType(val, llvmType, context.builder);
             context.builder.CreateStore(val, alloc);
         }
     }

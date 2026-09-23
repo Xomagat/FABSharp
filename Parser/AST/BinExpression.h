@@ -8,6 +8,8 @@
 #include <string>
 #include <variant>
 
+#include "AssigementStatement.h"
+
 #include "../../libs/Environment.h"
 #include "../../libs/NumberValue.h"
 #include "../../libs/StringValue.h"
@@ -73,13 +75,36 @@ public:
 
     llvm::Value *codegen(CodegenContext &context) const override
     {
+        llvm::Value* left = expr1->codegen(context);
+        llvm::Value* right = expr2->codegen(context);
+
+        bool isFloat = left->getType()->isDoubleTy() || right->getType()->isDoubleTy();
+
+        if (isFloat)
+        {
+            left  = coerceToType(left,  context.builder.getDoubleTy(), context.builder);
+            right = coerceToType(right, context.builder.getDoubleTy(), context.builder);
+
+            switch (op)
+            {
+            case '+': return context.builder.CreateFAdd(left, right);
+            case '-': return context.builder.CreateFSub(left, right);
+            case '*': return context.builder.CreateFMul(left, right);
+            case '/': return context.builder.CreateFDiv(left, right);
+            default: throw std::runtime_error("Codegen for this operator not implemented yet!");
+            }
+        }
+
+        if (!left->getType()->isIntegerTy() || !right->getType()->isIntegerTy())
+            throw std::runtime_error("Codegen only supports integer/float arithmetic for now!");
+
         switch (op)
         {
-            case '+': return context.builder.CreateAdd(expr1->codegen(context), expr2->codegen(context));
-            case '-': return context.builder.CreateSub(expr1->codegen(context), expr2->codegen(context));
-            case '*': return context.builder.CreateMul(expr1->codegen(context), expr2->codegen(context));
-            case '/': return context.builder.CreateSDiv(expr1->codegen(context), expr2->codegen(context));
-            default: throw std::runtime_error("Unknown operation!");
+        case '+': return context.builder.CreateAdd(left, right);
+        case '-': return context.builder.CreateSub(left, right);
+        case '*': return context.builder.CreateMul(left, right);
+        case '/': return context.builder.CreateSDiv(left, right);
+        default: throw std::runtime_error("Codegen for this operator not implemented yet!");
         }
     }
 
