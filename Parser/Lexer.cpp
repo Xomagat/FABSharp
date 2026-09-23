@@ -23,6 +23,13 @@ Lexer::Lexer(std::string code)
         {";", token_type::SEMI},
         {".", token_type::COMMA},
 
+        {"+=", token_type::PLUSEQ},
+        {"-=", token_type::MINUSEQ},
+        {"*=", token_type::MULTEQ},
+        {"/=", token_type::DIVEQ},
+        {"^=", token_type::POWEQ},
+        {"%=", token_type::MODEQ},
+
         {"{", token_type::LBRACKET},
         {"}", token_type::RBRACKET},
         {"(", token_type::LPARENT},

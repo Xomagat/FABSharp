@@ -6,7 +6,7 @@
 #define FABSHARP_TOKENTYPE_H
 
 #include <string>
-#include <vector>
+#include <unordered_map>
 
 // Real tokens
 enum token_type
@@ -39,6 +39,12 @@ enum token_type
     POW,            // ^
     MOD,            // %
     EQ,             // =
+    PLUSEQ,         // +=
+    MINUSEQ,        // -=
+    MULTEQ,         // *=
+    DIVEQ,          // /=
+    POWEQ,          // ^=
+    MODEQ,          // %=
     CEQ,            // ==
     NOT,            // !
     NEQ,            // !=
@@ -62,17 +68,60 @@ enum token_type
 };
 
 // Tokens for error
-inline std::vector<std::string> tokens_string = {
-    "number", "hex_number", "var_id", "text",
-    "write", "writeln", "input_in", "if", "else","type",
-    "while", "for", "do", "break", "continue", "define",
-    "return", "null",
-    "+", "-", "*", "/",
-    "^", "=", "==", "!",
-    "!=", ";", ",", "<", ">",
-    "<=", ">=", "&&", "||",
-    "(", ")", "{", "}",
-    "end of file",
+inline std::unordered_map<token_type, std::string> tokens_string = {
+    {NUMBER,     "number"},
+    {HEX_NUMBER, "hex_number"},
+    {WORD,       "var_id"},
+    {TEXT,       "text"},
+
+    {WRITE,      "write"},
+    {WRITELN,    "writeln"},
+    {INPUT_IN,   "input_in"},
+    {IF,         "if"},
+    {ELSE,       "else"},
+    {TYPES,      "type"},
+    {WHILE,      "while"},
+    {FOR,        "for"},
+    {DO,         "do"},
+    {BREAK,      "break"},
+    {CONTINUE,   "continue"},
+    {DEFINE,     "define"},
+    {RETURN,     "return"},
+    {NULLVAL,    "null"},
+
+    {PLUS,       "+"},
+    {MINUS,      "-"},
+    {MULT,       "*"},
+    {DIV,        "/"},
+    {POW,        "^"},
+    {MOD,        "%"},
+    {EQ,         "="},
+    {PLUSEQ,     "+="},
+    {MINUSEQ,    "-="},
+    {MULTEQ,     "*="},
+    {DIVEQ,      "/="},
+    {POWEQ,      "^="},
+    {MODEQ,      "%="},
+    {CEQ,        "=="},
+    {NOT,        "!"},
+    {NEQ,        "!="},
+    {SEMI,       ";"},
+    {COMMA,      ","},
+    {LT,         "<"},
+    {GT,         ">"},
+    {LTEQ,       "<="},
+    {GTEQ,       ">="},
+    {AMP,        "&"},
+    {AND,        "&&"},
+    {BAR,        "|"},
+    {OR,         "||"},
+
+    {LPARENT,    "("},
+    {RPARENT,    ")"},
+    {LBRACKET,   "{"},
+    {RBRACKET,   "}"},
+
+    {eof,        "end of file"},
 };
 
 #endif //FABSHARP_TOKENTYPE_H

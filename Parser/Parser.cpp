@@ -137,16 +137,38 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
 
         return std::make_unique<AssigementStatement>(type, name, std::move(expr));
     }
-    else if (current.get_type() == token_type::WORD && get(1).get_type() == token_type::EQ)
+    else if (current.get_type() == token_type::WORD)
     {
-        std::string name = consume(token_type::WORD).get_text();
-        consume(token_type::EQ);
+        std::string name = current.get_text();
 
-        std::unique_ptr<Expression> expr = expression();
-        if (!match(token_type::SEMI) && !no_semi)
-            throw std::runtime_error("You miss the ;");
+        if (get(1).get_type() == token_type::EQ)
+        {
+            consume(token_type::WORD);
+            consume(token_type::EQ);
+            std::unique_ptr<Expression> expr = expression();
+            if (!match(token_type::SEMI) && !no_semi)
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<AssigementStatement>("", name, std::move(expr));
+        }
 
-        return std::make_unique<AssigementStatement>("", name, std::move(expr));
+        static const std::unordered_map<token_type, char> compoundOps = {
+            {token_type::PLUSEQ, '+'}, {token_type::MINUSEQ, '-'},
+            {token_type::MULTEQ, '*'}, {token_type::DIVEQ, '/'},
+            {token_type::POWEQ, '^'}, {token_type::MODEQ, '%'},
+        };
+
+        auto it = compoundOps.find(get(1).get_type());
+        if (it != compoundOps.end())
+        {
+            consume(token_type::WORD);
+            pos++;
+            std::unique_ptr<Expression> right = expression();
+            auto binExpr = std::make_unique<BinExpression>(it->second,
+                std::make_unique<VariableExpression>(name), std::move(right));
+            if (!match(token_type::SEMI) && !no_semi)
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<AssigementStatement>("", name, std::move(binExpr));
+        }
     }
 
     throw std::runtime_error("Variable does have name or type!");

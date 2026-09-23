@@ -1,7 +1,6 @@
-int a = 0;
-
 define main()
 {
+    int a = 0;
     writeln a;
     a += 2;
     writeln a;
