@@ -15,14 +15,20 @@
 
 #include <filesystem>
 
+// App Settings
+#define VERSION "0.1"
+
+// System vars
 static bool is_compiled = false;
 
+// Functions
 void info()
 {
-    std::cout << "FAB# Interpreter\tv0.3" << std::endl
+    std::cout << "FAB# Interpreter(& Compiler)\tv" << VERSION << std::endl
               << std::endl
               << "Start arguments:" << std::endl
-              << "--help/-h - show this messege" << std::endl
+              << "--help/-h\t\t- show this message" << std::endl
+              << "--compile/-cmp\t\t- change mode to compile" << std::endl
               << std::endl
               << "How run the script?" << std::endl
               << "interpreter_path script_path.fab" << std::endl;
@@ -32,6 +38,11 @@ int main(int argc, char** argv)
 {
     if (argc > 1)
     {
+        if (std::strcmp(argv[1], "--version") == 0 || std::strcmp(argv[1], "-v") == 0)
+        {
+            std::cout << "FAB# Interpreter(& Compiler)\tv" << VERSION << std::endl;
+            return 0;
+        }
         if (std::strcmp(argv[1], "--help") == 0 || std::strcmp(argv[1], "-h") == 0)
         {
             info();
@@ -68,11 +79,9 @@ int main(int argc, char** argv)
                 compile(expression, name.path().filename().string());
 
                 std::string cmd = "\"\"C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.exe\" "
-                                "" + name.path().filename().string() + ".obj /out:" + name.path().string().substr(0, name.path().string().rfind('.'))
-                                + ".exe /subsystem:console /defaultlib:libcmt "
-                                "/LIBPATH:\"C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/lib/x64\" "
-                                "/LIBPATH:\"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/um/x64\" "
-                                "/LIBPATH:\"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.26100.0/ucrt/x64\"\"";
+                "" + name.path().filename().string() + ".obj /out:" + name.path().string().substr(0, name.path().string().rfind('.'))
+                + ".exe /subsystem:console /defaultlib:libcmt "
+                "/LIBPATH:\"...\" /LIBPATH:\"...\" /LIBPATH:\"...\"\"";
 
                 system(cmd.c_str());
 

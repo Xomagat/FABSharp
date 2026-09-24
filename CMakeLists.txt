@@ -47,3 +47,9 @@ add_executable(fab main.cpp
 
 llvm_map_components_to_libnames(llvm_libs core support target x86asmparser x86codegen)
 target_link_libraries(fab ${llvm_libs})
+
+if (WIN32)
+    target_link_options(fab PRIVATE -static-libgcc -static-libstdc++)
+elseif (UNIX)
+    target_link_options(fab PRIVATE -static)
+endif()
