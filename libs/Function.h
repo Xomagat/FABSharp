@@ -24,12 +24,14 @@ public:
 class UserDefineFunction : public Function
 {
 private:
+    std::string type;
     std::vector<std::string> arg_types;
     std::vector<std::string> arg_names;
     std::shared_ptr<Statement> body;
 
 public:
-    explicit UserDefineFunction(std::vector<std::string> arg_types, std::vector<std::string> arg_names, std::shared_ptr<Statement> body) : arg_types(arg_types), arg_names(arg_names), body(std::move(body)) {}
+    explicit UserDefineFunction(std::string type, std::vector<std::string> arg_types, std::vector<std::string> arg_names, std::shared_ptr<Statement> body)
+    : type(type), arg_types(arg_types), arg_names(arg_names), body(std::move(body)) {}
 
     int get_names_size()
     {
@@ -54,11 +56,22 @@ public:
         {
             Environment local(&env);
             body->execute(local);
+
+            if (type == "void")
+                return std::make_unique<NullValue>();
             return nullptr;
         }
         catch (ReturnException& re)
         {
-            return re.take_value();
+            std::unique_ptr<Value> result = re.take_value();
+
+            if (type == "void")
+                return std::make_unique<NullValue>();
+
+            if (!match_type(type, result.get()))
+                throw std::runtime_error("Return type mismatch: expected " + type + "!");
+
+            return coercers.at(type)(result.get());
         }
     }
 };

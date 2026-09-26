@@ -22,23 +22,29 @@ public:
     {
         expr->eval(env);
     }
+
+    void codegen(CodegenContext &context) const override
+    {
+        expr->codegen(context);
+    }
 };
 
 class FunctionDefineStatement : public Statement
 {
 private:
+    std::string type;
     std::string name;
     std::vector<std::string> arg_names;
     std::vector<std::string> arg_types;
     std::shared_ptr<Statement> body;
 
 public:
-    explicit FunctionDefineStatement(std::string name, std::vector<std::string> arg_types, std::vector<std::string> arg_names, std::unique_ptr<Statement> body)
-        : name(name), arg_types(arg_types), arg_names(arg_names), body(std::move(body)) {}
+    explicit FunctionDefineStatement(std::string& type, std::string& name, std::vector<std::string>& arg_types, std::vector<std::string>& arg_names, std::unique_ptr<Statement> body)
+        : type(type), name(name), arg_types(arg_types), arg_names(arg_names), body(std::move(body)) {}
 
     void execute(Environment &env) const override
     {
-        Functions::define(name, std::make_unique<UserDefineFunction>(arg_types, arg_names, body));
+        Functions::define(name, std::make_unique<UserDefineFunction>(type, arg_types, arg_names, body));
     }
 
     void codegen(CodegenContext &context) const override
@@ -48,7 +54,7 @@ public:
             param_types.push_back(type_to_llvm(arg_type, context.builder));
 
         llvm::FunctionType* fn_type = llvm::FunctionType::get(
-            context.builder.getInt32Ty(), param_types, false);
+            type_to_llvm(type, context.builder), param_types, false);
 
         llvm::Function* function = llvm::Function::Create(
             fn_type, llvm::Function::ExternalLinkage, name, context.module);
@@ -74,7 +80,12 @@ public:
         body->codegen(context);
 
         if (!context.builder.GetInsertBlock()->getTerminator())
-            context.builder.CreateRet(context.builder.getInt32(0));
+        {
+            if (type == "void")
+                context.builder.CreateRetVoid();
+            else
+                context.builder.CreateRet(llvm::Constant::getNullValue(type_to_llvm(type, context.builder)));
+        }
 
         context.variables = save_variables;
         context.builder.SetInsertPoint(save_insert_block);

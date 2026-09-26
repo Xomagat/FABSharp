@@ -48,6 +48,7 @@ Lexer::Lexer(std::string code)
 
         {"&&", token_type::AND},
         {"||", token_type::OR},
+        {"->", token_type::ARROW},
     };
 
     this->code = code;
@@ -131,6 +132,7 @@ void Lexer::tokenize_word()
         {"byte",    token_type::TYPES},
         {"string",  token_type::TYPES},
         {"bool",    token_type::TYPES},
+        {"void",    token_type::TYPES},
     };
 
     auto it = keywords.find(buffer);

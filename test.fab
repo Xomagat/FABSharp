@@ -1,4 +1,11 @@
-define main()
+define print(string text) -> void
 {
-    writeln "Hello, World!";
+    write text;
+}
+
+define main() -> int
+{
+    print("Hello, World!");
+
+    return 0;
 }

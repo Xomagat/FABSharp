@@ -118,6 +118,7 @@ inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm:
 
 inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& builder)
 {
+    if (type == "void")   return builder.getVoidTy();
     if (type == "int")    return builder.getInt32Ty();
     if (type == "short")  return builder.getInt16Ty();
     if (type == "long")   return builder.getInt64Ty();
@@ -143,6 +144,9 @@ public:
     void execute(Environment& env) const override
     {
         std::unique_ptr<Value> result;
+
+        if (type == "void")
+            throw std::runtime_error("Cannot declare a variable of type 'void'!");
 
         if (expression)
         {
@@ -170,6 +174,9 @@ public:
 
     void codegen(CodegenContext &context) const override
     {
+        if (type == "void")
+            throw std::runtime_error("Cannot declare a variable of type 'void'!");
+
         if (type.empty())
         {
             auto it = context.variables.find(name);

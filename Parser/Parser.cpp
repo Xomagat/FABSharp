@@ -85,7 +85,9 @@ std::unique_ptr<Statement> Parser::statement()
         }
         case token_type::RETURN: {
             consume(token_type::RETURN);
-            std::unique_ptr<Expression> expr = expression();
+            std::unique_ptr<Expression> expr = nullptr;
+            if (get(0).get_type() != token_type::SEMI)
+                expr = expression();
             if (!match(token_type::SEMI))
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<ReturnStatement>(std::move(expr));
@@ -243,6 +245,7 @@ std::unique_ptr<Statement> Parser::block()
 
 std::unique_ptr<FunctionDefineStatement> Parser::define_function()
 {
+    std::string type = "void";
     std::string name = consume(token_type::WORDS).get_text();
     consume(token_type::LPARENT);
 
@@ -257,9 +260,13 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function()
         arg_name.push_back(consume(token_type::WORDS).get_text());
         match(token_type::COMMA);
     }
+
+    if (match(token_type::ARROW))
+        type = consume(token_type::TYPES).get_text();
+
     std::unique_ptr<Statement> body = statement_or_block();
 
-    return std::make_unique<FunctionDefineStatement>(name, arg_type, arg_name, std::move(body));
+    return std::make_unique<FunctionDefineStatement>(type, name, arg_type, arg_name, std::move(body));
 }
 
 std::unique_ptr<Expression> Parser::function()

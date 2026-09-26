@@ -8,6 +8,7 @@
 #include "Expression.h"
 #include "Statement.h"
 
+#include "../../libs/NullValue.h"
 #include "../../libs/Value.h"
 
 class ReturnException
@@ -33,12 +34,17 @@ public:
 
     void execute(Environment &env) const override
     {
-        throw ReturnException(expr->eval(env));
+        if (expr)
+            throw ReturnException(expr->eval(env));
+        else
+            throw ReturnException(std::make_unique<NullValue>());
     }
 
     void codegen(CodegenContext &context) const override
     {
-        llvm::Value* val = expr->codegen(context);
-        context.builder.CreateRet(val);
+        if (expr)
+            context.builder.CreateRet(expr->codegen(context));
+        else
+            context.builder.CreateRetVoid();
     }
 };

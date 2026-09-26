@@ -60,6 +60,7 @@ enum token_type
     AND,            // &&
     BAR,            // |
     OR,             // ||
+    ARROW,          // ->
 
     LPARENT,        // (
     RPARENT,        // )
@@ -117,6 +118,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {AND,        "&&"},
     {BAR,        "|"},
     {OR,         "||"},
+    {ARROW,      "->"},
 
     {LPARENT,    "("},
     {RPARENT,    ")"},
