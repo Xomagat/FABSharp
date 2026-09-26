@@ -36,12 +36,19 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, std::string na
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
 
-    auto targetTriple = llvm::sys::getDefaultTargetTriple();
+    std::string targetTriple = "x86_64-w64-windows-gnu";
+
     std::string error;
     auto target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
 
+    if (!target)
+    {
+        std::cerr << "Target lookup failed: " << error << std::endl;
+        return;
+    }
+
     auto targetMachine = target->createTargetMachine(
-        targetTriple, "generic", "", llvm::TargetOptions(), std::optional<llvm::Reloc::Model>());
+    targetTriple, "generic", "", llvm::TargetOptions(), std::optional<llvm::Reloc::Model>());
 
     module.setDataLayout(targetMachine->createDataLayout());
     module.setTargetTriple(llvm::Triple(targetTriple));
