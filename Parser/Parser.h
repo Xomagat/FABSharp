@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <fstream>
+#include <filesystem>
 
 #include "AST/BinExpression.h"
 #include "AST/ConditionalExpression.h"
@@ -25,8 +27,10 @@
 #include "AST/ReturnStatement.h"
 #include "AST/FunctionStatement.h"
 #include "AST/AssigementStatement.h"
-
 #include "AST/IOStatement.h"
+#include "AST/UseStatement.h"
+
+#include "../libs/STDLibInfo.h"
 
 #include "Token.h"
 #include "TokenType.h"
@@ -69,7 +73,9 @@ private:
 
     Token consume(token_type type);
 
-public:
+    void load_stdlib_manifest(const std::filesystem::path &path);
+
+  public:
     Parser(std::vector<Token> tokens);
 
     std::vector<std::unique_ptr<Statement>> parse();

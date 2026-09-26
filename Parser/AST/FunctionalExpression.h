@@ -9,6 +9,7 @@
 #include "AssigementStatement.h"
 
 #include "Expression.h"
+#include "../../libs/STDLibInfo.h"
 #include "../../libs/Functions.h"
 
 class FunctionalExpression : public Expression
@@ -63,15 +64,33 @@ public:
 
     llvm::Value *codegen(CodegenContext &context) const override
     {
-        auto it = context.functions.find(name);
-        if (it == context.functions.end())
-            throw std::runtime_error("Function {" + name + "} not found (codegen)!");
-
         std::vector<llvm::Value*> args_values;
         for (auto& arg : args)
             args_values.push_back(arg->codegen(context));
 
-        return context.builder.CreateCall(it->second, args_values);
+        auto it = context.functions.find(name);
+        if (it != context.functions.end())
+        {
+            return context.builder.CreateCall(it->second, args_values);
+        }
+
+        auto libIt = stdlib_symbols.find(name);
+        if (libIt != stdlib_symbols.end())
+        {
+            std::vector<llvm::Type*> param_types;
+            for (auto& t : libIt->second.arg_types)
+                param_types.push_back(type_to_llvm(t, context.builder));
+
+            auto fnType = llvm::FunctionType::get(
+                type_to_llvm(libIt->second.return_type, context.builder), param_types, false);
+            auto fn = context.module.getOrInsertFunction(libIt->second.symbol, fnType);
+
+            std::vector<llvm::Value*> coerced_args;
+            for (size_t i = 0; i < args_values.size(); i++)
+                coerced_args.push_back(coerceToType(args_values[i], param_types[i], context.builder));
+
+            return context.builder.CreateCall(fn, coerced_args);
+        }
     }
 
     std::string to_str() const override

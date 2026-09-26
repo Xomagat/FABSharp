@@ -1,11 +1,9 @@
-define print(string text) -> void
-{
-    write text;
-}
+use math;
 
 define main() -> int
 {
-    print("Hello, World!");
+    writeln pow(2, 5);
+    writeln sqrt(4);
 
     return 0;
 }

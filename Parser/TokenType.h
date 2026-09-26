@@ -17,6 +17,7 @@ enum token_type
     TEXT,           // Base string
 
     // keywords
+    USE,            // Import files or libs
     WRITE,          // Output command
     WRITELN,        // Output command whit newline
     INPUT_IN,       // Input command

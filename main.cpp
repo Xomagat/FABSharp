@@ -102,14 +102,16 @@ int main(int argc, char** argv)
                 std::string exeFile = name.path().string().substr(0, name.path().string().rfind('.')) + ".exe";
 
                 std::string cmd = "\"\"" + (toolsPath / "lld-link.exe").string() + "\" "
-                   "\"" + (toolsPath / "crt" / "crt2.o").string() + "\" "
-                   "\"" + (toolsPath / "crt" / "crtbegin.o").string() + "\" "
-                   "\"" + objFile + "\" "
-                   "\"" + (toolsPath / "crt" / "crtend.o").string() + "\" "
-                   "/out:\"" + exeFile + "\""
-                   " /subsystem:console /entry:mainCRTStartup "
-                   "/LIBPATH:\"" + (toolsPath / "libs").string() + "\" "
-                   "libmingw32.a libmingwex.a libmsvcrt.a libkernel32.a libgcc.a\""; // <-- уберите последнюю \"
+                                   "\"" + (toolsPath / "crt" / "crt2.o").string() + "\" "
+                                   "\"" + (toolsPath / "crt" / "crtbegin.o").string() + "\" "
+                                   "\"" + objFile + "\" "
+                                   "\"" + (toolsPath / "crt" / "crtend.o").string() + "\" "
+                                   "/out:\"" + exeFile + "\""
+                                   " /subsystem:console /entry:mainCRTStartup "
+                                   "/LIBPATH:\"" + (toolsPath / "libs").string() + "\" "
+                                   "libmingw32.a libmingwex.a libmsvcrt.a libkernel32.a libgcc.a "
+                                   "/LIBPATH:\"" + (get_executable_dir() / "lib").string() + "\" "
+                                   "fabstd.lib\"";
 
                 system(cmd.c_str());
 

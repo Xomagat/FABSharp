@@ -109,6 +109,7 @@ void Lexer::tokenize_word()
     }
 
     static const std::unordered_map<std::string, token_type> keywords = {
+        {"use",     token_type::USE},
         {"write",   token_type::WRITE},
         {"writeln", token_type::WRITELN},
         {"input_in",token_type::INPUT_IN},

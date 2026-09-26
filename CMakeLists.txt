@@ -44,6 +44,19 @@ add_executable(fab main.cpp
         CodeGen/CodegenContext.h
         CodeGen/Compile.cpp
         CodeGen/Compile.h
+        libs/STDLibInfo.h
+        Parser/AST/UseStatement.h
+        lib/math.cpp
+)
+
+add_library(fabstd STATIC
+        lib/math.cpp
+)
+
+set_target_properties(fabstd PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+        ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/lib"
+        ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/lib"
 )
 
 llvm_map_components_to_libnames(llvm_libs core support target x86asmparser x86codegen)
@@ -54,3 +67,5 @@ if (WIN32)
 elseif (UNIX)
     target_link_options(fab PRIVATE -static)
 endif()
+
+add_dependencies(fab fabstd)

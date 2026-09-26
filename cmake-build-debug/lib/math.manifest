@@ -1,0 +1,3 @@
+# Math functions    v0.1
+pow fab_pow double : double, double
+sqrt fab_sqrt double : double

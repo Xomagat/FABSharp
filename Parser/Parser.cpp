@@ -34,6 +34,20 @@ std::unique_ptr<Statement> Parser::statement()
 {
     switch (get(0).get_type())
     {
+        case token_type::USE: {
+            consume(token_type::USE);
+            std::string name = consume(token_type::WORDS).get_text();
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+
+            if (!loaded_libs.contains(name))
+            {
+                load_stdlib_manifest(std::filesystem::path("lib/" + name + ".manifest"));
+                loaded_libs.insert(name);
+            }
+
+            return std::make_unique<UseStatement>(name);
+        }
         case token_type::WRITE: {
             consume(token_type::WRITE);
             std::unique_ptr<Expression> expr = expression();
@@ -535,4 +549,26 @@ Token Parser::consume(token_type type)
 
     pos++;
     return t;
+}
+
+void Parser::load_stdlib_manifest(const std::filesystem::path& path)
+{
+    std::ifstream file(path);
+    std::string line;
+    while (std::getline(file, line))
+    {
+        if (line.empty() || line[0] == '#') continue;
+        std::istringstream iss(line);
+        std::string fab_name, symbol, ret, colon, arg;
+        iss >> fab_name >> symbol >> ret >> colon;
+
+        std::vector<std::string> args;
+        while (iss >> arg)
+        {
+            if (arg.back() == ',') arg.pop_back();
+            args.push_back(arg);
+        }
+
+        stdlib_symbols[fab_name] = {symbol, ret, args};
+    }
 }
