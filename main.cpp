@@ -115,9 +115,11 @@ int main(int argc, char** argv)
 
                 cmd = "\".\\" + name.path().string().substr(0, name.path().string().rfind('.')) + ".exe\"";
 
-                system(cmd.c_str());
+                int exit_code = system(cmd.c_str());
 
                 std::filesystem::remove(name.path().string() + ".obj");
+
+                return exit_code;
             }
             else
             {
