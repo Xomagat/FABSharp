@@ -82,12 +82,15 @@ public:
         llvm::Value* left = expr1->codegen(context);
         llvm::Value* right = expr2->codegen(context);
 
-        bool isFloat = left->getType()->isDoubleTy() || right->getType()->isDoubleTy();
+        bool isFloat = left->getType()->isFloatingPointTy() || right->getType()->isFloatingPointTy();
+        llvm::Type* fp_type = (left->getType()->isDoubleTy() || right->getType()->isDoubleTy())
+                    ? left->getType()->getContext(), context.builder.getDoubleTy()
+                    : context.builder.getFloatTy();
 
         if (isFloat)
         {
-            left  = coerceToType(left,  context.builder.getDoubleTy(), context.builder);
-            right = coerceToType(right, context.builder.getDoubleTy(), context.builder);
+            left  = coerceToType(left,  fp_type, context.builder);
+            right = coerceToType(right, fp_type, context.builder);
 
             switch (op)
             {

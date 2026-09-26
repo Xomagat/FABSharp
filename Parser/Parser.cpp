@@ -476,6 +476,10 @@ std::unique_ptr<Expression> Parser::primary()
     }
     if (match(token_type::NULLVAL))
         return std::make_unique<ValueExpression>(NullTag{});
+    if (match(token_type::TRUEVAL))
+        return std::make_unique<ValueExpression>(BoolTag{true});
+    if (match(token_type::FALSEVAL))
+        return std::make_unique<ValueExpression>(BoolTag{false});
     if (match(token_type::HEX_NUMBER))
         return std::make_unique<ValueExpression>(static_cast<int>(std::stoll(current.get_text(), nullptr, 16)));
     if (current.get_type() == token_type::WORD && get(1).get_type() == token_type::LPARENT)

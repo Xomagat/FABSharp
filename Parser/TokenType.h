@@ -31,6 +31,8 @@ enum token_type
     DEFINE,         // Functions command (define)
     RETURN,         // Functions command (return)
     NULLVAL,        // Value null
+    TRUEVAL,        // Value true
+    FALSEVAL,       // Value false
 
     PLUS,           // +
     MINUS,          // -

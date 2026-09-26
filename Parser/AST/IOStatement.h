@@ -33,8 +33,10 @@ public:
 
         llvm::Value* val = expr->codegen(context);
 
-        if (val->getType()->isDoubleTy())
+        if (val->getType()->isFloatingPointTy())
         {
+            if (val->getType()->isFloatTy())
+                val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
             llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%f\n");
             context.builder.CreateCall(printfFunc, {fmt, val});
         }
@@ -72,8 +74,10 @@ public:
 
         llvm::Value* val = expr->codegen(context);
 
-        if (val->getType()->isDoubleTy())
+        if (val->getType()->isFloatingPointTy())
         {
+            if (val->getType()->isFloatTy())
+                val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
             llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%f");
             context.builder.CreateCall(printfFunc, {fmt, val});
         }

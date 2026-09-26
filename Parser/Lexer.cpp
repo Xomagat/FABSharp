@@ -121,6 +121,8 @@ void Lexer::tokenize_word()
         {"define",  token_type::DEFINE},
         {"return",  token_type::RETURN},
         {"null",    token_type::NULLVAL},
+        {"true",    token_type::TRUEVAL},
+        {"false",   token_type::FALSEVAL},
         {"int",     token_type::TYPES},
         {"double",  token_type::TYPES},
         {"float",   token_type::TYPES},

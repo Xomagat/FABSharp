@@ -102,12 +102,16 @@ inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm:
     llvm::Type* srcType = val->getType();
     if (srcType == targetType) return val;
 
-    if (srcType->isIntegerTy() && targetType->isDoubleTy())
-        return builder.CreateSIToFP(val, targetType);      // int -> double
-    if (srcType->isDoubleTy() && targetType->isIntegerTy())
-        return builder.CreateFPToSI(val, targetType);      // double -> int
+    if (srcType->isIntegerTy() && targetType->isFloatingPointTy())
+        return builder.CreateSIToFP(val, targetType);
+    if (srcType->isFloatingPointTy() && targetType->isIntegerTy())
+        return builder.CreateFPToSI(val, targetType);
+    if (srcType->isFloatingPointTy() && targetType->isFloatingPointTy())
+        return targetType->isDoubleTy()
+            ? builder.CreateFPExt(val, targetType)
+            : builder.CreateFPTrunc(val, targetType);
     if (srcType->isIntegerTy() && targetType->isIntegerTy())
-        return builder.CreateIntCast(val, targetType, true); // int16 <-> int32 <-> int64
+        return builder.CreateIntCast(val, targetType, true);
 
     throw std::runtime_error("Cannot coerce between these types in codegen!");
 }
@@ -172,7 +176,7 @@ public:
             if (it == context.variables.end())
                 std::runtime_error("Variable " + name + " not found!");
 
-            llvm::Value* val = expression->codegen(context);
+            llvm::Value* val = expression->is_null_literal() ? llvm::Constant::getNullValue(type_to_llvm(type, context.builder)) : expression->codegen(context);
             val = coerceToType(val, it->second->getAllocatedType(), context.builder);
             context.builder.CreateStore(val, it->second);
             return;
@@ -185,7 +189,7 @@ public:
 
         if (expression)
         {
-            llvm::Value* val = expression->codegen(context);
+            llvm::Value* val = expression->is_null_literal() ? llvm::Constant::getNullValue(llvmType) : expression->codegen(context);
             val = coerceToType(val, llvmType, context.builder);
             context.builder.CreateStore(val, alloc);
         }

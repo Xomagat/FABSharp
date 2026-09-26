@@ -84,12 +84,15 @@ public:
         llvm::Value* left = expr1->codegen(ctx);
         llvm::Value* right = expr2->codegen(ctx);
 
-        bool isFloat = left->getType()->isDoubleTy() || right->getType()->isDoubleTy();
+        bool isFloat = left->getType()->isFloatingPointTy() || right->getType()->isFloatingPointTy();
+        llvm::Type* fp_type = (left->getType()->isDoubleTy() || right->getType()->isDoubleTy())
+                    ? left->getType()->getContext(), ctx.builder.getDoubleTy()
+                    : ctx.builder.getFloatTy();
 
         if (isFloat)
         {
-            left  = coerceToType(left,  ctx.builder.getDoubleTy(), ctx.builder);
-            right = coerceToType(right, ctx.builder.getDoubleTy(), ctx.builder);
+            left  = coerceToType(left,  fp_type, ctx.builder);
+            right = coerceToType(right, fp_type, ctx.builder);
 
             if (op == "==") return ctx.builder.CreateFCmpOEQ(left, right);
             if (op == "!=") return ctx.builder.CreateFCmpONE(left, right);

@@ -1,7 +1,12 @@
 define main()
 {
-    int a = 0;
-    writeln a;
-    a += 2;
-    writeln a;
+    int i = null;
+    bool b = true;
+    float f = 3.14;
+
+    writeln i;
+    writeln b;
+    writeln f;
+
+    return 0;
 }

@@ -77,6 +77,11 @@ public:
         throw std::runtime_error("Codegen for this value type not implemented yet!");
     }
 
+    bool is_null_literal() const override
+    {
+        return dynamic_cast<NullValue*>(value.get()) != nullptr;
+    }
+
     std::string to_str() const override
     {
         return value->as_string();
