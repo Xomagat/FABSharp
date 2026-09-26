@@ -140,7 +140,7 @@ void Lexer::tokenize_word()
     }
     else
     {
-        add_token(token_type::WORD, buffer);
+        add_token(token_type::WORDS, buffer);
     }
 }
 

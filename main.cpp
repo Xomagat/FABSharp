@@ -5,6 +5,7 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 
 #include "Parser/Lexer.h"
 #include "Parser/Parser.h"
@@ -13,7 +14,24 @@
 
 #include "CodeGen/Compile.h"
 
-#include <filesystem>
+#ifdef _WIN32
+#include <windows.h>
+std::filesystem::path get_executable_dir()
+{
+    char buffer[MAX_PATH];
+    GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+    return std::filesystem::path(buffer).parent_path();
+}
+#else
+#include <unistd.h>
+std::filesystem::path get_executable_dir()
+{
+    char buffer[1024];
+    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+    buffer[len] = '\0';
+    return std::filesystem::path(buffer).parent_path();
+}
+#endif
 
 // App Settings
 #define VERSION "0.1"
@@ -76,12 +94,22 @@ int main(int argc, char** argv)
             {
                 auto name = std::filesystem::directory_entry(argv[1]);
 
-                compile(expression, name.path().filename().string());
+                compile(expression, name.path().string());
 
-                std::string cmd = "\"\"C:/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/bin/Hostx64/x64/link.exe\" "
-                "" + name.path().filename().string() + ".obj /out:" + name.path().string().substr(0, name.path().string().rfind('.'))
-                + ".exe /subsystem:console /defaultlib:libcmt "
-                "/LIBPATH:\"...\" /LIBPATH:\"...\" /LIBPATH:\"...\"\"";
+                auto toolsPath = get_executable_dir() / "tools";
+
+                std::string objFile = name.path().string() + ".obj";
+                std::string exeFile = name.path().string().substr(0, name.path().string().rfind('.')) + ".exe";
+
+                std::string cmd = "\"\"" + (toolsPath / "lld-link.exe").string() + "\" "
+                   "\"" + (toolsPath / "crt" / "crt2.o").string() + "\" "
+                   "\"" + (toolsPath / "crt" / "crtbegin.o").string() + "\" "
+                   "\"" + objFile + "\" "
+                   "\"" + (toolsPath / "crt" / "crtend.o").string() + "\" "
+                   "/out:\"" + exeFile + "\""
+                   " /subsystem:console /entry:mainCRTStartup "
+                   "/LIBPATH:\"" + (toolsPath / "libs").string() + "\" "
+                   "libmingw32.a libmingwex.a libmsvcrt.a libkernel32.a libgcc.a\""; // <-- уберите последнюю \"
 
                 system(cmd.c_str());
 
@@ -89,7 +117,7 @@ int main(int argc, char** argv)
 
                 system(cmd.c_str());
 
-                std::filesystem::remove(name.path().filename().string() + ".obj");
+                std::filesystem::remove(name.path().string() + ".obj");
             }
             else
             {

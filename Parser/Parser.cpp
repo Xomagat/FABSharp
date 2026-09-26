@@ -50,7 +50,7 @@ std::unique_ptr<Statement> Parser::statement()
         }
         case token_type::INPUT_IN: {
             consume(token_type::INPUT_IN);
-            std::string name = consume(token_type::WORD).get_text();
+            std::string name = consume(token_type::WORDS).get_text();
             if (!match(token_type::SEMI))
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<InputInStatement>(name);
@@ -94,7 +94,7 @@ std::unique_ptr<Statement> Parser::statement()
             consume(token_type::DEFINE);
             return define_function();
         }
-        case token_type::WORD: {
+        case token_type::WORDS: {
             if (get(1).get_type() == token_type::LPARENT)
             {
                 std::unique_ptr<FunctionStatement> fn = std::make_unique<FunctionStatement>(function());
@@ -121,10 +121,10 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
     // type name = 33; or type name;
     Token current = get(0);
 
-    if (current.get_type() == token_type::TYPES && get(1).get_type() == token_type::WORD)
+    if (current.get_type() == token_type::TYPES && get(1).get_type() == token_type::WORDS)
     {
         std::string type = consume(token_type::TYPES).get_text();
-        std::string name = consume(token_type::WORD).get_text();
+        std::string name = consume(token_type::WORDS).get_text();
         std::unique_ptr<Expression> expr;
 
         if (match(token_type::EQ))
@@ -137,13 +137,13 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
 
         return std::make_unique<AssigementStatement>(type, name, std::move(expr));
     }
-    else if (current.get_type() == token_type::WORD)
+    else if (current.get_type() == token_type::WORDS)
     {
         std::string name = current.get_text();
 
         if (get(1).get_type() == token_type::EQ)
         {
-            consume(token_type::WORD);
+            consume(token_type::WORDS);
             consume(token_type::EQ);
             std::unique_ptr<Expression> expr = expression();
             if (!match(token_type::SEMI) && !no_semi)
@@ -160,7 +160,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
         auto it = compoundOps.find(get(1).get_type());
         if (it != compoundOps.end())
         {
-            consume(token_type::WORD);
+            consume(token_type::WORDS);
             pos++;
             std::unique_ptr<Expression> right = expression();
             auto binExpr = std::make_unique<BinExpression>(it->second,
@@ -243,7 +243,7 @@ std::unique_ptr<Statement> Parser::block()
 
 std::unique_ptr<FunctionDefineStatement> Parser::define_function()
 {
-    std::string name = consume(token_type::WORD).get_text();
+    std::string name = consume(token_type::WORDS).get_text();
     consume(token_type::LPARENT);
 
     std::vector<std::string> arg_type;
@@ -254,7 +254,7 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function()
     while (!match(token_type::RPARENT))
     {
         arg_type.push_back(consume(token_type::TYPES).get_text());
-        arg_name.push_back(consume(token_type::WORD).get_text());
+        arg_name.push_back(consume(token_type::WORDS).get_text());
         match(token_type::COMMA);
     }
     std::unique_ptr<Statement> body = statement_or_block();
@@ -264,7 +264,8 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function()
 
 std::unique_ptr<Expression> Parser::function()
 {
-    std::string name = consume(token_type::WORD).get_text();
+    auto basic_string = consume(token_type::WORDS).get_text();
+    std::string name = basic_string;
     consume(token_type::LPARENT);
 
     std::unique_ptr<FunctionalExpression> function = std::make_unique<FunctionalExpression>(name);
@@ -482,11 +483,11 @@ std::unique_ptr<Expression> Parser::primary()
         return std::make_unique<ValueExpression>(BoolTag{false});
     if (match(token_type::HEX_NUMBER))
         return std::make_unique<ValueExpression>(static_cast<int>(std::stoll(current.get_text(), nullptr, 16)));
-    if (current.get_type() == token_type::WORD && get(1).get_type() == token_type::LPARENT)
+    if (current.get_type() == token_type::WORDS && get(1).get_type() == token_type::LPARENT)
         return function();
     if (match(token_type::TEXT))
         return std::make_unique<ValueExpression>(current.get_text());
-    if (match(token_type::WORD))
+    if (match(token_type::WORDS))
         return std::make_unique<VariableExpression>(current.get_text());
     if (match(token_type::LPARENT))
     {
