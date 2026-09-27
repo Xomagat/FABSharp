@@ -134,6 +134,7 @@ void Lexer::tokenize_word()
         {"string",  token_type::TYPES},
         {"bool",    token_type::TYPES},
         {"void",    token_type::TYPES},
+        {"const",   token_type::CONST},
     };
 
     auto it = keywords.find(buffer);

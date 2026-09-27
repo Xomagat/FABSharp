@@ -5,6 +5,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -24,4 +25,5 @@ struct CodegenContext
     std::unordered_map<std::string, llvm::AllocaInst*> variables;
     std::unordered_map<std::string, llvm::Function*> functions;
     std::vector<LoopTargets> loop_stack;
+    std::unordered_set<std::string> const_vars;
 };

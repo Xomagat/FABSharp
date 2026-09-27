@@ -151,10 +151,11 @@ class AssigementStatement : public Statement
 private:
     std::string type, name;
     std::unique_ptr<Expression> expression;
+    bool is_const;
 
 public:
-    explicit AssigementStatement(std::string type, std::string name, std::unique_ptr<Expression> expr) : type(std::move(type)), name(std::move(name)), expression(std::move(expr)) {
-    }
+    explicit AssigementStatement(std::string type, std::string name, std::unique_ptr<Expression> expr, bool is_const = false)
+    : type(std::move(type)), name(std::move(name)), expression(std::move(expr)), is_const(is_const) {}
 
     void execute(Environment& env) const override
     {
@@ -194,6 +195,9 @@ public:
 
         if (type.empty())
         {
+            if (context.const_vars.contains(name))
+                throw std::runtime_error("Cannot assign to const variable '" + name + "'!");
+
             auto it = context.variables.find(name);
             if (it == context.variables.end())
                 std::runtime_error("Variable " + name + " not found!");
@@ -215,5 +219,8 @@ public:
             val = coerceToType(val, llvmType, context.builder);
             context.builder.CreateStore(val, alloc);
         }
+
+        if (is_const)
+            context.const_vars.insert(name);
     }
 };

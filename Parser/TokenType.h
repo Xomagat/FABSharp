@@ -24,6 +24,7 @@ enum token_type
     IF,             // Conditional command (if)
     ELSE,           // Conditional command (else)
     TYPES,          // Types: int, string, bool and another
+    CONST,          // Create constants variables
     WHILE,          // Loop command (while)
     FOR,            // Loop command (for)
     DO,             // Loop command (do)
@@ -84,6 +85,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {IF,         "if"},
     {ELSE,       "else"},
     {TYPES,      "type"},
+    {CONST,      "const"},
     {WHILE,      "while"},
     {FOR,        "for"},
     {DO,         "do"},

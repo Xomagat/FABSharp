@@ -126,6 +126,9 @@ std::unique_ptr<Statement> Parser::statement()
         case token_type::TYPES: {
             return assigment_statement();
         }
+        case token_type::CONST: {
+            return assigment_statement();
+        }
         default: {
             throw std::runtime_error("Unexpected token: " + tokens_string[get(0).get_type()]);
         }
@@ -185,6 +188,20 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<AssigementStatement>("", name, std::move(binExpr));
         }
+    }
+    else if (current.get_type() == token_type::CONST && get(1).get_type() == token_type::TYPES
+             && get(2).get_type() == token_type::WORDS)
+    {
+        consume(token_type::CONST);
+        std::string type = consume(token_type::TYPES).get_text();
+        std::string name = consume(token_type::WORDS).get_text();
+        consume(token_type::EQ);
+        std::unique_ptr<Expression> expr = expression();
+
+        if (!match(token_type::SEMI) && !no_semi)
+            throw std::runtime_error("You miss the ;");
+
+        return std::make_unique<AssigementStatement>(type, name, std::move(expr), true);
     }
 
     throw std::runtime_error("Variable does have name or type!");

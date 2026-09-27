@@ -1,14 +1,9 @@
-use math;
-
 define main() -> int
 {
-    writeln pow(2, 5);
-    writeln sqrt(4);
-    writeln abs(-(-4));
-    writeln fabs(-(-4.0));
-    writeln ceil(4.5);
-    writeln floor(4.5);
-    writeln round(4.5);
+    const string text = "Hello, ";
+
+    write text;
+    writeln "World!";
 
     return 0;
 }

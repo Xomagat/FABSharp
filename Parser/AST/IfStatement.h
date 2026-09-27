@@ -93,10 +93,12 @@ public:
     void codegen(CodegenContext &context) const override
     {
         auto saveVar = context.variables;
+        auto saveConst = context.const_vars;
 
         for (auto& s : statements)
             s->codegen(context);
 
         context.variables = saveVar;
+        context.const_vars = saveConst;
     }
 };
