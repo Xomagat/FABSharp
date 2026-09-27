@@ -1,9 +1,13 @@
+use "fact.fab";
+
 define main() -> int
 {
-    const string text = "Hello, ";
-
-    write text;
-    writeln "World!";
+    for (int i = 1; i <= 10; i += 1)
+    {
+        write i;
+        write "! = ";
+        writeln factorial(i);
+    }
 
     return 0;
 }

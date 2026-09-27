@@ -7,13 +7,15 @@
 // vars
 
 // funcs
-Parser::Parser(std::vector<Token> tokens)
+Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir)
 {
     eof = Token(token_type::eof, "");
 
     this->tokens = tokens;
 
     size = tokens.size();
+
+    this->base_dir = base_dir;
 
     pos = 0;
 }
@@ -24,7 +26,13 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
 
     while (!match(token_type::eof))
     {
-        result.push_back(statement());
+        auto stmt = statement();
+
+        for (auto& imported : pending_imports)
+            result.push_back(std::move(imported));
+        pending_imports.clear();
+
+        result.push_back(std::move(stmt));
     }
 
     return result;
@@ -36,17 +44,37 @@ std::unique_ptr<Statement> Parser::statement()
     {
         case token_type::USE: {
             consume(token_type::USE);
-            std::string name = consume(token_type::WORDS).get_text();
-            if (!match(token_type::SEMI))
-                throw std::runtime_error("You miss the ;");
-
-            if (!loaded_libs.contains(name))
+            if (get(0).get_type() == token_type::WORDS)
             {
-                load_stdlib_manifest(std::filesystem::path("lib/" + name + ".manifest"));
-                loaded_libs.insert(name);
-            }
+                std::string name = consume(token_type::WORDS).get_text();
 
-            return std::make_unique<UseStatement>(name);
+                if (!loaded_libs.contains(name))
+                {
+                    load_stdlib_manifest("lib/" + name + ".manifest");
+                    loaded_libs.insert(name);
+                }
+
+                if (!match(token_type::SEMI))
+                    throw std::runtime_error("You miss the ;");
+
+                return std::make_unique<UseStatement>(name);
+            }
+            else if (get(0).get_type() == token_type::TEXT)
+            {
+                std::string path = (base_dir / consume(token_type::TEXT).get_text()).string();
+
+                if (!loaded_fab_modules.contains(path))
+                {
+                    auto module_statements = load_fab_module(path);
+                    for (auto& s : module_statements)
+                        pending_imports.push_back(std::move(s));
+                }
+
+                if (!match(token_type::SEMI))
+                    throw std::runtime_error("You miss the ;");
+
+                return std::make_unique<UseStatement>(path);
+            }
         }
         case token_type::WRITE: {
             consume(token_type::WRITE);
@@ -588,4 +616,23 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
 
         stdlib_symbols[mangle_name(fab_name, args)] = {symbol, ret, args};
     }
+}
+
+std::vector<std::unique_ptr<Statement>> Parser::load_fab_module(const std::filesystem::path& path)
+{
+    auto canonical = std::filesystem::canonical(path).string();
+
+    if (loaded_fab_modules.contains(canonical))
+        return {};
+
+    loaded_fab_modules.insert(canonical);
+
+    std::ifstream file(path);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+
+    auto tokens = Lexer(buffer.str()).tokenize();
+    Parser module_parser(tokens, path.parent_path());
+
+    return module_parser.parse();
 }

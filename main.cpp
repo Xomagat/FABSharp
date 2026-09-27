@@ -87,12 +87,14 @@ int main(int argc, char** argv)
 
         try
         {
+            auto name = std::filesystem::directory_entry(argv[1]);
+
             auto tokens = Lexer(input).tokenize();
-            auto expression = Parser(tokens).parse();
+            auto expression = Parser(tokens,
+                name.path().string().substr(0, name.path().string().rfind('\\'))).parse();
 
             if (is_compiled)
             {
-                auto name = std::filesystem::directory_entry(argv[1]);
 
                 compile(expression, name.path().string());
 

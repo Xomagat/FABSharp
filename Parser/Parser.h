@@ -32,6 +32,8 @@
 
 #include "../libs/STDLibInfo.h"
 
+#include "Lexer.h"
+
 #include "Token.h"
 #include "TokenType.h"
 
@@ -43,6 +45,10 @@ private:
 
     int pos;
     int size;
+
+    std::filesystem::path base_dir;
+
+    std::vector<std::unique_ptr<Statement>> pending_imports;
 
     Token get(int relative_position);
 
@@ -75,8 +81,10 @@ private:
 
     void load_stdlib_manifest(const std::filesystem::path &path);
 
+    std::vector<std::unique_ptr<Statement>> load_fab_module(const std::filesystem::path &path);
+
   public:
-    Parser(std::vector<Token> tokens);
+    Parser(std::vector<Token> tokens, std::filesystem::path base_dir);
 
     std::vector<std::unique_ptr<Statement>> parse();
 };

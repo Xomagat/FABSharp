@@ -17,3 +17,4 @@ struct StdlibFunctionInfo
 
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_symbols;
 inline std::unordered_set<std::string> loaded_libs;
+inline std::unordered_set<std::string> loaded_fab_modules;
