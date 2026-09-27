@@ -131,6 +131,21 @@ inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& buil
     throw std::runtime_error("Unknown type for codegen: " + type);
 }
 
+inline std::string llvm_to_type(llvm::Type* t)
+{
+    if (t->isVoidTy())                 return "void";
+    if (t->isIntegerTy(1))             return "bool";
+    if (t->isIntegerTy(8))             return "byte";
+    if (t->isIntegerTy(16))            return "short";
+    if (t->isIntegerTy(32))            return "int";
+    if (t->isIntegerTy(64))            return "long";
+    if (t->isFloatTy())                return "float";
+    if (t->isDoubleTy())               return "double";
+    if (t->isPointerTy())              return "string";
+
+    throw std::runtime_error("Cannot demangle llvm type for overload resolution!");
+}
+
 class AssigementStatement : public Statement
 {
 private:

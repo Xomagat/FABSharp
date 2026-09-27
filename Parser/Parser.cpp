@@ -569,6 +569,6 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
             args.push_back(arg);
         }
 
-        stdlib_symbols[fab_name] = {symbol, ret, args};
+        stdlib_symbols[mangle_name(fab_name, args)] = {symbol, ret, args};
     }
 }

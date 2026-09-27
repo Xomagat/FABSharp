@@ -68,13 +68,15 @@ public:
         for (auto& arg : args)
             args_values.push_back(arg->codegen(context));
 
-        auto it = context.functions.find(name);
-        if (it != context.functions.end())
-        {
-            return context.builder.CreateCall(it->second, args_values);
-        }
+        std::vector<std::string> arg_type_names;
+        for (auto* v : args_values)
+            arg_type_names.push_back(llvm_to_type(v->getType()));
 
-        auto libIt = stdlib_symbols.find(name);
+        auto it = context.functions.find(mangle_name(name, arg_type_names));
+        if (it != context.functions.end())
+            return context.builder.CreateCall(it->second, args_values);
+
+        auto libIt = stdlib_symbols.find(mangle_name(name, arg_type_names));
         if (libIt != stdlib_symbols.end())
         {
             std::vector<llvm::Type*> param_types;
@@ -91,6 +93,8 @@ public:
 
             return context.builder.CreateCall(fn, coerced_args);
         }
+
+        throw std::runtime_error("Unknown function or overload for codegen: " + name);
     }
 
     std::string to_str() const override

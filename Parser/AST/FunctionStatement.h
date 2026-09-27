@@ -59,7 +59,7 @@ public:
         llvm::Function* function = llvm::Function::Create(
             fn_type, llvm::Function::ExternalLinkage, name, context.module);
 
-        context.functions[name] = function;
+        context.functions[mangle_name(name, arg_types)] = function;
 
         llvm::BasicBlock* entry = llvm::BasicBlock::Create(context.context, "entry", function);
         auto save_insert_block = context.builder.GetInsertBlock();
