@@ -20,6 +20,12 @@
 #include "../Parser/AST/Statement.h"
 #include "CodegenContext.h"
 
-void compile(std::vector<std::unique_ptr<Statement>>& statements, std::string name);
+void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::string& name);
+
+#ifdef _WIN32
+inline constexpr const char* OBJ_EXT = ".obj";
+#else
+inline constexpr const char* OBJ_EXT = ".o";
+#endif
 
 #endif // FABSHARP_COMPILE_H

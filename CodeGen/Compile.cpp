@@ -1,6 +1,6 @@
 #include "Compile.h"
 
-void compile(std::vector<std::unique_ptr<Statement>>& statements, std::string name)
+void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::string& name)
 {
     llvm::LLVMContext context;
     llvm::Module module("fabsharp_module", context);
@@ -36,7 +36,13 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, std::string na
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
 
+#ifdef _WIN32
     std::string targetTriple = "x86_64-w64-windows-gnu";
+    const char* obj_ext = ".obj";
+#else
+    std::string targetTriple = llvm::sys::getDefaultTargetTriple();
+    const char* obj_ext = ".o";
+#endif
 
     std::string error;
     auto target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
@@ -48,13 +54,16 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, std::string na
     }
 
     auto targetMachine = target->createTargetMachine(
-    targetTriple, "generic", "", llvm::TargetOptions(), std::optional<llvm::Reloc::Model>());
+    targetTriple, "generic", "", llvm::TargetOptions(),
+    std::optional<llvm::Reloc::Model>(llvm::Reloc::PIC_));
 
     module.setDataLayout(targetMachine->createDataLayout());
     module.setTargetTriple(llvm::Triple(targetTriple));
 
     std::error_code EC;
-    llvm::raw_fd_ostream dest(name + ".obj", EC, llvm::sys::fs::OF_None);
+    if (EC) { std::cerr << "Cannot open output: " << EC.message() << std::endl; return; }
+
+    llvm::raw_fd_ostream dest(name + obj_ext, EC, llvm::sys::fs::OF_None);
 
     llvm::legacy::PassManager pass;
     targetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile);
