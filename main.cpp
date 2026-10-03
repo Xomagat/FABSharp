@@ -16,18 +16,19 @@
 
 #ifdef _WIN32
 #include <windows.h>
-std::filesystem::path get_executable_dir()
+inline std::filesystem::path get_executable_dir()
 {
     char buffer[MAX_PATH];
-    GetModuleFileNameA(nullptr, buffer, MAX_PATH);
-    return std::filesystem::path(buffer).parent_path();
+    DWORD len = GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+    return std::filesystem::path(std::string(buffer, len)).parent_path();
 }
 #else
 #include <unistd.h>
-std::filesystem::path get_executable_dir()
+inline std::filesystem::path get_executable_dir()
 {
-    char buffer[1024];
+    char buffer[4096];
     ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+    if (len < 0) return std::filesystem::current_path();
     buffer[len] = '\0';
     return std::filesystem::path(buffer).parent_path();
 }
@@ -58,7 +59,7 @@ int main(int argc, char** argv)
     {
         if (std::strcmp(argv[1], "--version") == 0 || std::strcmp(argv[1], "-v") == 0)
         {
-            std::cout << "FAB# Interpreter(& Compiler)\tv" << VERSION << std::endl;
+            std::cout << "FAB# v" << VERSION << std::endl;
             return 0;
         }
         if (std::strcmp(argv[1], "--help") == 0 || std::strcmp(argv[1], "-h") == 0)
@@ -66,10 +67,8 @@ int main(int argc, char** argv)
             info();
             return 0;
         }
-        if (std::strcmp(argv[2], "--compile") == 0 || std::strcmp(argv[2], "-cmp") == 0)
-        {
+        if (argc > 2 && (std::strcmp(argv[2], "--compile") == 0 || std::strcmp(argv[2], "-cmp") == 0))
             is_compiled = true;
-        }
 
         std::ifstream file(argv[1]);
         std::stringstream buffer;
@@ -89,9 +88,9 @@ int main(int argc, char** argv)
         {
             auto name = std::filesystem::directory_entry(argv[1]);
 
+            std::filesystem::path script_path = argv[1];
             auto tokens = Lexer(input).tokenize();
-            auto expression = Parser(tokens,
-                name.path().string().substr(0, name.path().string().rfind('\\'))).parse();
+            auto expression = Parser(tokens, name.path().parent_path(), get_executable_dir()).parse();
 
             if (is_compiled)
             {
@@ -100,6 +99,22 @@ int main(int argc, char** argv)
 
                 auto toolsPath = get_executable_dir() / "tools";
 
+#ifndef _WIN32
+                std::string objFile = name.path().string() + ".o";
+                std::filesystem::path exePath = name.path();
+                exePath.replace_extension("");
+                std::string exeFile = exePath.string();
+
+                std::string cmd = "c++ \"" + objFile + "\" -o \"" + exeFile + "\""
+                                  " -L\"" + (get_executable_dir() / "lib").string() + "\""
+                                  " lib/libfabstd.a -lm";
+
+                if (system(cmd.c_str()) != 0)
+                    throw std::runtime_error("Link failed!");
+                else
+                    std::filesystem::remove(objFile);
+
+#else
                 std::string objFile = name.path().string() + ".obj";
                 std::string exeFile = name.path().string().substr(0, name.path().string().rfind('.')) + ".exe";
 
@@ -115,15 +130,15 @@ int main(int argc, char** argv)
                                    "/LIBPATH:\"" + (get_executable_dir() / "lib").string() + "\" "
                                    "fabstd.lib\"";
 
-                system(cmd.c_str());
-
-                cmd = "\".\\" + name.path().string().substr(0, name.path().string().rfind('.')) + ".exe\"";
-
                 int exit_code = system(cmd.c_str());
 
-                std::filesystem::remove(name.path().string() + ".obj");
+                if (exit_code == 0)
+                    std::cout << "Success!" << std::endl;
+                else
+                    std::cout << "Compile error! Exit code: " << exit_code << std::endl;
 
-                return exit_code;
+                std::filesystem::remove(name.path().string() + ".obj");
+#endif
             }
             else
             {

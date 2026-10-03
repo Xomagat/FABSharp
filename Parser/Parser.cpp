@@ -7,7 +7,7 @@
 // vars
 
 // funcs
-Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir)
+Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir, std::filesystem::path exe_dir)
 {
     eof = Token(token_type::eof, "");
 
@@ -15,7 +15,7 @@ Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir)
 
     size = tokens.size();
 
-    this->base_dir = base_dir;
+    this->exe_dir = base_dir;
 
     pos = 0;
 }
@@ -50,7 +50,8 @@ std::unique_ptr<Statement> Parser::statement()
 
                 if (!loaded_libs.contains(name))
                 {
-                    load_stdlib_manifest("lib/" + name + ".manifest");
+                    auto manifest = exe_dir / "lib" / (name + ".manifest");
+                    load_stdlib_manifest(manifest);
                     loaded_libs.insert(name);
                 }
 
@@ -61,7 +62,7 @@ std::unique_ptr<Statement> Parser::statement()
             }
             else if (get(0).get_type() == token_type::TEXT)
             {
-                std::string path = (base_dir / consume(token_type::TEXT).get_text()).string();
+                std::string path = (exe_dir / consume(token_type::TEXT).get_text()).string();
 
                 if (!loaded_fab_modules.contains(path))
                 {
@@ -599,7 +600,11 @@ Token Parser::consume(token_type type)
 void Parser::load_stdlib_manifest(const std::filesystem::path& path)
 {
     std::ifstream file(path);
+    if (!file.is_open())
+        throw std::runtime_error("Library '" + path.string() + "' not found!");
+
     std::string line;
+
     while (std::getline(file, line))
     {
         if (line.empty() || line[0] == '#') continue;
@@ -632,7 +637,7 @@ std::vector<std::unique_ptr<Statement>> Parser::load_fab_module(const std::files
     buffer << file.rdbuf();
 
     auto tokens = Lexer(buffer.str()).tokenize();
-    Parser module_parser(tokens, path.parent_path());
+    Parser module_parser(tokens, path.parent_path(), exe_dir);;
 
     return module_parser.parse();
 }

@@ -46,7 +46,7 @@ private:
     int pos;
     int size;
 
-    std::filesystem::path base_dir;
+    std::filesystem::path exe_dir;
 
     std::vector<std::unique_ptr<Statement>> pending_imports;
 
@@ -84,7 +84,8 @@ private:
     std::vector<std::unique_ptr<Statement>> load_fab_module(const std::filesystem::path &path);
 
   public:
-    Parser(std::vector<Token> tokens, std::filesystem::path base_dir);
+    Parser(std::vector<Token> tokens, std::filesystem::path base_dir,
+           std::filesystem::path exe_dir);
 
     std::vector<std::unique_ptr<Statement>> parse();
 };
