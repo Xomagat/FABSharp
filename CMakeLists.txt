@@ -90,8 +90,7 @@ add_library(fabstd STATIC
 )
 
 if (MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
-    target_compile_options(fab PRIVATE /utf-8)
+    target_compile_options(fabstd PRIVATE /Zl /GS- /utf-8)
 endif()
 
 set_target_properties(fabstd PROPERTIES
