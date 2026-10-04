@@ -40,7 +40,7 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::str
     std::string targetTriple = "x86_64-w64-windows-gnu";
     const char* obj_ext = ".obj";
 #else
-    std::string targetTriple = llvm::sys::getDefaultTargetTriple();
+    std::string targetTriple = "x86_64-unknown-linux-gnu";
     const char* obj_ext = ".o";
 #endif
 

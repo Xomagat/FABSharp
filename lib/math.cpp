@@ -2,7 +2,8 @@
 // Created by Xomagat on 26.09.2026.
 //
 
-#include <cmath>
+#include <math.h>
+#include <stdlib.h>
 
 extern "C" int fab_absi(const int x)
 {

@@ -1,10 +1,27 @@
-cmake_minimum_required(VERSION 4.3)
+cmake_minimum_required(VERSION 3.31.11)
 project(fab)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(LLVM_DIR "llvm/lib/cmake/llvm")
+if (WIN32)
+    set(LLVM_DIR "llvm/lib/cmake/llvm")
+endif()
+
 find_package(LLVM REQUIRED CONFIG)
+
+if (NOT WIN32)
+    find_library(ZSTD_STATIC NAMES libzstd.a REQUIRED)
+endif()
+
+foreach(t zstd::libzstd_shared zstd::libzstd_static)
+    if (TARGET ${t})
+        set_target_properties(${t} PROPERTIES
+                IMPORTED_LOCATION "${ZSTD_STATIC}"
+                IMPORTED_LOCATION_NONE "${ZSTD_STATIC}"
+                IMPORTED_LOCATION_DEBUG "${ZSTD_STATIC}"
+                IMPORTED_LOCATION_RELEASE "${ZSTD_STATIC}")
+    endif()
+endforeach()
 
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
@@ -46,26 +63,35 @@ add_executable(fab main.cpp
         CodeGen/Compile.h
         libs/STDLibInfo.h
         Parser/AST/UseStatement.h
-        lib/math.cpp
 )
+
+foreach(lib libc.a libm.a libgcc.a libgcc_eh.a crt1.o crti.o crtn.o)
+    execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=${lib}
+            OUTPUT_VARIABLE _p OUTPUT_STRIP_TRAILING_WHITESPACE)
+    add_custom_command(TARGET fab POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_p}"
+            "$<TARGET_FILE_DIR:fab>/tools/glibc/${lib}")
+endforeach()
 
 add_library(fabstd STATIC
         lib/math.cpp
 )
 
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+    target_compile_options(fab PRIVATE /utf-8)
+endif()
+
 set_target_properties(fabstd PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-        ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/lib"
-        ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/lib"
-)
+        ARCHIVE_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:fab>/lib")
 
 llvm_map_components_to_libnames(llvm_libs core support target x86asmparser x86codegen)
 target_link_libraries(fab ${llvm_libs})
 
 if (WIN32)
     target_link_options(fab PRIVATE -static-libgcc -static-libstdc++)
-elseif (UNIX)
-    target_link_options(fab PRIVATE -static)
+elseif (UNIX AND NOT APPLE)
+    target_link_options(fab PRIVATE -static -s)
 endif()
 
 add_dependencies(fab fabstd)

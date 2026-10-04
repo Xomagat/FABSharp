@@ -105,9 +105,26 @@ int main(int argc, char** argv)
                 exePath.replace_extension("");
                 std::string exeFile = exePath.string();
 
-                std::string cmd = "c++ \"" + objFile + "\" -o \"" + exeFile + "\""
-                                  " -L\"" + (get_executable_dir() / "lib").string() + "\""
-                                  " lib/libfabstd.a -lm";
+                auto q = [](const std::filesystem::path& p) { return "\"" + p.string() + "\""; };
+
+                std::filesystem::path exe  = get_executable_dir();
+                std::filesystem::path tl   = exe / "tools";
+                std::filesystem::path glib = tl / "glibc";
+
+                std::string cmd =
+                    q(tl / "ld.lld") + " -static "
+                    + q(glib / "crt1.o") + " "
+                    + q(glib / "crti.o") + " "
+                    + q(objFile) + " "
+                    + "--start-group "
+                    + q(exe / "lib" / "libfabstd.a") + " "
+                    + q(glib / "libm.a") + " "
+                    + q(glib / "libc.a") + " "
+                    + q(glib / "libgcc.a") + " "
+                    + q(glib / "libgcc_eh.a") + " "
+                    + "--end-group "
+                    + q(glib / "crtn.o") + " "
+                    + "-o " + q(exeFile);
 
                 if (system(cmd.c_str()) != 0)
                     throw std::runtime_error("Link failed!");
