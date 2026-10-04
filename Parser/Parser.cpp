@@ -203,7 +203,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
         static const std::unordered_map<token_type, char> compoundOps = {
             {token_type::PLUSEQ, '+'}, {token_type::MINUSEQ, '-'},
             {token_type::MULTEQ, '*'}, {token_type::DIVEQ, '/'},
-            {token_type::POWEQ, '^'}, {token_type::MODEQ, '%'},
+            {token_type::MODEQ, '%'},
         };
 
         auto it = compoundOps.find(get(1).get_type());
@@ -467,41 +467,23 @@ std::unique_ptr<Expression> Parser::additive()
 
 std::unique_ptr<Expression> Parser::multiply()
 {
-    std::unique_ptr<Expression> expr = pow();
+    std::unique_ptr<Expression> expr = unary();
 
     while (true)
     {
         if (match(token_type::MULT))
         {
-            expr = std::make_unique<BinExpression>('*', std::move(expr), pow());
+            expr = std::make_unique<BinExpression>('*', std::move(expr), unary());
             continue;
         }
         if (match(token_type::DIV))
         {
-            expr = std::make_unique<BinExpression>('/', std::move(expr), pow());
+            expr = std::make_unique<BinExpression>('/', std::move(expr), unary());
             continue;
         }
         if (match(token_type::MOD))
         {
-            expr = std::make_unique<BinExpression>('%', std::move(expr), pow());
-            continue;
-        }
-        break;
-    }
-
-
-    return expr;
-}
-
-std::unique_ptr<Expression> Parser::pow()
-{
-    std::unique_ptr<Expression> expr = unary();
-
-    while (true)
-    {
-        if (match(token_type::POW))
-        {
-            expr = std::make_unique<BinExpression>('^', std::move(expr), unary());
+            expr = std::make_unique<BinExpression>('%', std::move(expr), unary());
             continue;
         }
         break;

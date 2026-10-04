@@ -69,7 +69,6 @@ private:
     std::unique_ptr<Expression> conditional();
     std::unique_ptr<Expression> additive();
     std::unique_ptr<Expression> multiply();
-    std::unique_ptr<Expression> pow();
     std::unique_ptr<Expression> unary();
     std::unique_ptr<Expression> primary();
     std::unique_ptr<Expression> equality();

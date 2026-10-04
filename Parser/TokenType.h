@@ -40,14 +40,12 @@ enum token_type
     MINUS,          // -
     MULT,           // *
     DIV,            // /
-    POW,            // ^
     MOD,            // %
     EQ,             // =
     PLUSEQ,         // +=
     MINUSEQ,        // -=
     MULTEQ,         // *=
     DIVEQ,          // /=
-    POWEQ,          // ^=
     MODEQ,          // %=
     CEQ,            // ==
     NOT,            // !
@@ -99,14 +97,12 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {MINUS,      "-"},
     {MULT,       "*"},
     {DIV,        "/"},
-    {POW,        "^"},
     {MOD,        "%"},
     {EQ,         "="},
     {PLUSEQ,     "+="},
     {MINUSEQ,    "-="},
     {MULTEQ,     "*="},
     {DIVEQ,      "/="},
-    {POWEQ,      "^="},
     {MODEQ,      "%="},
     {CEQ,        "=="},
     {NOT,        "!"},

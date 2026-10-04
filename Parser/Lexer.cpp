@@ -11,13 +11,12 @@
 // funcs
 Lexer::Lexer(std::string code)
 {
-    OPERATION_CHARS = "+-*/^%(){}=;.<>!&|";
+    OPERATION_CHARS = "+-*/%(){}=;.<>!&|";
     OPERATORS = {
         {"+", token_type::PLUS},
         {"-", token_type::MINUS},
         {"*", token_type::MULT},
         {"/", token_type::DIV},
-        {"^", token_type::POW},
         {"%", token_type::MOD},
         {"=", token_type::EQ},
         {";", token_type::SEMI},
@@ -27,7 +26,6 @@ Lexer::Lexer(std::string code)
         {"-=", token_type::MINUSEQ},
         {"*=", token_type::MULTEQ},
         {"/=", token_type::DIVEQ},
-        {"^=", token_type::POWEQ},
         {"%=", token_type::MODEQ},
 
         {"{", token_type::LBRACKET},
