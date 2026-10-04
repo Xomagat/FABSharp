@@ -27,12 +27,38 @@ public:
         llvm::Value* left = expr1->codegen(context);
         llvm::Value* right = expr2->codegen(context);
 
-        bool isFloat = left->getType()->isFloatingPointTy() || right->getType()->isFloatingPointTy();
         llvm::Type* fp_type = (left->getType()->isDoubleTy() || right->getType()->isDoubleTy())
                     ? left->getType()->getContext(), context.builder.getDoubleTy()
                     : context.builder.getFloatTy();
 
-        if (isFloat)
+        if (left->getType()->isPointerTy() || right->getType()->isIntegerTy())
+        {
+            if (op != '+')
+                throw std::runtime_error("Only '+' is supported for strings!");
+
+            auto& b = context.builder;
+            llvm::Type* ptr = b.getInt8Ty()->getPointerTo();
+            llvm::Type* i64 = b.getInt64Ty();
+
+            auto strlen = context.module.getOrInsertFunction(
+                "strlen", llvm::FunctionType::get(i64, {ptr}, false));
+            auto malloc = context.module.getOrInsertFunction(
+                "malloc", llvm::FunctionType::get(ptr, {i64}, false));
+            auto memcpy = context.module.getOrInsertFunction(
+                "memcpy", llvm::FunctionType::get(ptr, {ptr, ptr, i64}, false));
+
+            auto la = b.CreateCall(strlen, {left});
+            auto lb = b.CreateCall(strlen, {right});
+            auto total = b.CreateAdd(b.CreateAdd(la, lb), b.getInt64(1));
+            auto buf = b.CreateCall(malloc, {total});
+
+            b.CreateCall(memcpy, {buf, left, la});
+            auto tail = b.CreateGEP(b.getInt8Ty(), buf, la);
+            b.CreateCall(memcpy, {tail, right, b.CreateAdd(lb, b.getInt64(1))});
+            return buf;
+        }
+
+        if (left->getType()->isFloatingPointTy() || right->getType()->isFloatingPointTy())
         {
             left  = coerceToType(left,  fp_type, context.builder);
             right = coerceToType(right, fp_type, context.builder);
