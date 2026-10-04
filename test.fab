@@ -1,8 +1,5 @@
-use math;
-
 define main() -> int
 {
-    writeln pow(2, 2);
-
-    return 0;
+    bool x = false;
+    writeln !x;
 }

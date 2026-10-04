@@ -27,6 +27,9 @@ public:
 
         llvm::Value* val = expr->codegen(context);
 
+        if (val->getType()->isIntegerTy(1))
+            val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
+
         if (val->getType()->isFloatingPointTy())
         {
             if (val->getType()->isFloatTy())
@@ -62,6 +65,9 @@ public:
         auto printfFunc = context.module.getOrInsertFunction("printf", printfType);
 
         llvm::Value* val = expr->codegen(context);
+
+        if (val->getType()->isIntegerTy(1))
+            val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
 
         if (val->getType()->isFloatingPointTy())
         {

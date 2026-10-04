@@ -495,10 +495,12 @@ std::unique_ptr<Expression> Parser::multiply()
 
 std::unique_ptr<Expression> Parser::unary()
 {
+    if (match(token_type::NOT))
+        return std::make_unique<UnaryExpression>('!', std::move(unary()));
     if (match(token_type::MINUS))
-        return std::make_unique<UnaryExpression>('-', std::move(primary()));
+        return std::make_unique<UnaryExpression>('-', std::move(unary()));
     if (match(token_type::PLUS))
-        return std::make_unique<UnaryExpression>('+', std::move(primary()));
+        return std::make_unique<UnaryExpression>('+', std::move(unary()));
 
     return primary();
 }

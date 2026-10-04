@@ -10,6 +10,15 @@
 #include <string>
 #include <unordered_map>
 
+inline llvm::Value* to_bool(llvm::Value* v, llvm::IRBuilder<>& b)
+{
+    llvm::Type* t = v->getType();
+    if (t->isIntegerTy(1)) return v;
+    if (t->isFloatingPointTy())
+        return b.CreateFCmpUNE(v, llvm::ConstantFP::get(t, 0.0));
+    return b.CreateIsNotNull(v);
+}
+
 inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm::IRBuilder<>& builder)
 {
     llvm::Type* srcType = val->getType();

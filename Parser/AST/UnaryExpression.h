@@ -35,6 +35,9 @@ public:
                 return val;
             throw std::runtime_error("Codegen unary '+' not supported for this type!");
 
+        case '!':
+            return ctx.builder.CreateNot(to_bool(val, ctx.builder));
+
         default:
             throw std::runtime_error("Codegen for this unary operator not implemented yet!");
         }
