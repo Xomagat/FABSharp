@@ -1,9 +1,0 @@
-define factorial(int n) -> long
-{
-    long answer = 1;
-
-    for (int i = 1; i <= n; i += 1)
-        answer *= i;
-
-    return answer;
-}
