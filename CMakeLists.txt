@@ -42,20 +42,12 @@ add_executable(fab main.cpp
         Parser/AST/Statement.h
         Parser/AST/AssigementStatement.h
         Parser/AST/IOStatement.h
-        libs/Value.h
-        libs/Environment.h
-        libs/StringValue.h
-        libs/NumberValue.h
-        libs/BooleanValue.h
         Parser/AST/ConditionalExpression.h
         Parser/AST/IfStatement.h
         Parser/AST/LoopStatement.h
         Parser/AST/BreakStatement.h
         Parser/AST/ContinueStatement.h
         Parser/AST/FunctionalExpression.h
-        libs/Function.h
-        libs/Functions.h
-        libs/NullValue.h
         Parser/AST/FunctionStatement.h
         Parser/AST/ReturnStatement.h
         CodeGen/CodegenContext.h
@@ -65,13 +57,33 @@ add_executable(fab main.cpp
         Parser/AST/UseStatement.h
 )
 
-foreach(lib libc.a libm.a libgcc.a libgcc_eh.a crt1.o crti.o crtn.o)
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=${lib}
-            OUTPUT_VARIABLE _p OUTPUT_STRIP_TRAILING_WHITESPACE)
-    add_custom_command(TARGET fab POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_p}"
-            "$<TARGET_FILE_DIR:fab>/tools/glibc/${lib}")
-endforeach()
+if (NOT WIN32)
+    foreach(lib libc.a libm.a libgcc.a libgcc_eh.a crt1.o crti.o crtn.o)
+        execute_process(COMMAND ${CMAKE_C_COMPILER} -print-file-name=${lib}
+                OUTPUT_VARIABLE _p OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+        if (NOT EXISTS "${_p}")
+            message(FATAL_ERROR "${lib} not found. Install glibc-static.")
+        endif()
+
+        # libm.a и libc.a могут быть текстовыми скриптами GROUP(...)
+        file(READ "${_p}" _head LIMIT 64 HEX)
+        if (_head MATCHES "^2169726368") # "!<arch" = настоящий архив
+            set(_files "${_p}")
+        else()
+            file(READ "${_p}" _txt)
+            string(REGEX MATCH "GROUP *\\(([^)]*)\\)" _m "${_txt}")
+            string(REGEX MATCHALL "/[^ ]+\\.a" _files "${CMAKE_MATCH_1}")
+        endif()
+
+        foreach(f ${_files})
+            get_filename_component(_n "${f}" NAME)
+            add_custom_command(TARGET fab POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${f}"
+                    "$<TARGET_FILE_DIR:fab>/tools/glibc/${_n}")
+        endforeach()
+    endforeach()
+endif()
 
 add_library(fabstd STATIC
         lib/math.cpp
@@ -88,7 +100,7 @@ set_target_properties(fabstd PROPERTIES
 llvm_map_components_to_libnames(llvm_libs core support target x86asmparser x86codegen)
 target_link_libraries(fab ${llvm_libs})
 
-if (WIN32)
+if (MINGW)
     target_link_options(fab PRIVATE -static-libgcc -static-libstdc++)
 elseif (UNIX AND NOT APPLE)
     target_link_options(fab PRIVATE -static -s)

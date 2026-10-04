@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <iostream>
 
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Host.h"

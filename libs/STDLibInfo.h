@@ -18,3 +18,11 @@ struct StdlibFunctionInfo
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_symbols;
 inline std::unordered_set<std::string> loaded_libs;
 inline std::unordered_set<std::string> loaded_fab_modules;
+
+inline std::string mangle_name(const std::string& name, const std::vector<std::string>& arg_types)
+{
+    std::string key = name + "#" + std::to_string(arg_types.size());
+    for (auto& t : arg_types)
+        key += "_" + t;
+    return key;
+}

@@ -15,7 +15,8 @@ Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir, std::f
 
     size = tokens.size();
 
-    this->exe_dir = base_dir;
+    this->base_dir = base_dir;
+    this->exe_dir  = exe_dir;
 
     pos = 0;
 }
@@ -312,8 +313,6 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function()
     std::vector<std::string> arg_type;
     std::vector<std::string> arg_name;
 
-    Environment env;
-
     while (!match(token_type::RPARENT))
     {
         arg_type.push_back(consume(token_type::TYPES).get_text());
@@ -549,7 +548,7 @@ std::unique_ptr<Expression> Parser::primary()
     if (match(token_type::FALSEVAL))
         return std::make_unique<ValueExpression>(BoolTag{false});
     if (match(token_type::HEX_NUMBER))
-        return std::make_unique<ValueExpression>(static_cast<int>(std::stoll(current.get_text(), nullptr, 16)));
+        return std::make_unique<ValueExpression>(std::stoll(current.get_text(), nullptr, 16));
     if (current.get_type() == token_type::WORDS && get(1).get_type() == token_type::LPARENT)
         return function();
     if (match(token_type::TEXT))

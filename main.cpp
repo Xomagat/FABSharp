@@ -10,8 +10,6 @@
 #include "Parser/Lexer.h"
 #include "Parser/Parser.h"
 
-#include "libs/Environment.h"
-
 #include "CodeGen/Compile.h"
 
 #ifdef _WIN32
@@ -38,19 +36,17 @@ inline std::filesystem::path get_executable_dir()
 #define VERSION "0.1"
 
 // System vars
-static bool is_compiled = false;
 
 // Functions
 void info()
 {
-    std::cout << "FAB# Interpreter(& Compiler)\tv" << VERSION << std::endl
+    std::cout << "FAB# Compiler\tv" << VERSION << std::endl
               << std::endl
               << "Start arguments:" << std::endl
               << "--help/-h\t\t- show this message" << std::endl
-              << "--compile/-cmp\t\t- change mode to compile" << std::endl
               << std::endl
               << "How run the script?" << std::endl
-              << "interpreter_path script_path.fab" << std::endl;
+              << "compiler_path script_path.fab" << std::endl;
 }
 
 int main(int argc, char** argv)
@@ -67,8 +63,6 @@ int main(int argc, char** argv)
             info();
             return 0;
         }
-        if (argc > 2 && (std::strcmp(argv[2], "--compile") == 0 || std::strcmp(argv[2], "-cmp") == 0))
-            is_compiled = true;
 
         std::ifstream file(argv[1]);
         std::stringstream buffer;
@@ -92,84 +86,87 @@ int main(int argc, char** argv)
             auto tokens = Lexer(input).tokenize();
             auto expression = Parser(tokens, name.path().parent_path(), get_executable_dir()).parse();
 
-            if (is_compiled)
-            {
+            compile(expression, name.path().string());
 
-                compile(expression, name.path().string());
-
-                auto toolsPath = get_executable_dir() / "tools";
+            auto toolsPath = get_executable_dir() / "tools";
 
 #ifndef _WIN32
-                std::string objFile = name.path().string() + ".o";
-                std::filesystem::path exePath = name.path();
-                exePath.replace_extension("");
-                std::string exeFile = exePath.string();
+            std::string objFile = name.path().string() + ".o";
+            std::filesystem::path exePath = name.path();
+            exePath.replace_extension("");
+            std::string exeFile = exePath.string();
 
-                auto q = [](const std::filesystem::path& p) { return "\"" + p.string() + "\""; };
+            auto q = [](const std::filesystem::path& p) { return "\"" + p.string() + "\""; };
 
-                std::filesystem::path exe  = get_executable_dir();
-                std::filesystem::path tl   = exe / "tools";
-                std::filesystem::path glib = tl / "glibc";
+            std::filesystem::path exe  = get_executable_dir();
+            std::filesystem::path tl   = exe / "tools";
+            std::filesystem::path glib = tl / "glibc";
 
-                std::string cmd =
-                    q(tl / "ld.lld") + " -static "
-                    + q(glib / "crt1.o") + " "
-                    + q(glib / "crti.o") + " "
-                    + q(objFile) + " "
-                    + "--start-group "
-                    + q(exe / "lib" / "libfabstd.a") + " "
-                    + q(glib / "libm.a") + " "
-                    + q(glib / "libc.a") + " "
-                    + q(glib / "libgcc.a") + " "
-                    + q(glib / "libgcc_eh.a") + " "
-                    + "--end-group "
-                    + q(glib / "crtn.o") + " "
-                    + "-o " + q(exeFile);
+            std::vector<std::string> libm_files;
+            for (auto& e : std::filesystem::directory_iterator(glib))
+            {
+                auto n = e.path().filename().string();
+                if (n.starts_with("libm") && n.ends_with(".a"))
+                    libm_files.push_back(q(e.path()));
+            }
+            std::sort(libm_files.begin(), libm_files.end());
 
-                if (system(cmd.c_str()) != 0)
-                    throw std::runtime_error("Link failed!");
-                else
-                    std::filesystem::remove(objFile);
+            if (libm_files.empty())
+                throw std::runtime_error("libm*.a not found in tools/glibc! Install glibc-static.");
+
+            std::string libm_args;
+            for (auto& f : libm_files)
+                libm_args += f + " ";
+
+            std::string cmd =
+                q(tl / "ld.lld") + " -static "
+                + q(glib / "crt1.o") + " "
+                + q(glib / "crti.o") + " "
+                + q(objFile) + " "
+                + "--start-group "
+                + q(exe / "lib" / "libfabstd.a") + " "
+                + libm_args
+                + q(glib / "libc.a") + " "
+                + q(glib / "libgcc.a") + " "
+                + q(glib / "libgcc_eh.a") + " "
+                + "--end-group "
+                + q(glib / "crtn.o") + " "
+                + "-o " + q(exeFile);
+
+            if (system(cmd.c_str()) != 0)
+                throw std::runtime_error("Link failed!");
+            else
+                std::filesystem::remove(objFile);
 
 #else
-                std::string objFile = name.path().string() + ".obj";
-                std::string exeFile = name.path().string().substr(0, name.path().string().rfind('.')) + ".exe";
+            std::string objFile = name.path().string() + ".obj";
+            std::string exeFile = name.path().string().substr(0, name.path().string().rfind('.')) + ".exe";
 
-                std::string cmd = "\"\"" + (toolsPath / "lld-link.exe").string() + "\" "
-                                   "\"" + (toolsPath / "crt" / "crt2.o").string() + "\" "
-                                   "\"" + (toolsPath / "crt" / "crtbegin.o").string() + "\" "
-                                   "\"" + objFile + "\" "
-                                   "\"" + (toolsPath / "crt" / "crtend.o").string() + "\" "
-                                   "/out:\"" + exeFile + "\""
-                                   " /subsystem:console /entry:mainCRTStartup "
-                                   "/LIBPATH:\"" + (toolsPath / "libs").string() + "\" "
-                                   "libmingw32.a libmingwex.a libmsvcrt.a libkernel32.a libgcc.a "
-                                   "/LIBPATH:\"" + (get_executable_dir() / "lib").string() + "\" "
-                                   "fabstd.lib\"";
+            std::string cmd = "\"\"" + (toolsPath / "lld-link.exe").string() + "\" "
+                               "\"" + (toolsPath / "crt" / "crt2.o").string() + "\" "
+                               "\"" + (toolsPath / "crt" / "crtbegin.o").string() + "\" "
+                               "\"" + objFile + "\" "
+                               "\"" + (toolsPath / "crt" / "crtend.o").string() + "\" "
+                               "/out:\"" + exeFile + "\""
+                               " /subsystem:console /entry:mainCRTStartup "
+                               "/LIBPATH:\"" + (toolsPath / "libs").string() + "\" "
+                               "libmingw32.a libmingwex.a libmsvcrt.a libkernel32.a libgcc.a "
+                               "/LIBPATH:\"" + (get_executable_dir() / "lib").string() + "\" "
+                               "fabstd.lib\"";
 
-                int exit_code = system(cmd.c_str());
+            int exit_code = system(cmd.c_str());
 
-                if (exit_code == 0)
-                    std::cout << "Success!" << std::endl;
-                else
-                    std::cout << "Compile error! Exit code: " << exit_code << std::endl;
-
-                std::filesystem::remove(name.path().string() + ".obj");
-#endif
-            }
+            if (exit_code == 0)
+                std::cout << "Success!" << std::endl;
             else
-            {
-                Environment global;
+                std::cout << "Compile error! Exit code: " << exit_code << std::endl;
 
-                for (auto& expr : expression)
-                {
-                    expr->execute(global);
-                }
-            }
+            std::filesystem::remove(name.path().string() + ".obj");
+#endif
         }
         catch (std::exception& e)
         {
-            std::cout << "Runtime error: " << e.what() << std::endl;
+            std::cout << "Compile error: " << e.what() << std::endl;
         }
 
         return 0;

@@ -46,6 +46,7 @@ private:
     int pos;
     int size;
 
+    std::filesystem::path base_dir;
     std::filesystem::path exe_dir;
 
     std::vector<std::unique_ptr<Statement>> pending_imports;
