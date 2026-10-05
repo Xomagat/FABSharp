@@ -31,7 +31,7 @@ public:
                     ? left->getType()->getContext(), context.builder.getDoubleTy()
                     : context.builder.getFloatTy();
 
-        if (left->getType()->isPointerTy() || right->getType()->isIntegerTy())
+        if (left->getType()->isPointerTy() || right->getType()->isPointerTy())
         {
             if (op != '+')
                 throw std::runtime_error("Only '+' is supported for strings!");
