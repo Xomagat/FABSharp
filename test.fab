@@ -1,6 +1,8 @@
 define main() -> int
 {
-    char a = 'a';
+    char a;
+
+    input_in a;
 
     writeln a;
 }

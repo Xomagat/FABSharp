@@ -121,14 +121,60 @@ public:
             context.builder.getInt32Ty(), {context.builder.getInt8Ty()->getPointerTo()}, true);
         auto scanfFunc = context.module.getOrInsertFunction("scanf", scanfType);
 
-        if (varType->isIntegerTy(32))
+        llvm::Value* fmt = nullptr;
+        llvm::Value* arg = alloc;
+
+        if (varType->isIntegerTy(32)) // int
         {
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d");
-            context.builder.CreateCall(scanfFunc, {fmt, alloc});
+            fmt = context.builder.CreateGlobalStringPtr("%d");
+        }
+        else if (varType->isIntegerTy(8)) // char
+        {
+            fmt = context.builder.CreateGlobalStringPtr(" %c");
+        }
+        else if (varType->isIntegerTy(16)) // short
+        {
+            fmt = context.builder.CreateGlobalStringPtr("%hd");
+        }
+        else if (varType->isIntegerTy(64)) // long
+        {
+            fmt = context.builder.CreateGlobalStringPtr("%lld");
+        }
+        else if (varType->isFloatTy()) // float
+        {
+            fmt = context.builder.CreateGlobalStringPtr("%f");
+        }
+        else if (varType->isDoubleTy()) // double
+        {
+            fmt = context.builder.CreateGlobalStringPtr("%lf");
+        }
+        else if (varType->isPointerTy()) // string (i8*)
+        {
+            llvm::Value* arraySize = context.builder.getInt32(256);
+            llvm::Value* stringBuffer = context.builder.CreateAlloca(context.builder.getInt8Ty(), arraySize, name + "_buf");
+
+            context.builder.CreateStore(stringBuffer, alloc);
+
+            fmt = context.builder.CreateGlobalStringPtr("%255s");
+            arg = stringBuffer;
+        }
+        else if (varType->isIntegerTy(1)) // bool
+        {
+            llvm::AllocaInst* tmpAlloc = context.builder.CreateAlloca(context.builder.getInt32Ty(), nullptr, "tmp_bool");
+            fmt = context.builder.CreateGlobalStringPtr("%d");
+
+            context.builder.CreateCall(scanfFunc, {fmt, tmpAlloc});
+
+            llvm::Value* tmpVal = context.builder.CreateLoad(context.builder.getInt32Ty(), tmpAlloc);
+            llvm::Value* boolVal = context.builder.CreateICmpNE(tmpVal, context.builder.getInt32(0));
+            context.builder.CreateStore(boolVal, alloc);
+            return;
         }
         else
         {
-            throw std::runtime_error("input_in codegen only supports int for now!");
+            throw std::runtime_error("Unsupported type for input_in codegen!");
         }
+
+        context.builder.CreateCall(scanfFunc, {fmt, arg});
     }
 };
