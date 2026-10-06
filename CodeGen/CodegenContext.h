@@ -26,4 +26,5 @@ struct CodegenContext
     std::unordered_map<std::string, llvm::Function*> functions;
     std::vector<LoopTargets> loop_stack;
     std::unordered_set<std::string> const_vars;
+    std::unordered_map<std::string, llvm::Function*> methods;
 };

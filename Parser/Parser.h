@@ -18,6 +18,7 @@
 #include "AST/ValueExpression.h"
 #include "AST/VariableExpression.h"
 #include "AST/FunctionalExpression.h"
+#include "AST/MethodCallExpression.h"
 
 #include "AST/Statement.h"
 #include "AST/IfStatement.h"
@@ -70,6 +71,7 @@ private:
     std::unique_ptr<Expression> additive();
     std::unique_ptr<Expression> multiply();
     std::unique_ptr<Expression> unary();
+    std::unique_ptr<Expression> postfix();
     std::unique_ptr<Expression> primary();
     std::unique_ptr<Expression> equality();
     std::unique_ptr<Expression> logic_or();

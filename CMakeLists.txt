@@ -55,6 +55,7 @@ add_executable(fab main.cpp
         CodeGen/Compile.h
         libs/STDLibInfo.h
         Parser/AST/UseStatement.h
+        Parser/AST/MethodCallExpression.h
 )
 
 if (NOT WIN32)
@@ -87,6 +88,7 @@ endif()
 
 add_library(fabstd STATIC
         lib/math.cpp
+        lib/string.cpp
 )
 
 if (MSVC)

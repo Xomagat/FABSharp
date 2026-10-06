@@ -16,6 +16,8 @@ struct StdlibFunctionInfo
 };
 
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_symbols;
+inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_methods;
+
 inline std::unordered_set<std::string> loaded_libs;
 inline std::unordered_set<std::string> loaded_fab_modules;
 
@@ -25,4 +27,10 @@ inline std::string mangle_name(const std::string& name, const std::vector<std::s
     for (auto& t : arg_types)
         key += "_" + t;
     return key;
+}
+
+inline std::string mangle_method(const std::string& type, const std::string& name,
+                                 const std::vector<std::string>& args_without_receiver)
+{
+    return type + "::" + mangle_name(name, args_without_receiver);
 }

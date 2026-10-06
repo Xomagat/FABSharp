@@ -11,7 +11,7 @@
 // funcs
 Lexer::Lexer(std::string code)
 {
-    OPERATION_CHARS = "+-*/%(){}=;.<>!&|";
+    OPERATION_CHARS = "+-*/%(){}=;.,<>!&|";
     OPERATORS = {
         {"+", token_type::PLUS},
         {"-", token_type::MINUS},
@@ -20,7 +20,8 @@ Lexer::Lexer(std::string code)
         {"%", token_type::MOD},
         {"=", token_type::EQ},
         {";", token_type::SEMI},
-        {".", token_type::COMMA},
+        {",", token_type::COMMA},
+        {".", token_type::DOT},
 
         {"+=", token_type::PLUSEQ},
         {"-=", token_type::MINUSEQ},
@@ -187,6 +188,7 @@ void Lexer::tokenize_number()
     {
         if (current == '.')
         {
+            if (!isdigit(peek(1))) break;
             if (buffer.find('.') != std::string::npos)
                 throw std::runtime_error("Incorrect notation of a real number!");
         }

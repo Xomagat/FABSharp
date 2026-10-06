@@ -25,6 +25,14 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
 {
     std::vector<std::unique_ptr<Statement>> result;
 
+    if (!loaded_libs.contains("@types"))
+    {
+        for (auto& e : std::filesystem::directory_iterator(exe_dir / "lib" / "types"))
+            if (e.path().extension() == ".manifest")
+                load_stdlib_manifest(e.path());
+        loaded_libs.insert("@types");
+    }
+
     while (!match(token_type::eof))
     {
         auto stmt = statement();
@@ -502,7 +510,27 @@ std::unique_ptr<Expression> Parser::unary()
     if (match(token_type::PLUS))
         return std::make_unique<UnaryExpression>('+', std::move(unary()));
 
-    return primary();
+    return postfix();
+}
+
+std::unique_ptr<Expression> Parser::postfix()
+{
+    auto expr = primary();
+
+    while (match(token_type::DOT))
+    {
+        std::string name = consume(token_type::WORDS).get_text();
+        consume(token_type::LPARENT);
+
+        auto call = std::make_unique<MethodCallExpression>(name, std::move(expr));
+        while (!match(token_type::RPARENT))
+        {
+            call->add_arg(expression());
+            match(token_type::COMMA);
+        }
+        expr = std::move(call);
+    }
+    return expr;
 }
 
 std::unique_ptr<Expression> Parser::primary()
@@ -580,6 +608,20 @@ Token Parser::consume(token_type type)
     return t;
 }
 
+bool is_known_type(std::string& type)
+{
+    if (type == "string") return true;
+    if (type == "int")    return true;
+    if (type == "short")  return true;
+    if (type == "byte")   return true;
+    if (type == "long")   return true;
+    if (type == "float")  return true;
+    if (type == "double") return true;
+    if (type == "bool")   return true;
+
+    return false;
+}
+
 void Parser::load_stdlib_manifest(const std::filesystem::path& path)
 {
     std::ifstream file(path);
@@ -602,7 +644,28 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
             args.push_back(arg);
         }
 
-        stdlib_symbols[mangle_name(fab_name, args)] = {symbol, ret, args};
+        auto dot = fab_name.find('.');
+        if (dot == std::string::npos)
+        {
+            stdlib_symbols[mangle_name(fab_name, args)] = {symbol, ret, args};
+            continue;
+        }
+
+        std::string type = fab_name.substr(0, dot);
+        std::string name = fab_name.substr(dot + 1);
+
+        if (!is_known_type(type))
+            throw std::runtime_error("Manifest: unknown receiver type '" + type + "' in " + fab_name);
+        if (args.empty() || args[0] != type)
+            throw std::runtime_error("Manifest: first argument of " + fab_name + " must be '" + type + "'");
+
+        std::vector<std::string> tail(args.begin() + 1, args.end());
+        auto key = mangle_method(type, name, tail);
+
+        if (stdlib_methods.contains(key))
+            throw std::runtime_error("Manifest: duplicate method " + fab_name);
+
+        stdlib_methods[key] = {symbol, ret, args};
     }
 }
 
