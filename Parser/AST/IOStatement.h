@@ -37,6 +37,12 @@ public:
             llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%f\n");
             context.builder.CreateCall(printfFunc, {fmt, val});
         }
+        else if (val->getType()->isIntegerTy(8))
+        {
+            val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%c\n");
+            context.builder.CreateCall(printfFunc, {fmt, val});
+        }
         else if (val->getType()->isIntegerTy())
         {
             llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d\n");
@@ -74,6 +80,12 @@ public:
             if (val->getType()->isFloatTy())
                 val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
             llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%f");
+            context.builder.CreateCall(printfFunc, {fmt, val});
+        }
+        else if (val->getType()->isIntegerTy(8))
+        {
+            val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%c");
             context.builder.CreateCall(printfFunc, {fmt, val});
         }
         else if (val->getType()->isIntegerTy())

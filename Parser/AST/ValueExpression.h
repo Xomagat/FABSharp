@@ -16,7 +16,7 @@ template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 struct NullTag {};
 struct BoolTag { bool b; };
 
-using Literal = std::variant<long long, long double, bool, std::string, NullTag>;
+using Literal = std::variant<long long, long double, bool, std::string, char, NullTag>;
 
 class ValueExpression : public Expression
 {
@@ -28,6 +28,7 @@ public:
     explicit ValueExpression(long long v)   : value(v) {}
     explicit ValueExpression(long double v) : value(v) {}
     explicit ValueExpression(std::string v) : value(std::move(v)) {}
+    explicit ValueExpression(char v)        : value(v) {}
     explicit ValueExpression(BoolTag v)     : value(v.b) {}
     explicit ValueExpression(NullTag)       : value(NullTag{}) {}
 
@@ -37,6 +38,7 @@ public:
             [&](long double v) { return (llvm::Value*)llvm::ConstantFP::get(ctx.builder.getDoubleTy(), (double)v); },
             [&](bool v)        { return (llvm::Value*)ctx.builder.getInt1(v); },
             [&](const std::string& s) { return (llvm::Value*)ctx.builder.CreateGlobalStringPtr(s); },
+            [&](const char& c) { return (llvm::Value*)llvm::ConstantInt::get(ctx.builder.getInt8Ty(), c, false); },
             [&](NullTag)       { throw std::runtime_error("null has no standalone value"); return (llvm::Value*)nullptr; }
         }, value);
     }

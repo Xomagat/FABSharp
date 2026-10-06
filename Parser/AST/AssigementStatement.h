@@ -44,7 +44,7 @@ inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& buil
     if (type == "int")    return builder.getInt32Ty();
     if (type == "short")  return builder.getInt16Ty();
     if (type == "long")   return builder.getInt64Ty();
-    if (type == "byte")   return builder.getInt8Ty();
+    if (type == "char")   return builder.getInt8Ty();
     if (type == "double") return builder.getDoubleTy();
     if (type == "float")  return builder.getFloatTy();
     if (type == "bool")   return builder.getInt1Ty();
@@ -57,7 +57,7 @@ inline std::string llvm_to_type(llvm::Type* t)
 {
     if (t->isVoidTy())                 return "void";
     if (t->isIntegerTy(1))      return "bool";
-    if (t->isIntegerTy(8))      return "byte";
+    if (t->isIntegerTy(8))      return "char";
     if (t->isIntegerTy(16))     return "short";
     if (t->isIntegerTy(32))     return "int";
     if (t->isIntegerTy(64))     return "long";
@@ -91,7 +91,7 @@ public:
 
             auto it = context.variables.find(name);
             if (it == context.variables.end())
-                std::runtime_error("Variable " + name + " not found!");
+                throw std::runtime_error("Variable " + name + " not found!");
 
             llvm::Value* val = expression->is_null_literal() ? llvm::Constant::getNullValue(type_to_llvm(type, context.builder)) : expression->codegen(context);
             val = coerceToType(val, it->second->getAllocatedType(), context.builder);

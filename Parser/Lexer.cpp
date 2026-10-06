@@ -72,6 +72,10 @@ std::vector<Token> Lexer::tokenize()
         {
             tokenize_string();
         }
+        else if (current == '\'')
+        {
+            tokenize_char();
+        }
         else if (isalpha(current))
         {
             tokenize_word();
@@ -129,10 +133,10 @@ void Lexer::tokenize_word()
         {"float",   token_type::TYPES},
         {"short",   token_type::TYPES},
         {"long",    token_type::TYPES},
-        {"byte",    token_type::TYPES},
         {"string",  token_type::TYPES},
         {"bool",    token_type::TYPES},
         {"void",    token_type::TYPES},
+        {"char",    token_type::TYPES},
         {"const",   token_type::CONST},
     };
 
@@ -177,6 +181,38 @@ void Lexer::tokenize_string()
     next(); // skip "
 
     add_token(token_type::TEXT, buffer);
+}
+
+void Lexer::tokenize_char()
+{
+    next(); // skip '
+    std::string buffer;
+    char current = peek(0);
+
+    while (current != '\'' && current != '\0')
+    {
+        if (current == '\\')
+        {
+            current = next();
+
+            switch (current)
+            {
+            case '\'': current = next(); buffer.push_back('\''); continue;
+            case 'n':  current = next(); buffer.push_back('\n'); continue;
+            case 'r':  current = next(); buffer.push_back('\r'); continue;
+            case 't':  current = next(); buffer.push_back('\t'); continue;
+            }
+
+            buffer.push_back('\\');
+            continue;
+        }
+
+        buffer.push_back(current);
+        current = next();
+    }
+    next(); // skip '
+
+    add_token(token_type::CHARS, buffer);
 }
 
 void Lexer::tokenize_number()

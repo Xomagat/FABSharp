@@ -1,4 +1,6 @@
 define main() -> int
 {
-    writeln "Hello World!".length();
+    char a = 'a';
+
+    writeln a;
 }

@@ -563,6 +563,8 @@ std::unique_ptr<Expression> Parser::primary()
         return std::make_unique<ValueExpression>(std::stoll(current.get_text(), nullptr, 16));
     if (current.get_type() == token_type::WORDS && get(1).get_type() == token_type::LPARENT)
         return function();
+    if (match(token_type::CHARS))
+        return std::make_unique<ValueExpression>(current.get_text()[0]);
     if (match(token_type::TEXT))
         return std::make_unique<ValueExpression>(current.get_text());
     if (match(token_type::WORDS))

@@ -36,6 +36,7 @@ private:
     void tokenize_operation();
     void tokenize_word();
     void tokenize_string();
+    void tokenize_char();
     void tokenize_comment();
     void tokenize_mcomment();
 

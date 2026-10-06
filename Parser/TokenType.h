@@ -13,8 +13,9 @@ enum token_type
 {
     NUMBER,         // 1, 2, 3, 4 ,5 ...
     HEX_NUMBER,     // #101, #12, #645 ...
-    WORDS,           // For const and vars
+    WORDS,          // For const and vars
     TEXT,           // Base string
+    CHARS,          // Base chars
 
     // keywords
     USE,            // Import files or libs
@@ -75,8 +76,9 @@ enum token_type
 inline std::unordered_map<token_type, std::string> tokens_string = {
     {NUMBER,     "number"},
     {HEX_NUMBER, "hex_number"},
-    {WORDS,       "var_id"},
+    {WORDS,      "var_id"},
     {TEXT,       "text"},
+    {CHARS,      "symbol"},
 
     {WRITE,      "write"},
     {WRITELN,    "writeln"},
