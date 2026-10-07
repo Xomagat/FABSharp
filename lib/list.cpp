@@ -3,9 +3,10 @@
 //
 
 #define _NO_CRT_STDIO_INLINE
+#include <stdexcept>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 template<class T> struct FabList { T* data; int len; int cap;
 };
@@ -60,6 +61,8 @@ template<class T> void list_print(FabList<T>* l)
     extern "C" void  fab_list_addend_##NAME(void* l, T v) { list_addend<T>((FabList<T>*)l, v); } \
     extern "C" void  fab_list_add_##NAME(void* l, T v)    { list_add<T>((FabList<T>*)l, v); } \
     extern "C" int   fab_list_length_##NAME(void* l)      { return ((FabList<T>*)l)->len; } \
+    extern "C" int   fab_list_capacity_##NAME(void* l)    { return ((FabList<T>*)l)->cap; } \
+    extern "C" bool  fab_list_empty_##NAME(void* l)       { return ((FabList<T>*)l)->len == 0; } \
     extern "C" void  fab_list_print_##NAME(void* l)       { list_print<T>((FabList<T>*)l); }
 
 FAB_LIST(int,    int)
