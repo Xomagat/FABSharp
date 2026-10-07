@@ -1,0 +1,7 @@
+# List methods    v0.1
+# Created on 07.10.2060
+# Last update 07.10.2026
+
+list<T>.addend  fab_list_addend  void : list<T>, T
+list<T>.add     fab_list_add     void : list<T>, T
+list<T>.length  fab_list_length  int  : list<T>

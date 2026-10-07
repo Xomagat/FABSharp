@@ -19,6 +19,7 @@
 #include "AST/VariableExpression.h"
 #include "AST/FunctionalExpression.h"
 #include "AST/MethodCallExpression.h"
+#include "AST/ListLiteralExpression.h"
 
 #include "AST/Statement.h"
 #include "AST/IfStatement.h"
@@ -55,6 +56,7 @@ private:
     Token get(int relative_position);
 
     std::unique_ptr<Statement> statement();
+    std::string parse_type();
     std::unique_ptr<Statement> assigment_statement(bool no_semi = false);
     std::unique_ptr<Statement> if_else();
     std::unique_ptr<Statement> while_statement();

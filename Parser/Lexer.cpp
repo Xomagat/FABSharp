@@ -11,7 +11,7 @@
 // funcs
 Lexer::Lexer(std::string code)
 {
-    OPERATION_CHARS = "+-*/%(){}=;.,<>!&|";
+    OPERATION_CHARS = "+-*/%(){}[]=;.,<>!&|";
     OPERATORS = {
         {"+", token_type::PLUS},
         {"-", token_type::MINUS},
@@ -33,6 +33,8 @@ Lexer::Lexer(std::string code)
         {"}", token_type::RBRACKET},
         {"(", token_type::LPARENT},
         {")", token_type::RPARENT},
+        {"[", token_type::LSQUARE},
+        {"]", token_type::RSQUARE},
 
         {"!", token_type::NOT},
         {"&", token_type::AMP},
@@ -137,6 +139,7 @@ void Lexer::tokenize_word()
         {"bool",    token_type::TYPES},
         {"void",    token_type::TYPES},
         {"char",    token_type::TYPES},
+        {"list",    token_type::TYPES},
         {"const",   token_type::CONST},
     };
 

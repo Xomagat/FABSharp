@@ -68,6 +68,8 @@ enum token_type
     RPARENT,        // )
     LBRACKET,       // {
     RBRACKET,       // }
+    LSQUARE,        // [
+    RSQUARE,        // ]
 
     eof,            // End of File
 };
@@ -127,6 +129,8 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {RPARENT,    ")"},
     {LBRACKET,   "{"},
     {RBRACKET,   "}"},
+    {LSQUARE,    "["},
+    {RSQUARE,    "]"},
 
     {eof,        "end of file"},
 };

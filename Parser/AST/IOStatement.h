@@ -27,6 +27,18 @@ public:
 
         llvm::Value* val = expr->codegen(context);
 
+        std::string t = type_of(context, val);
+        if (t.starts_with("list<"))
+        {
+            auto printFn = context.module.getOrInsertFunction(
+                "fab_list_print_" + list_elem(t),
+                llvm::FunctionType::get(context.builder.getVoidTy(),
+                                        {context.builder.getInt8Ty()->getPointerTo()}, false));
+            context.builder.CreateCall(printFn, {val});
+            context.builder.CreateCall(printfFunc, {context.builder.CreateGlobalStringPtr("\n")});
+            return;
+        }
+
         if (val->getType()->isIntegerTy(1))
             val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
 
@@ -71,6 +83,17 @@ public:
         auto printfFunc = context.module.getOrInsertFunction("printf", printfType);
 
         llvm::Value* val = expr->codegen(context);
+
+        std::string t = type_of(context, val);
+        if (t.starts_with("list<"))
+        {
+            auto printFn = context.module.getOrInsertFunction(
+                "fab_list_print_" + list_elem(t),
+                llvm::FunctionType::get(context.builder.getVoidTy(),
+                                        {context.builder.getInt8Ty()->getPointerTo()}, false));
+            context.builder.CreateCall(printFn, {val});
+            return;
+        }
 
         if (val->getType()->isIntegerTy(1))
             val = context.builder.CreateZExt(val, context.builder.getInt32Ty());

@@ -49,6 +49,7 @@ inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& buil
     if (type == "float")  return builder.getFloatTy();
     if (type == "bool")   return builder.getInt1Ty();
     if (type == "string") return builder.getInt8Ty()->getPointerTo();
+    if (type.starts_with("list<")) return builder.getPtrTy();
 
     throw std::runtime_error("Unknown type for codegen: " + type);
 }
@@ -66,6 +67,30 @@ inline std::string llvm_to_type(llvm::Type* t)
     if (t->isPointerTy())              return "string";
 
     throw std::runtime_error("Cannot demangle llvm type for overload resolution!");
+}
+
+inline std::string list_elem(const std::string& t)
+{
+    return t.substr(5, t.size() - 6);
+}
+
+inline std::string type_of(CodegenContext& ctx, llvm::Value* v)
+{
+    auto it = ctx.value_types.find(v);
+    if (it != ctx.value_types.end()) return it->second;
+    return llvm_to_type(v->getType());
+}
+
+inline llvm::Value* emit_list_new(CodegenContext& ctx, const std::string& list_type)
+{
+    auto& b = ctx.builder;
+    llvm::Type* ptr = b.getInt8Ty()->getPointerTo();
+    auto fn = ctx.module.getOrInsertFunction(
+        "fab_list_new_" + list_elem(list_type),
+        llvm::FunctionType::get(ptr, {}, false));
+    llvm::Value* v = b.CreateCall(fn);
+    ctx.value_types[v] = list_type;
+    return v;
 }
 
 class AssigementStatement : public Statement
@@ -93,7 +118,7 @@ public:
             if (it == context.variables.end())
                 throw std::runtime_error("Variable " + name + " not found!");
 
-            llvm::Value* val = expression->is_null_literal() ? llvm::Constant::getNullValue(type_to_llvm(type, context.builder)) : expression->codegen(context);
+            llvm::Value* val = expression->is_null_literal() ? llvm::Constant::getNullValue(type_to_llvm(type, context.builder)) : expression->codegen_expected(context, context.var_types[name]);
             val = coerceToType(val, it->second->getAllocatedType(), context.builder);
             context.builder.CreateStore(val, it->second);
             return;
@@ -103,10 +128,18 @@ public:
 
         llvm::AllocaInst* alloc = context.builder.CreateAlloca(llvmType, nullptr, name);
         context.variables[name] = alloc;
+        context.var_types[name] = type;
 
         if (expression)
         {
-            llvm::Value* val = expression->is_null_literal() ? llvm::Constant::getNullValue(llvmType) : expression->codegen(context);
+            llvm::Value* val;
+            if (expression->is_null_literal())
+                val = type.starts_with("list<")
+                ? emit_list_new(context, type)
+                : llvm::Constant::getNullValue(llvmType);
+            else
+                val = expression->codegen_expected(context, type);
+
             val = coerceToType(val, llvmType, context.builder);
             context.builder.CreateStore(val, alloc);
         }

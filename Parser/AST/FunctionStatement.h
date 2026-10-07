@@ -56,6 +56,7 @@ public:
         context.builder.SetInsertPoint(entry);
 
         auto save_variables = context.variables;
+        auto save_var_types = context.var_types;
 
         int i = 0;
         for (auto& arg : function->args())
@@ -64,6 +65,7 @@ public:
             llvm::AllocaInst* alloc = context.builder.CreateAlloca(param_types[i], nullptr, arg_names[i]);
             context.builder.CreateStore(&arg, alloc);
             context.variables[arg_names[i]] = alloc;
+            context.var_types[arg_names[i]] = arg_types[i];
             i++;
         }
 
@@ -78,6 +80,7 @@ public:
         }
 
         context.variables = save_variables;
+        context.var_types = save_var_types;
         context.builder.SetInsertPoint(save_insert_block);
     }
 

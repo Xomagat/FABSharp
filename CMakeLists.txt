@@ -56,6 +56,7 @@ add_executable(fab main.cpp
         libs/STDLibInfo.h
         Parser/AST/UseStatement.h
         Parser/AST/MethodCallExpression.h
+        Parser/AST/ListLiteralExpression.h
 )
 
 if (NOT WIN32)
@@ -89,6 +90,7 @@ endif()
 add_library(fabstd STATIC
         lib/math.cpp
         lib/string.cpp
+        lib/list.cpp
 )
 
 if (MSVC)

@@ -149,9 +149,10 @@ std::unique_ptr<Statement> Parser::statement()
             return define_function();
         }
         case token_type::WORDS: {
-            if (get(1).get_type() == token_type::LPARENT)
+            if (get(1).get_type() == token_type::LPARENT ||
+                get(1).get_type() == token_type::DOT)
             {
-                std::unique_ptr<FunctionStatement> fn = std::make_unique<FunctionStatement>(function());
+                auto fn = std::make_unique<FunctionStatement>(expression());
 
                 if (!match(token_type::SEMI))
                     throw std::runtime_error("You miss the ;");
@@ -173,14 +174,26 @@ std::unique_ptr<Statement> Parser::statement()
     }
 }
 
+std::string Parser::parse_type()
+{
+    std::string t = consume(token_type::TYPES).get_text();
+    if (t == "list")
+    {
+        consume(token_type::LT);
+        t += "<" + parse_type() + ">";
+        consume(token_type::GT);
+    }
+    return t;
+}
+
 std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
 {
     // type name = 33; or type name;
     Token current = get(0);
 
-    if (current.get_type() == token_type::TYPES && get(1).get_type() == token_type::WORDS)
+    if (current.get_type() == token_type::TYPES)
     {
-        std::string type = consume(token_type::TYPES).get_text();
+        std::string type = parse_type();
         std::string name = consume(token_type::WORDS).get_text();
         std::unique_ptr<Expression> expr;
 
@@ -227,8 +240,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
             return std::make_unique<AssigementStatement>("", name, std::move(binExpr));
         }
     }
-    else if (current.get_type() == token_type::CONST && get(1).get_type() == token_type::TYPES
-             && get(2).get_type() == token_type::WORDS)
+    else if (current.get_type() == token_type::CONST && get(1).get_type() == token_type::TYPES)
     {
         consume(token_type::CONST);
         std::string type = consume(token_type::TYPES).get_text();
@@ -323,13 +335,13 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function()
 
     while (!match(token_type::RPARENT))
     {
-        arg_type.push_back(consume(token_type::TYPES).get_text());
+        arg_type.push_back(parse_type());
         arg_name.push_back(consume(token_type::WORDS).get_text());
         match(token_type::COMMA);
     }
 
     if (match(token_type::ARROW))
-        type = consume(token_type::TYPES).get_text();
+        type = parse_type();
 
     std::unique_ptr<Statement> body = statement_or_block();
 
@@ -553,6 +565,16 @@ std::unique_ptr<Expression> Parser::primary()
         ld_convert:
         return std::make_unique<ValueExpression>(std::stold(current.get_text()));
     }
+    if (match(token_type::LSQUARE))
+    {
+        auto list = std::make_unique<ListLiteralExpression>();
+        while (!match(token_type::RSQUARE))
+        {
+            list->add_item(expression());
+            match(token_type::COMMA);
+        }
+        return list;
+    }
     if (match(token_type::NULLVAL))
         return std::make_unique<ValueExpression>(NullTag{});
     if (match(token_type::TRUEVAL))
@@ -620,6 +642,7 @@ bool is_known_type(std::string& type)
     if (type == "float")  return true;
     if (type == "double") return true;
     if (type == "bool")   return true;
+    if (type == "list")   return true;
 
     return false;
 }
@@ -656,10 +679,13 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         std::string type = fab_name.substr(0, dot);
         std::string name = fab_name.substr(dot + 1);
 
+        std::string recv = type;
+        if (type == "list<T>") type = "list";
+
         if (!is_known_type(type))
             throw std::runtime_error("Manifest: unknown receiver type '" + type + "' in " + fab_name);
-        if (args.empty() || args[0] != type)
-            throw std::runtime_error("Manifest: first argument of " + fab_name + " must be '" + type + "'");
+        if (args.empty() || args[0] != recv)
+            throw std::runtime_error("Manifest: first argument of " + fab_name + " must be '" + recv + "'");
 
         std::vector<std::string> tail(args.begin() + 1, args.end());
         auto key = mangle_method(type, name, tail);

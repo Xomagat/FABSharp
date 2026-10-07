@@ -22,7 +22,9 @@ public:
             throw std::runtime_error("Variable {" + name + "} not found!");
 
         llvm::AllocaInst* alloc = it->second;
-        return context.builder.CreateLoad(alloc->getAllocatedType(), alloc, name);
+        auto* v = context.builder.CreateLoad(alloc->getAllocatedType(), alloc, name);
+        context.value_types[v] = context.var_types[name];
+        return v;
     }
 
     std::string to_str() const override

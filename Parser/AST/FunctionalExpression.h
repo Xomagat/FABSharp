@@ -52,7 +52,7 @@ public:
     {
         std::vector<std::string> arg_type_names;
         for (auto* v : args_values)
-            arg_type_names.push_back(llvm_to_type(v->getType()));
+            arg_type_names.push_back(type_of(context, v));
 
         auto key = mangle_name(name, arg_type_names);
 
