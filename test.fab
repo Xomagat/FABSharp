@@ -1,8 +1,13 @@
 define main() -> int
 {
-    char a;
-
-    input_in a;
-
-    writeln a;
+    string s = "Hello, World!";
+    writeln s.length();                         // 13
+    writeln s.empty();                          // 0
+    writeln s.find(",");                        // 5
+    writeln s.substr(0, 5);                     // Hello
+    writeln s.compare("Hello, World!") == 0;    // 1
+    writeln s.first();                          // H
+    writeln s.last();                           // !
+    writeln s.to_upper();                       // HELLO, WORLD!
+    writeln s.to_lower();                       // HELLO, WORLD!
 }

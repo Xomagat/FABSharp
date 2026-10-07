@@ -3,16 +3,13 @@
 # Last update 06.10.2026
 
 # String
-string.length fab_strlen int : string
-
-# Int
-
-# Short
-
-# Long
-
-# Float
-
-# Double
-
-# Bool
+string.length   fab_length   int    : string
+string.empty    fab_empty    bool   : string
+string.clear    fab_clear    void   : string
+string.find     fab_finds    int    : string, string
+string.substr   fab_substr   string : string, int, int
+string.compare  fab_compare  string : string, string
+string.first    fab_first    char   : string
+string.last     fab_last     char   : string
+string.to_upper fab_to_upper string : string
+string.to_lower fab_to_lower string : string
