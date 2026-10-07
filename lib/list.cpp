@@ -44,9 +44,9 @@ inline void print_elem(float v)       { printf("%f", (double)v); }
 inline void print_elem(double v)      { printf("%f", v); }
 inline void print_elem(const char* v) { printf("%s", v); }
 
-template<class T> void list_print(FabList<T>* l, const char* name)
+template<class T> void list_print(FabList<T>* l)
 {
-    printf("list<%s>[", name);
+    printf("[");
     for (int i = 0; i < l->len; ++i)
     {
         if (i) printf(", ");
@@ -60,7 +60,7 @@ template<class T> void list_print(FabList<T>* l, const char* name)
     extern "C" void  fab_list_addend_##NAME(void* l, T v) { list_addend<T>((FabList<T>*)l, v); } \
     extern "C" void  fab_list_add_##NAME(void* l, T v)    { list_add<T>((FabList<T>*)l, v); } \
     extern "C" int   fab_list_length_##NAME(void* l)      { return ((FabList<T>*)l)->len; } \
-    extern "C" void  fab_list_print_##NAME(void* l)       { list_print<T>((FabList<T>*)l, #NAME); }
+    extern "C" void  fab_list_print_##NAME(void* l)       { list_print<T>((FabList<T>*)l); }
 
 FAB_LIST(int,    int)
 FAB_LIST(long,   long long)

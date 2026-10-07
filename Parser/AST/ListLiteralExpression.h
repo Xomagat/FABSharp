@@ -2,9 +2,6 @@
 // Created by Xomagat on 07.10.2026.
 //
 
-#ifndef FAB_LISTLITERALEXPRESSION_H
-#define FAB_LISTLITERALEXPRESSION_H
-
 #pragma once
 #include <memory>
 #include <vector>
@@ -48,5 +45,3 @@ public:
         return "";
     }
 };
-
-#endif // FAB_LISTLITERALEXPRESSION_H

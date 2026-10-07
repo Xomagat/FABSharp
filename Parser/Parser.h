@@ -21,6 +21,8 @@
 #include "AST/MethodCallExpression.h"
 #include "AST/ListLiteralExpression.h"
 
+#include "AST/IndexExprAndStat.h"
+
 #include "AST/Statement.h"
 #include "AST/IfStatement.h"
 #include "AST/LoopStatement.h"

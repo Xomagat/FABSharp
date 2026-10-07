@@ -529,18 +529,28 @@ std::unique_ptr<Expression> Parser::postfix()
 {
     auto expr = primary();
 
-    while (match(token_type::DOT))
+    while (true)
     {
-        std::string name = consume(token_type::WORDS).get_text();
-        consume(token_type::LPARENT);
-
-        auto call = std::make_unique<MethodCallExpression>(name, std::move(expr));
-        while (!match(token_type::RPARENT))
+        if (match(token_type::DOT))
         {
-            call->add_arg(expression());
-            match(token_type::COMMA);
+            std::string name = consume(token_type::WORDS).get_text();
+            consume(token_type::LPARENT);
+
+            auto call = std::make_unique<MethodCallExpression>(name, std::move(expr));
+            while (!match(token_type::RPARENT))
+            {
+                call->add_arg(expression());
+                match(token_type::COMMA);
+            }
+            expr = std::move(call);
         }
-        expr = std::move(call);
+        else if (match(token_type::LSQUARE))
+        {
+            auto idx = expression();
+            consume(token_type::RSQUARE);
+            expr = std::make_unique<IndexExpression>(std::move(expr), std::move(idx));
+        }
+        else break;
     }
     return expr;
 }
