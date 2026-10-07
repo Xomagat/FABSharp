@@ -669,6 +669,45 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
     {
         if (line.empty() || line[0] == '#') continue;
         std::istringstream iss(line);
+
+        std::string head;
+        iss >> head;
+
+        if (head == "const" || head == "var")
+        {
+            bool is_const = (head == "const");
+            std::string name;
+            iss >> name;
+
+            if (stdlib_vars.contains(name))
+                throw std::runtime_error("Manifest: duplicate variable " + name);
+
+            if (is_const)
+            {
+                std::string type, value;
+                iss >> type;
+                std::getline(iss, value);
+
+                auto b = value.find_first_not_of(" \t");
+                auto e = value.find_last_not_of(" \t\r");
+                if (b == std::string::npos)
+                    throw std::runtime_error("Manifest: const " + name + " has no value");
+                value = value.substr(b, e - b + 1);
+
+                stdlib_vars[name] = {"", type, value, true};
+            }
+            else
+            {
+                std::string symbol, type;
+                iss >> symbol >> type;
+                stdlib_vars[name] = {symbol, type, "", false};
+            }
+            continue;
+        }
+
+        iss.clear();
+        iss.seekg(0);
+
         std::string fab_name, symbol, ret, colon, arg;
         iss >> fab_name >> symbol >> ret >> colon;
 

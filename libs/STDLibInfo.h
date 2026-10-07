@@ -15,6 +15,16 @@ struct StdlibFunctionInfo
     std::vector<std::string> arg_types;
 };
 
+struct StdlibVarInfo
+{
+    std::string symbol;
+    std::string type;
+    std::string value;
+    bool is_const;
+};
+
+inline std::unordered_map<std::string, StdlibVarInfo> stdlib_vars;
+
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_symbols;
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_methods;
 

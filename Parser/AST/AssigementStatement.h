@@ -3,12 +3,14 @@
 //
 
 #pragma once
-#include "Statement.h"
-#include "Expression.h"
-
 #include <memory>
 #include <string>
 #include <unordered_map>
+
+#include "../../libs/STDLibInfo.h"
+
+#include "Statement.h"
+#include "Expression.h"
 
 inline llvm::Value* to_bool(llvm::Value* v, llvm::IRBuilder<>& b)
 {
@@ -69,6 +71,47 @@ inline std::string llvm_to_type(llvm::Type* t)
     throw std::runtime_error("Cannot demangle llvm type for overload resolution!");
 }
 
+inline llvm::Value* emit_stdlib_const(CodegenContext& ctx, const StdlibVarInfo& v)
+{
+    auto& b = ctx.builder;
+    llvm::Type* t = type_to_llvm(v.type, b);
+    std::string s = v.value;
+
+    if (v.type == "string" || v.type == "char")
+    {
+        if (s.size() >= 2 && (s.front() == '"' || s.front() == '\''))
+            s = s.substr(1, s.size() - 2);
+
+        std::string text;
+        for (size_t i = 0; i < s.size(); ++i)
+        {
+            if (s[i] == '\\' && i + 1 < s.size())
+            {
+                char c = s[++i];
+                text.push_back(c == 'n' ? '\n' : c == 't' ? '\t' : c == 'r' ? '\r' : c);
+            }
+            else text.push_back(s[i]);
+        }
+
+        if (v.type == "string") return b.CreateGlobalStringPtr(text);
+        return llvm::ConstantInt::get(t, text.empty() ? 0 : (unsigned char)text[0]);
+    }
+    if (v.type == "bool")
+        return b.getInt1(s == "true" || s == "1");
+    if (t->isFloatingPointTy())
+        return llvm::ConstantFP::get(t, std::stod(s));
+    if (t->isIntegerTy())
+        return llvm::ConstantInt::get(t, std::stoll(s), true);
+
+    throw std::runtime_error("Unsupported library const type: " + v.type);
+}
+
+inline llvm::GlobalVariable* stdlib_global(CodegenContext& ctx, const StdlibVarInfo& v)
+{
+    llvm::Type* t = type_to_llvm(v.type, ctx.builder);
+    return llvm::cast<llvm::GlobalVariable>(ctx.module.getOrInsertGlobal(v.symbol, t));
+}
+
 inline std::string list_elem(const std::string& t)
 {
     return t.substr(5, t.size() - 6);
@@ -116,7 +159,19 @@ public:
 
             auto it = context.variables.find(name);
             if (it == context.variables.end())
-                throw std::runtime_error("Variable " + name + " not found!");
+            {
+                auto lib = stdlib_vars.find(name);
+                if (lib == stdlib_vars.end())
+                    throw std::runtime_error("Variable " + name + " not found!");
+                if (lib->second.is_const)
+                    throw std::runtime_error("Cannot assign to library const '" + name + "'!");
+
+                auto* g = stdlib_global(context, lib->second);
+                llvm::Value* val = expression->codegen_expected(context, lib->second.type);
+                val = coerceToType(val, g->getValueType(), context.builder);
+                context.builder.CreateStore(val, g);
+                return;
+            }
 
             llvm::Value* val = expression->is_null_literal() ? llvm::Constant::getNullValue(type_to_llvm(type, context.builder)) : expression->codegen_expected(context, context.var_types[name]);
             val = coerceToType(val, it->second->getAllocatedType(), context.builder);

@@ -19,7 +19,19 @@ public:
     {
         auto it = context.variables.find(name);
         if (it == context.variables.end())
-            throw std::runtime_error("Variable {" + name + "} not found!");
+        {
+            auto lib = stdlib_vars.find(name);
+            if (lib == stdlib_vars.end())
+                throw std::runtime_error("Variable {" + name + "} not found!");
+
+            if (lib->second.is_const)
+                return emit_stdlib_const(context, lib->second);
+
+            auto* g = stdlib_global(context, lib->second);
+            auto* v = context.builder.CreateLoad(g->getValueType(), g, name);
+            context.value_types[v] = lib->second.type;
+            return v;
+        }
 
         llvm::AllocaInst* alloc = it->second;
         auto* v = context.builder.CreateLoad(alloc->getAllocatedType(), alloc, name);

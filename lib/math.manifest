@@ -1,7 +1,13 @@
 # Math functions    v0.1
 # Created on 26.09.2060
-# Last update 27.09.2026
+# Last update 07.10.2026
 
+# Consts
+const PI double 3.14159265358979323846
+
+# Vars
+
+# Funcs
 pow   fab_powd    double : double, double
 pow   fab_powl    long   : long, long
 pow   fab_powi    int    : int, int
