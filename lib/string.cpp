@@ -16,9 +16,10 @@ extern "C" bool fab_empty(const char* x)
     return strlen(x) == 0;
 }
 
-extern "C" bool fab_clear(char* x)
+extern "C" char* fab_clear(char* x)
 {
-    return *x = '\0';
+    *x = '\0';
+    return x;
 }
 
 extern "C" int fab_findc(const char* x, const char y)
@@ -104,4 +105,69 @@ extern "C" char* fab_to_lower(const char* x)
     r[len] = '\0';
 
     return r;
+}
+
+extern "C" char* fab_replace(const char* x, const char* y, const char* z)
+{
+    if (!x || !y || !z || *y == '\0') return nullptr;
+
+    size_t x_len = strlen(x);
+    size_t y_len = strlen(y);
+    size_t z_len = strlen(z);
+
+    size_t count = 0;
+    const char* tmp = x;
+    while ((tmp = strstr(tmp, y))) {
+        count++;
+        tmp += y_len;
+    }
+
+    size_t result_len = x_len + count * (z_len - y_len);
+    char* result = (char*)malloc(result_len + 1);
+    if (!result) return nullptr;
+
+    char* p = result;
+    while (*x != '\0') {
+        if (strstr(x, y) == x) {
+            strcpy(p, z);
+            p += z_len;
+            x += y_len;
+        } else {
+            *p++ = *x++;
+        }
+    }
+    *p = '\0';
+
+    return result;
+}
+
+extern "C" bool fab_contains(const char* x, const char* y)
+{
+    return fab_finds(x, y) == 0;
+}
+
+extern "C" bool fab_start_with(const char* x, const char* y)
+{
+    if (!x || !y) return false;
+
+    size_t len_prefix = strlen(y);
+    size_t len_str = strlen(x);
+
+    if (len_prefix > len_str) {
+        return false;
+    }
+
+    return strncmp(x, y, len_prefix) == 0;
+}
+
+extern "C" bool fab_ends_with(const char* x, const char* y)
+{
+    if (!x || !y) return false;
+
+    size_t str_len = strlen(x);
+    size_t suffix_len = strlen(y);
+
+    if (suffix_len > str_len) return false;
+
+    return strcmp(x + str_len - suffix_len, y) == 0;
 }

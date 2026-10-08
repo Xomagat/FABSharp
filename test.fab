@@ -1,6 +1,8 @@
-use math;
-
 define main() -> int
 {
-    writeln PI;
+    string text = "Hello, World!";
+    writeln text.replace("o", "0");     // Hell0, W0rld!
+    writeln text.contains("Hel");       // 1
+    writeln text.start_with("Hel");     // 1
+    writeln text.ends_with("Hel");      // 0
 }

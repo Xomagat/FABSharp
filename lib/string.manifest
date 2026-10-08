@@ -1,15 +1,20 @@
-# String functions    v0.1
-# Created on 05.10.2060
-# Last update 06.10.2026
+# String functions
+# Created on 05.10.2026
+# Last update 08.10.2026
 
 # String
-string.length   fab_length   int    : string
-string.empty    fab_empty    bool   : string
-string.clear    fab_clear    void   : string
-string.find     fab_finds    int    : string, string
-string.substr   fab_substr   string : string, int, int
-string.compare  fab_compare  string : string, string
-string.first    fab_first    char   : string
-string.last     fab_last     char   : string
-string.to_upper fab_to_upper string : string
-string.to_lower fab_to_lower string : string
+string.length     fab_length      int    : string
+string.empty      fab_empty       bool   : string
+string.clear      fab_clear       void   : string
+string.find       fab_finds       int    : string, string
+string.substr     fab_substr      string : string, int, int
+string.compare    fab_compare     string : string, string
+string.first      fab_first       char   : string
+string.last       fab_last        char   : string
+string.to_upper   fab_to_upper    string : string
+string.to_lower   fab_to_lower    string : string
+string.replace    fab_replace     string : string, string, string
+string.contains   fab_contains    bool   : string, string
+string.start_with fab_start_with  bool   : string, string
+string.ends_with  fab_ends_with   bool   : string, string
+string.split      fab_split       list<T>: string, string
