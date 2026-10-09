@@ -171,3 +171,21 @@ extern "C" bool fab_ends_with(const char* x, const char* y)
 
     return strcmp(x + str_len - suffix_len, y) == 0;
 }
+
+extern "C" int fab_to_int(const char* x)
+{
+    char *p = nullptr;
+    return strtol(x, &p, 10);
+}
+
+extern "C" long fab_to_long(const char* x)
+{
+    char *p = nullptr;
+    return strtoll(x, &p, 10);
+}
+
+extern "C" double fab_to_double(const char* x)
+{
+    char *p = nullptr;
+    return strtod(x, &p);
+}

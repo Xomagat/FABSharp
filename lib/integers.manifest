@@ -1,0 +1,42 @@
+# Integers functions
+# Create on 08.10.2026
+# Last update 09.10.2026
+
+# Const
+const INT_MIN int -2147483647
+const INT_MAX int 2147483647
+const CHAR_MIN char -128
+const CHAR_MAX char 127
+const SHORT_MIN short -32768
+const SHORT_MAX short 32767
+const LONG_MIN long -9223372036854775807LL - 1
+const LONG_MAX long 9223372036854775807LL
+const FLOAT_MIN float 1.40129846e-45f
+const FLOAT_MAX float 3.40282347e+38f
+const DOUBLE_MIN double 4.9406564584124654e-324
+const DOUBLE_MAX double 1.7976931348623157e+308
+
+# Short
+short.to_str      fab_to_str_short      string : short
+short.is_positive fab_is_positive_short bool   : short
+short.is_negative fab_is_negative_short bool   : short
+
+# Int
+int.to_str      fab_to_str_int      string : int
+int.is_positive fab_is_positive_int bool   : int
+int.is_negative fab_is_negative_int bool   : int
+
+# Long
+long.to_str      fab_to_str_long      string : long
+long.is_positive fab_is_positive_long bool   : long
+long.is_negative fab_is_negative_long bool   : long
+
+# Float
+float.to_str      fab_to_str_float      string : float
+float.is_positive fab_is_positive_float bool   : float
+float.is_negative fab_is_negative_float bool   : float
+
+# Double
+double.to_str      fab_to_str_double      string : double
+double.is_positive fab_is_positive_double bool   : double
+double.is_negative fab_is_negative_double bool   : double

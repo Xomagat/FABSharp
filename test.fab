@@ -1,8 +1,15 @@
 define main() -> int
 {
-    string text = "Hello, World!";
-    writeln text.replace("o", "0");     // Hell0, W0rld!
-    writeln text.contains("Hel");       // 1
-    writeln text.start_with("Hel");     // 1
-    writeln text.ends_with("Hel");      // 0
+    writeln INT_MIN;
+    writeln INT_MAX;
+    writeln CHAR_MIN;
+    writeln CHAR_MAX;
+    writeln SHORT_MIN;
+    writeln SHORT_MAX;
+    writeln LONG_MIN;
+    writeln LONG_MAX;
+    writeln FLOAT_MIN;
+    writeln FLOAT_MAX;
+    writeln DOUBLE_MIN;
+    writeln DOUBLE_MAX;
 }

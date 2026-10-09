@@ -17,4 +17,6 @@ string.replace    fab_replace     string : string, string, string
 string.contains   fab_contains    bool   : string, string
 string.start_with fab_start_with  bool   : string, string
 string.ends_with  fab_ends_with   bool   : string, string
-string.split      fab_split       list<T>: string, string
+string.to_int     fab_to_int      int    : string
+string.to_long    fab_to_long     long   : string
+string.to_double  fab_to_double   double : string
