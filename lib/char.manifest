@@ -1,0 +1,9 @@
+# Chars functions
+# Create on 09.10.2026
+# Last update 09.10.2026
+
+# Char functions
+char.is_digit  fab_char_is_digit  bool : char
+char.is_alpha  fab_char_is_alpha  bool : char
+char.to_upper  fab_char_to_upper  char : char
+char.to_lower  fab_char_to_lower  char : char

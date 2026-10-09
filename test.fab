@@ -1,15 +1,8 @@
 define main() -> int
 {
-    writeln INT_MIN;
-    writeln INT_MAX;
-    writeln CHAR_MIN;
-    writeln CHAR_MAX;
-    writeln SHORT_MIN;
-    writeln SHORT_MAX;
-    writeln LONG_MIN;
-    writeln LONG_MAX;
-    writeln FLOAT_MIN;
-    writeln FLOAT_MAX;
-    writeln DOUBLE_MIN;
-    writeln DOUBLE_MAX;
+    char c = 'a';
+    writeln c.to_upper();
+    writeln c.to_upper().to_lower();
+    writeln c.is_alpha();
+    writeln '7'.is_digit();
 }
