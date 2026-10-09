@@ -34,7 +34,12 @@ public:
 
     llvm::Value* codegen(CodegenContext& ctx) const override {
         return std::visit(overloaded {
-            [&](long long v)   { return (llvm::Value*)llvm::ConstantInt::get(ctx.builder.getInt32Ty(), v); },
+            [&](long long v) {
+                            llvm::Type* t = (v >= INT32_MIN && v <= INT32_MAX)
+                                ? ctx.builder.getInt32Ty()
+                                : ctx.builder.getInt64Ty();
+                            return (llvm::Value*)llvm::ConstantInt::get(t, (uint64_t)v, true);
+                         },
             [&](long double v) { return (llvm::Value*)llvm::ConstantFP::get(ctx.builder.getDoubleTy(), (double)v); },
             [&](bool v)        { return (llvm::Value*)ctx.builder.getInt1(v); },
             [&](const std::string& s) { return (llvm::Value*)ctx.builder.CreateGlobalStringPtr(s); },

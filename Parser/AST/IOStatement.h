@@ -44,9 +44,17 @@ public:
 
         if (val->getType()->isFloatingPointTy())
         {
+            llvm::Value* fmt = nullptr;
             if (val->getType()->isFloatTy())
+            {
+                val = context.builder.CreateFPExt(val, context.builder.getFloatTy());
+                fmt = context.builder.CreateGlobalStringPtr("%.9g\n");
+            }
+            else
+            {
                 val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%f\n");
+                fmt = context.builder.CreateGlobalStringPtr("%.17g\n");
+            }
             context.builder.CreateCall(printfFunc, {fmt, val});
         }
         else if (val->getType()->isIntegerTy(8))
@@ -57,7 +65,12 @@ public:
         }
         else if (val->getType()->isIntegerTy())
         {
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d\n");
+            unsigned bits = val->getType()->getIntegerBitWidth();
+            if (bits < 32)
+                val = context.builder.CreateSExt(val, context.builder.getInt32Ty());
+
+            const char* f = (bits == 64) ? "%lld\n" : "%d\n";
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr(f);
             context.builder.CreateCall(printfFunc, {fmt, val});
         }
         else
@@ -100,15 +113,27 @@ public:
 
         if (val->getType()->isFloatingPointTy())
         {
+            llvm::Value* fmt = nullptr;
             if (val->getType()->isFloatTy())
+            {
+                val = context.builder.CreateFPExt(val, context.builder.getFloatTy());
+                fmt = context.builder.CreateGlobalStringPtr("%.9g");
+            }
+            else
+            {
                 val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%f");
+                fmt = context.builder.CreateGlobalStringPtr("%.17g");
+            }
             context.builder.CreateCall(printfFunc, {fmt, val});
         }
         else if (val->getType()->isIntegerTy(8))
         {
-            val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%c");
+            unsigned bits = val->getType()->getIntegerBitWidth();
+            if (bits < 32)
+                val = context.builder.CreateSExt(val, context.builder.getInt32Ty());
+
+            const char* f = (bits == 64) ? "%lld" : "%d";
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr(f);
             context.builder.CreateCall(printfFunc, {fmt, val});
         }
         else if (val->getType()->isIntegerTy())
