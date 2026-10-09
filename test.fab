@@ -1,8 +1,9 @@
 define main() -> int
 {
-    char c = 'a';
-    writeln c.to_upper();
-    writeln c.to_upper().to_lower();
-    writeln c.is_alpha();
-    writeln '7'.is_digit();
+    bool a = true;
+    bool b = false;
+    writeln a.to_str(); // true
+    writeln a.to_int(); // 1
+    writeln a.negate(); // 0
+    writeln a.xor(b);   // 1
 }

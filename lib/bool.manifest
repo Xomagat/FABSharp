@@ -1,0 +1,9 @@
+# Booleans functions
+# Create on 09.10.2026
+# Last update 09.10.2026
+
+# Bool functions
+bool.to_str  fab_bool_to_str  string : bool
+bool.to_int  fab_bool_to_int  int    : bool
+bool.negate  fab_bool_negate  bool   : bool
+bool.xor     fab_bool_xor     bool   : bool, bool
