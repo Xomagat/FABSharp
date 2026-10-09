@@ -652,6 +652,7 @@ bool is_known_type(std::string& type)
     if (type == "float")  return true;
     if (type == "double") return true;
     if (type == "bool")   return true;
+    if (type == "char")   return true;
     if (type == "list")   return true;
 
     return false;
