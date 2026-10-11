@@ -1,42 +1,109 @@
 # Integers functions
 # Create on 08.10.2026
-# Last update 09.10.2026
+# Last update 11.10.2026
 
 # Const
-const INT_MIN int -2147483647
+const INT_MIN int -2147483648
 const INT_MAX int 2147483647
-const CHAR_MIN char -128
-const CHAR_MAX char 127
+const CHAR_MIN int -128
+const CHAR_MAX int 127
 const SHORT_MIN short -32768
 const SHORT_MAX short 32767
-const LONG_MIN long -9223372036854775807LL - 1
-const LONG_MAX long 9223372036854775807LL
-const FLOAT_MIN float 1.40129846e-45f
-const FLOAT_MAX float 3.40282347e+38f
-const DOUBLE_MIN double 4.9406564584124654e-324
+const LONG_MIN long -9223372036854775808
+const LONG_MAX long 9223372036854775807
+const FLOAT_MIN float 1.17549435e-38
+const FLOAT_MAX float 3.40282347e+38
+const FLOAT_EPSILON float 1.19209290e-07
+const DOUBLE_MIN double 2.2250738585072014e-308
 const DOUBLE_MAX double 1.7976931348623157e+308
+const DOUBLE_EPSILON double 2.2204460492503131e-16
 
 # Short
 short.to_str      fab_to_str_short      string : short
 short.is_positive fab_is_positive_short bool   : short
 short.is_negative fab_is_negative_short bool   : short
+short.is_zero     fab_is_zero_short     bool   : short
+short.is_even     fab_is_even_short     bool   : short
+short.is_odd      fab_is_odd_short      bool   : short
+short.abs         fab_abs_short         short  : short
+short.sign        fab_sign_short        int    : short
+short.to_bool     fab_to_bool_short     bool   : short
+short.to_char     fab_to_char_short     char   : short
+short.to_int      fab_to_int_short      int    : short
+short.to_long     fab_to_long_short     long   : short
+short.to_float    fab_to_float_short    float  : short
+short.to_double   fab_to_double_short   double : short
 
 # Int
 int.to_str      fab_to_str_int      string : int
 int.is_positive fab_is_positive_int bool   : int
 int.is_negative fab_is_negative_int bool   : int
+int.is_zero     fab_is_zero_int     bool   : int
+int.is_even     fab_is_even_int     bool   : int
+int.is_odd      fab_is_odd_int      bool   : int
+int.abs         fab_abs_int         int    : int
+int.sign        fab_sign_int        int    : int
+int.to_bool     fab_to_bool_int     bool   : int
+int.to_char     fab_to_char_int     char   : int
+int.to_short    fab_to_short_int    short  : int
+int.to_long     fab_to_long_int     long   : int
+int.to_float    fab_to_float_int    float  : int
+int.to_double   fab_to_double_int   double : int
 
 # Long
 long.to_str      fab_to_str_long      string : long
 long.is_positive fab_is_positive_long bool   : long
 long.is_negative fab_is_negative_long bool   : long
+long.is_zero     fab_is_zero_long     bool   : long
+long.is_even     fab_is_even_long     bool   : long
+long.is_odd      fab_is_odd_long      bool   : long
+long.abs         fab_abs_long         long   : long
+long.sign        fab_sign_long        int    : long
+long.to_bool     fab_to_bool_long     bool   : long
+long.to_char     fab_to_char_long     char   : long
+long.to_short    fab_to_short_long    short  : long
+long.to_int      fab_to_int_long      int    : long
+long.to_float    fab_to_float_long    float  : long
+long.to_double   fab_to_double_long   double : long
 
 # Float
 float.to_str      fab_to_str_float      string : float
 float.is_positive fab_is_positive_float bool   : float
 float.is_negative fab_is_negative_float bool   : float
+float.is_zero     fab_is_zero_float     bool   : float
+float.is_nan      fab_is_nan_float      bool   : float
+float.is_inf      fab_is_inf_float      bool   : float
+float.is_finite   fab_is_finite_float   bool   : float
+float.abs         fab_abs_float         float  : float
+float.sign        fab_sign_float        int    : float
+float.floor       fab_floor_float       float  : float
+float.ceil        fab_ceil_float        float  : float
+float.trunc       fab_trunc_float       float  : float
+float.round       fab_round_float       float  : float
+float.to_bool     fab_to_bool_float     bool   : float
+float.to_char     fab_to_char_float     char   : float
+float.to_short    fab_to_short_float    short  : float
+float.to_int      fab_to_int_float      int    : float
+float.to_long     fab_to_long_float     long   : float
+float.to_double   fab_to_double_float   double : float
 
 # Double
 double.to_str      fab_to_str_double      string : double
 double.is_positive fab_is_positive_double bool   : double
 double.is_negative fab_is_negative_double bool   : double
+double.is_zero     fab_is_zero_double     bool   : double
+double.is_nan      fab_is_nan_double      bool   : double
+double.is_inf      fab_is_inf_double      bool   : double
+double.is_finite   fab_is_finite_double   bool   : double
+double.abs         fab_abs_double         double : double
+double.sign        fab_sign_double        int    : double
+double.floor       fab_floor_double       double : double
+double.ceil        fab_ceil_double        double : double
+double.trunc       fab_trunc_double       double : double
+double.round       fab_round_double       double : double
+double.to_bool     fab_to_bool_double     bool   : double
+double.to_char     fab_to_char_double     char   : double
+double.to_short    fab_to_short_double    short  : double
+double.to_int      fab_to_int_double      int    : double
+double.to_long     fab_to_long_double     long   : double
+double.to_float    fab_to_float_double    float  : double
