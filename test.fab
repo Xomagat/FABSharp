@@ -1,38 +1,54 @@
 define main() -> int
 {
-    dict<string, int> ages;
-    dict<string, int> extra = {"Jonn": 15, "Jo": 24};
+    bool t = true;
+    bool f = false;
 
-    // ADD, CHANGE
-    ages.set("Alice", 25);              // добавляет или обновляет ключ "Alice" значением 25
-    ages.set("Bob", 30);                // добавляет или обновляет ключ "Bob" значением 30
-    ages.merge(extra);                  // объединяет текущий словарь со словарем extra
+    // CONVERT
+    writeln t.to_str();                 // true
+    writeln f.to_str();                 // false
+    writeln t.to_bin();                 // 1
+    writeln f.to_bin();                 // 0
+    writeln t.to_int();                 // 1
+    writeln f.to_int();                 // 0
+    writeln t.to_short();               // 1
+    writeln t.to_long();                // 1
+    writeln t.to_float();               // 1
+    writeln t.to_double();              // 1
 
-    // SIZE
-    writeln ages.length();              // 3
-    writeln ages.empty();               // false
-    writeln ages.capacity();            // текущая емкость буфера памяти словаря (int)
+    // LOGIC
+    writeln t.negate();                 // false
+    writeln f.negate();                 // true
+    writeln t.xor(f);                   // true
+    writeln t.xor(t);                   // false
+    writeln t.and(t);                   // true
+    writeln t.and(f);                   // false
+    writeln f.or(f);                    // false
+    writeln t.or(f);                    // true
+    writeln t.nand(t);                  // false
+    writeln t.nand(f);                  // true
+    writeln f.nor(f);                   // true
+    writeln t.nor(f);                   // false
+    writeln t.xnor(t);                  // true
+    writeln t.xnor(f);                  // false
+    writeln t.implies(f);               // false
+    writeln f.implies(t);               // true
+    writeln f.implies(f);               // true
 
-    // ACCESS
-    writeln ages.get("Alice");          // 25
-    writeln ages.get_or("Charlie", 18); // 18 (возвращает 18, так как ключа "Charlie" нет)
-    writeln ages.key_at(0);             // "Alice" (получает ключ по внутреннему индексу)
-    writeln ages.value_at(0);           // 25 (получает значение по внутреннему индексу)
+    // COMPARE
+    writeln t.compare(f);               // 1
+    writeln f.compare(t);               // -1
+    writeln t.compare(t);               // 0
 
-    // SEARCH
-    writeln ages.contains("Bob");       // true
-    writeln ages.contains_value(30);    // true
+    // LITERALS, EXPRESSIONS, CHAINS
+    writeln true.to_str();              // true
+    writeln (5 > 3).to_str();           // true
+    writeln (5 < 3).to_str();           // false
+    writeln t.and(t).negate().to_str(); // false
+    writeln (1 == 1).xor(2 == 3);       // true
 
-    // REMOVE
-    writeln ages.remove("Bob");         // true (удаляет ключ "Bob" и возвращает статус)
-    writeln ages.pop("Alice");          // 25 (удаляет ключ "Alice" и возвращает его значение)
-    ages.clear();                       // очищает словарь, оставляя его пустым
-
-    // KEYS, VALUES, COPY
-    ages.set("Ivan", 20);
-    ages.set("Petr", 35);
-
-    list<string> all_keys = ages.keys(); // ["Ivan", "Petr"]
-    list<int> all_values = ages.values(); // [20, 35]
-    dict<string, int> backup = ages.copy(); // создает независимую копию словаря
+    // IN CONDITIONS
+    if (t.xor(f))
+        writeln "xor ok";               // xor ok
+    if (f.implies(t) && t.xnor(t))
+        writeln "implies ok";           // implies ok
 }

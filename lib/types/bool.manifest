@@ -1,9 +1,25 @@
 # Booleans functions
 # Create on 09.10.2026
-# Last update 09.10.2026
+# Last update 11.10.2026
 
-# Bool functions
-bool.to_str  fab_bool_to_str  string : bool
-bool.to_int  fab_bool_to_int  int    : bool
-bool.negate  fab_bool_negate  bool   : bool
-bool.xor     fab_bool_xor     bool   : bool, bool
+# Convert
+bool.to_str    fab_bool_to_str    string : bool
+bool.to_bin    fab_bool_to_bin    string : bool
+bool.to_int    fab_bool_to_int    int    : bool
+bool.to_short  fab_bool_to_short  short  : bool
+bool.to_long   fab_bool_to_long   long   : bool
+bool.to_float  fab_bool_to_float  float  : bool
+bool.to_double fab_bool_to_double double : bool
+
+# Logic
+bool.negate    fab_bool_negate    bool   : bool
+bool.xor       fab_bool_xor       bool   : bool, bool
+bool.and       fab_bool_and       bool   : bool, bool
+bool.or        fab_bool_or        bool   : bool, bool
+bool.nand      fab_bool_nand      bool   : bool, bool
+bool.nor       fab_bool_nor       bool   : bool, bool
+bool.xnor      fab_bool_xnor      bool   : bool, bool
+bool.implies   fab_bool_implies   bool   : bool, bool
+
+# Compare
+bool.compare   fab_bool_compare   int    : bool, bool
