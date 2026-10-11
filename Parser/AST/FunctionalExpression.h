@@ -77,7 +77,7 @@ public:
 
             return context.builder.CreateCall(fn, coerced);
         }
-        
+
         std::vector<std::string> widened = arg_type_names;
         bool changed = false;
         for (auto& t : widened)
@@ -91,7 +91,12 @@ public:
                 return emit_stdlib_call(context, wIt->second, args_values);
         }
 
-        throw std::runtime_error("Unknown function or overload for codegen: " + name);
+        std::string sig = name + "(";
+        for (size_t i = 0; i < arg_type_names.size(); ++i)
+            sig += (i ? ", " : "") + arg_type_names[i];
+        sig += ")";
+
+        throw std::runtime_error("Unknown function or overload for codegen: " + sig);
     }
 
     llvm::Value* codegen(CodegenContext& context) const override
