@@ -77,6 +77,19 @@ public:
 
             return context.builder.CreateCall(fn, coerced);
         }
+        
+        std::vector<std::string> widened = arg_type_names;
+        bool changed = false;
+        for (auto& t : widened)
+            if (t == "int" || t == "short" || t == "long" || t == "float")
+            { t = "double"; changed = true; }
+
+        if (changed)
+        {
+            auto wIt = stdlib_symbols.find(mangle_name(name, widened));
+            if (wIt != stdlib_symbols.end())
+                return emit_stdlib_call(context, wIt->second, args_values);
+        }
 
         throw std::runtime_error("Unknown function or overload for codegen: " + name);
     }

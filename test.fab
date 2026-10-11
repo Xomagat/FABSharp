@@ -1,8 +1,6 @@
+use math;
+
 define main() -> int
 {
-    dict<int, string> a = {
-        0: "a", 1: "b", 2: "c"
-    };
-
-    writeln a;  // {0: a, 1: b, 2: c}
+    writeln pow(2, 2.5);
 }

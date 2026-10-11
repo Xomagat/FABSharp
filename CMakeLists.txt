@@ -57,6 +57,7 @@ add_executable(fab main.cpp
         Parser/AST/UseStatement.h
         Parser/AST/MethodCallExpression.h
         Parser/AST/ListLiteralExpression.h
+        Parser/AST/DictLiteralExpression.h
         Parser/AST/IndexExprAndStat.h
 )
 
