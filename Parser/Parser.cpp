@@ -183,6 +183,16 @@ std::string Parser::parse_type()
         t += "<" + parse_type() + ">";
         consume(token_type::GT);
     }
+    else if (t == "dict")
+    {
+        consume(token_type::LT);
+        std::string k = parse_type();
+        consume(token_type::COMMA);
+        std::string v = parse_type();
+        consume(token_type::GT);
+
+        t = "dict<" + k + "," + v + ">";
+    }
     return t;
 }
 
@@ -575,6 +585,19 @@ std::unique_ptr<Expression> Parser::primary()
         ld_convert:
         return std::make_unique<ValueExpression>(std::stold(current.get_text()));
     }
+    if (match(token_type::LBRACKET))
+    {
+        auto dict = std::make_unique<DictLiteralExpression>();
+        while (!match(token_type::RBRACKET))
+        {
+            auto key = expression();
+            consume(token_type::COLON);
+            auto val = expression();
+            dict->add_pair(std::move(key), std::move(val));
+            match(token_type::COMMA);
+        }
+        return dict;
+    }
     if (match(token_type::LSQUARE))
     {
         auto list = std::make_unique<ListLiteralExpression>();
@@ -654,6 +677,7 @@ bool is_known_type(std::string& type)
     if (type == "bool")   return true;
     if (type == "char")   return true;
     if (type == "list")   return true;
+    if (type == "dict")   return true;
 
     return false;
 }
@@ -730,7 +754,8 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         std::string name = fab_name.substr(dot + 1);
 
         std::string recv = type;
-        if (type == "list<T>") type = "list";
+        if (type == "list<T>")   type = "list";
+        if (type == "dict<K,V>") type = "dict";
 
         if (!is_known_type(type))
             throw std::runtime_error("Manifest: unknown receiver type '" + type + "' in " + fab_name);

@@ -38,6 +38,11 @@ public:
             context.builder.CreateCall(printfFunc, {context.builder.CreateGlobalStringPtr("\n")});
             return;
         }
+        if (emit_container_print(context, val, t))
+        {
+            context.builder.CreateCall(printfFunc, {context.builder.CreateGlobalStringPtr("\n")});
+            return;
+        }
 
         if (val->getType()->isIntegerTy(1))
             val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
@@ -107,6 +112,12 @@ public:
             context.builder.CreateCall(printFn, {val});
             return;
         }
+        if (emit_container_print(context, val, t))
+        {
+            context.builder.CreateCall(printfFunc, {});
+            return;
+        }
+
 
         if (val->getType()->isIntegerTy(1))
             val = context.builder.CreateZExt(val, context.builder.getInt32Ty());

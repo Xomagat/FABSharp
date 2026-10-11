@@ -1,0 +1,9 @@
+# Dict functions
+# Create on 09.10.2026
+# Last update 09.10.2026
+
+# Dict
+dict<K,V>.set       fab_dict_set       void : dict<K,V>, K, V
+dict<K,V>.get       fab_dict_get       V    : dict<K,V>, K
+dict<K,V>.contains  fab_dict_contains  bool : dict<K,V>, K
+dict<K,V>.length    fab_dict_length    int  : dict<K,V>

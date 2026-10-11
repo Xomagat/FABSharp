@@ -1,9 +1,8 @@
 define main() -> int
 {
-    bool a = true;
-    bool b = false;
-    writeln a.to_str(); // true
-    writeln a.to_int(); // 1
-    writeln a.negate(); // 0
-    writeln a.xor(b);   // 1
+    dict<int, string> a = {
+        0: "a", 1: "b", 2: "c"
+    };
+
+    writeln a;  // {0: a, 1: b, 2: c}
 }

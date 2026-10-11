@@ -20,6 +20,7 @@
 #include "AST/FunctionalExpression.h"
 #include "AST/MethodCallExpression.h"
 #include "AST/ListLiteralExpression.h"
+#include "AST/DictLiteralExpression.h"
 
 #include "AST/IndexExprAndStat.h"
 
@@ -89,7 +90,7 @@ private:
 
     std::vector<std::unique_ptr<Statement>> load_fab_module(const std::filesystem::path &path);
 
-  public:
+public:
     Parser(std::vector<Token> tokens, std::filesystem::path base_dir,
            std::filesystem::path exe_dir);
 

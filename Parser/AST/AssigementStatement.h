@@ -40,6 +40,56 @@ inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm:
     throw std::runtime_error("Cannot coerce between these types in codegen!");
 }
 
+inline std::string list_elem(const std::string& t)
+{
+    return t.substr(5, t.size() - 6);
+}
+
+inline llvm::Value* emit_list_new(CodegenContext& ctx, const std::string& list_type)
+{
+    auto& b = ctx.builder;
+    llvm::Type* ptr = b.getInt8Ty()->getPointerTo();
+    auto fn = ctx.module.getOrInsertFunction(
+        "fab_list_new_" + list_elem(list_type),
+        llvm::FunctionType::get(ptr, {}, false));
+    llvm::Value* v = b.CreateCall(fn);
+    ctx.value_types[v] = list_type;
+    return v;
+}
+
+inline std::pair<std::string, std::string> dict_kv(const std::string& t)
+{
+    std::string in = t.substr(5, t.size() - 6);
+    int depth = 0;
+    for (size_t i = 0; i < in.size(); ++i)
+    {
+        if      (in[i] == '<') depth++;
+        else if (in[i] == '>') depth--;
+        else if (in[i] == ',' && depth == 0)
+            return {in.substr(0, i), in.substr(i + 1)};
+    }
+    throw std::runtime_error("Bad dict type: " + t);
+}
+
+inline llvm::Value* emit_container_new(CodegenContext& ctx, const std::string& t)
+{
+    if (t.starts_with("list<")) return emit_list_new(ctx, t);
+
+    auto [k, v] = dict_kv(t);
+    auto& b = ctx.builder;
+    auto fn = ctx.module.getOrInsertFunction(
+        "fab_dict_new_" + k + "_" + v,
+        llvm::FunctionType::get(b.getPtrTy(), {}, false));
+    llvm::Value* r = b.CreateCall(fn);
+    ctx.value_types[r] = t;
+    return r;
+}
+
+inline bool is_container(const std::string& t)
+{
+    return t.starts_with("list<") || t.starts_with("dict<");
+}
+
 inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& builder)
 {
     if (type == "void")   return builder.getVoidTy();
@@ -51,7 +101,7 @@ inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& buil
     if (type == "float")  return builder.getFloatTy();
     if (type == "bool")   return builder.getInt1Ty();
     if (type == "string") return builder.getInt8Ty()->getPointerTo();
-    if (type.starts_with("list<")) return builder.getPtrTy();
+    if (is_container(type)) return builder.getPtrTy();
 
     throw std::runtime_error("Unknown type for codegen: " + type);
 }
@@ -112,11 +162,6 @@ inline llvm::GlobalVariable* stdlib_global(CodegenContext& ctx, const StdlibVarI
     return llvm::cast<llvm::GlobalVariable>(ctx.module.getOrInsertGlobal(v.symbol, t));
 }
 
-inline std::string list_elem(const std::string& t)
-{
-    return t.substr(5, t.size() - 6);
-}
-
 inline std::string type_of(CodegenContext& ctx, llvm::Value* v)
 {
     auto it = ctx.value_types.find(v);
@@ -124,16 +169,18 @@ inline std::string type_of(CodegenContext& ctx, llvm::Value* v)
     return llvm_to_type(v->getType());
 }
 
-inline llvm::Value* emit_list_new(CodegenContext& ctx, const std::string& list_type)
+inline bool emit_container_print(CodegenContext& ctx, llvm::Value* val, const std::string& t)
 {
     auto& b = ctx.builder;
-    llvm::Type* ptr = b.getInt8Ty()->getPointerTo();
-    auto fn = ctx.module.getOrInsertFunction(
-        "fab_list_new_" + list_elem(list_type),
-        llvm::FunctionType::get(ptr, {}, false));
-    llvm::Value* v = b.CreateCall(fn);
-    ctx.value_types[v] = list_type;
-    return v;
+    std::string sym;
+    if      (t.starts_with("list<")) sym = "fab_list_print_" + list_elem(t);
+    else if (t.starts_with("dict<")) { auto [k, v] = dict_kv(t); sym = "fab_dict_print_" + k + "_" + v; }
+    else return false;
+
+    auto fn = ctx.module.getOrInsertFunction(sym,
+        llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false));
+    b.CreateCall(fn, {val});
+    return true;
 }
 
 class AssigementStatement : public Statement

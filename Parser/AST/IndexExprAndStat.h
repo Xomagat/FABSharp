@@ -51,6 +51,15 @@ public:
             return b.CreateLoad(b.getInt8Ty(), p);
         }
 
+        if (t.starts_with("dict<"))
+        {
+            auto [k, v] = dict_kv(t);
+            StdlibFunctionInfo info{"fab_dict_get_" + k + "_" + v, v, {t, k}};
+            llvm::Value* r = FunctionalExpression::emit_stdlib_call(ctx, info, {base, index->codegen(ctx)});
+            ctx.value_types[r] = v;
+            return r;
+        }
+
         if (!t.starts_with("list<"))
             throw std::runtime_error("Type '" + t + "' does not support indexing!");
 

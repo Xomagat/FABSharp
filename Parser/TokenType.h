@@ -52,6 +52,7 @@ enum token_type
     NOT,            // !
     NEQ,            // !=
     SEMI,           // ;
+    COLON,          // :
     COMMA,          // ,
     DOT,            // .
     LT,             // <
@@ -113,6 +114,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {NOT,        "!"},
     {NEQ,        "!="},
     {SEMI,       ";"},
+    {COLON,      ":"},
     {COMMA,      ","},
     {DOT,        "."},
     {LT,         "<"},

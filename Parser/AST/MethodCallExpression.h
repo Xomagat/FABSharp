@@ -38,26 +38,29 @@ public:
         }
 
         auto it = stdlib_methods.find(mangle_method(recv_type, name, tail_types));
-        if (recv_type.starts_with("list<"))
+        if (recv_type.starts_with("list<") || recv_type.starts_with("dict<"))
         {
-            std::string elem = list_elem(recv_type);
+            bool is_list = recv_type.starts_with("list<");
+            auto git = stdlib_methods.find(
+                std::string(is_list ? "list" : "dict") + "::" + name + "#" + std::to_string(tail_types.size()));
+            if (git == stdlib_methods.end())
+                throw std::runtime_error("Type '" + recv_type + "' has no method '" + name + "'");
 
-            auto lit = stdlib_methods.find(mangle_method("list", name, tail_types));
-            if (lit == stdlib_methods.end())
-                lit = stdlib_methods.find(mangle_method("list", name,
-                          std::vector<std::string>(tail_types.size(), "T")));
-            if (lit == stdlib_methods.end())
-                throw std::runtime_error("Type '" + recv_type + "' has no method '" + name + "' with these arguments");
+            std::unordered_map<std::string, std::string> subst;
+            std::string suffix;
+            if (is_list) { subst = {{"T", list_elem(recv_type)}}; suffix = "_" + list_elem(recv_type); }
+            else         { auto [k, v] = dict_kv(recv_type);
+                subst = {{"K", k}, {"V", v}};        suffix = "_" + k + "_" + v; }
 
-            StdlibFunctionInfo info = lit->second;
-            info.symbol += "_" + elem;
-            for (auto& t : info.arg_types)
-            {
-                if (t == "list<T>") t = recv_type;
-                else if (t == "T")  t = elem;
-            }
-            if (info.return_type == "T")           info.return_type = elem;
-            else if (info.return_type == "list<T>") info.return_type = recv_type;
+            auto fix = [&](std::string& t) {
+                if (t == "list<T>" || t == "dict<K,V>") t = recv_type;
+                else if (auto s = subst.find(t); s != subst.end()) t = s->second;
+            };
+
+            StdlibFunctionInfo info = git->second;
+            info.symbol += suffix;
+            for (auto& t : info.arg_types) fix(t);
+            fix(info.return_type);
 
             return FunctionalExpression::emit_stdlib_call(ctx, info, vals);
         }
