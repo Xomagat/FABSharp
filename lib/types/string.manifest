@@ -5,7 +5,6 @@
 # String
 string.length               fab_length              int          : string
 string.empty                fab_empty               bool         : string
-string.clear                fab_clear               void         : string
 string.find                 fab_finds               int          : string, string
 string.substr               fab_substr              string       : string, int, int
 string.compare              fab_compare             string       : string, string

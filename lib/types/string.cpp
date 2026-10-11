@@ -31,12 +31,6 @@ extern "C" bool fab_empty(const char* x)
     return strlen(x) == 0;
 }
 
-extern "C" char* fab_clear(char* x)
-{
-    *x = '\0';
-    return x;
-}
-
 extern "C" int fab_findc(const char* x, const char y)
 {
     char const *p = strchr(x, y);
@@ -308,6 +302,23 @@ extern "C" char* fab_pad_left(const char* x, int width, char fill)
     size_t pad = (size_t)width - len;
     memset(r, fill, pad);
     memcpy(r + pad, x, len + 1);   // +1 copies the '\0'
+
+    return r;
+}
+
+extern "C" char* fab_pad_right(const char* x, int width, char fill)
+{
+    if (x == nullptr) return nullptr;
+
+    size_t len = strlen(x);
+    if (width <= 0 || (size_t)width <= len) return str_dup_n(x, len);
+
+    char* r = (char*)malloc((size_t)width + 1);
+    if (r == nullptr) return nullptr;
+
+    size_t pad = (size_t)width - len;
+    memset(r, fill, pad);
+    memcpy(r - pad, x, len + 1);   // +1 copies the '\0'
 
     return r;
 }
