@@ -1,6 +1,250 @@
+// Test of the math library
+// Every line must start with OK. If you see FAIL, check that function.
+
 use math;
+
+// Helpers
+// Calls to user functions need an exact type match (no implicit widening),
+// so there is one helper per result type.
+
+define check_d(string name, double got, double expected)
+{
+    double diff = got - expected;
+    if (diff < 0) diff = -diff;
+
+    if (diff < 0.000001) writeln "OK    " + name;
+    else writeln "FAIL  " + name;
+}
+
+// float has ~7 digits, so the tolerance is looser
+define check_f(string name, float got, double expected)
+{
+    double diff = got - expected;
+    if (diff < 0) diff = -diff;
+
+    if (diff < 0.0001) writeln "OK    " + name;
+    else writeln "FAIL  " + name;
+}
+
+define check_i(string name, int got, int expected)
+{
+    if (got == expected) writeln "OK    " + name;
+    else writeln "FAIL  " + name;
+}
+
+// long result, expected value fits in int
+define check_l(string name, long got, int expected)
+{
+    long e = expected;
+    if (got == e) writeln "OK    " + name;
+    else writeln "FAIL  " + name;
+}
+
+// long result, expected value does not fit in int
+define check_ll(string name, long got, long expected)
+{
+    if (got == expected) writeln "OK    " + name;
+    else writeln "FAIL  " + name;
+}
+
+define check_b(string name, bool got, bool expected)
+{
+    if (got == expected) writeln "OK    " + name;
+    else writeln "FAIL  " + name;
+}
 
 define main() -> int
 {
-    writeln pow(2, 2.5);
+    // Variables for float / long overloads
+    float f0 = 0.0;
+    float f1 = 1.0;
+    float f2 = 2.0;
+    float f3 = 3.0;
+    float f4 = 4.0;
+    float f8 = 8.0;
+    float f27 = 27.0;
+    float f180 = 180.0;
+    float f1000 = 1000.0;
+    float fh = 0.5;
+    float fq = 0.25;
+    float fa = 1.5;
+    float fb = 2.5;
+    float fc = 9.0;
+    float fe = 2.718281828459045;
+    float f12 = 1.2;
+    float fneg = -1.5;
+    float fm = -1.9;
+
+    long la = 5;
+    long lb = 9;
+    long lc = 15;
+    long ld = 0;
+    long lneg = -5;
+    long l2 = 2;
+    long l4 = 4;
+    long l6 = 6;
+    long l18 = 18;
+    long l40 = 40;
+    long l48 = 48;
+    long lp = 1000000007;
+    long p40 = 1099511627776;
+    long f20 = 2432902008176640000;
+
+    // Consts
+    writeln "--- consts ---";
+    check_d("PI",    PI,    3.141592653589793);
+    check_d("TAU",   TAU,   6.283185307179586);
+    check_d("E",     E,     2.718281828459045);
+    check_d("PHI",   PHI,   1.618033988749895);
+    check_d("SQRT2", SQRT2, 1.4142135623730951);
+    check_d("LN2",   LN2,   0.6931471805599453);
+    check_d("LN10",  LN10,  2.302585092994046);
+
+    // Abs
+    writeln "--- abs ---";
+    check_i("abs(int)",    abs(-5), 5);
+    check_l("abs(long)",   abs(lneg), 5);
+    check_d("abs(double)", abs(-2.5), 2.5);
+    check_f("fabs(float)", fabs(fneg), 1.5);
+    check_d("fabs(double)", fabs(-2.5), 2.5);
+
+    // Pow, sqrt, cbrt, hypot
+    writeln "--- pow / sqrt ---";
+    check_i("pow(int) 2^10",    pow(2, 10), 1024);
+    check_i("pow(int) (-2)^3",  pow(-2, 3), -8);
+    check_i("pow(int) 5^0",     pow(5, 0), 1);
+    check_i("pow(int) 2^-1",    pow(2, -1), 0);
+    check_ll("pow(long) 2^40",  pow(l2, l40), p40);
+    check_f("pow(float)",       pow(f2, f3), 8.0);
+    check_d("pow(double)",      pow(2.0, 0.5), 1.4142135623730951);
+    check_d("sqrt(int)",        sqrt(16), 4.0);
+    check_f("sqrt(float)",      sqrt(f2), 1.4142135623730951);
+    check_d("sqrt(double)",     sqrt(2.0), 1.4142135623730951);
+    check_f("cbrt(float)",      cbrt(f27), 3.0);
+    check_d("cbrt(double)",     cbrt(27.0), 3.0);
+    check_f("hypot(float)",     hypot(f3, f4), 5.0);
+    check_d("hypot(double)",    hypot(3.0, 4.0), 5.0);
+
+    // Rounding
+    writeln "--- rounding ---";
+    check_f("ceil(float)",    ceil(f12), 2.0);
+    check_d("ceil(double)",   ceil(1.2), 2.0);
+    check_f("floor(float)",   floor(fneg), -2.0);
+    check_d("floor(double)",  floor(-1.5), -2.0);
+    check_f("round(float)",   round(fb), 3.0);
+    check_d("round(double)",  round(2.5), 3.0);
+    check_d("round(double) negative", round(-2.5), -3.0);
+    check_f("trunc(float)",   trunc(fm), -1.0);
+    check_d("trunc(double)",  trunc(-1.9), -1.0);
+    check_f("fmod(float)",    fmod(fb, f2), 0.5);
+    check_d("fmod(double)",   fmod(7.5, 2.0), 1.5);
+    check_i("mod(7, 3)",      mod(7, 3), 1);
+    check_i("mod(-7, 3)",     mod(-7, 3), 2);
+
+    // Trigonometry
+    writeln "--- trig ---";
+    check_f("sin(float)",    sin(f1), 0.8414709848078965);
+    check_d("sin(double)",   sin(1.0), 0.8414709848078965);
+    check_f("cos(float)",    cos(f0), 1.0);
+    check_d("cos(double)",   cos(0.0), 1.0);
+    check_f("tan(float)",    tan(f1), 1.5574077246549023);
+    check_d("tan(double)",   tan(1.0), 1.5574077246549023);
+    check_f("asin(float)",   asin(f1), 1.5707963267948966);
+    check_d("asin(double)",  asin(1.0), 1.5707963267948966);
+    check_f("acos(float)",   acos(f1), 0.0);
+    check_d("acos(double)",  acos(1.0), 0.0);
+    check_f("atan(float)",   atan(f1), 0.7853981633974483);
+    check_d("atan(double)",  atan(1.0), 0.7853981633974483);
+    check_f("atan2(float)",  atan2(f1, f1), 0.7853981633974483);
+    check_d("atan2(double)", atan2(1.0, 1.0), 0.7853981633974483);
+    check_f("sinh(float)",   sinh(f1), 1.1752011936438014);
+    check_d("sinh(double)",  sinh(1.0), 1.1752011936438014);
+    check_f("cosh(float)",   cosh(f0), 1.0);
+    check_d("cosh(double)",  cosh(0.0), 1.0);
+    check_f("tanh(float)",   tanh(f1), 0.7615941559557649);
+    check_d("tanh(double)",  tanh(1.0), 0.7615941559557649);
+
+    // Exp, log
+    writeln "--- exp / log ---";
+    check_f("exp(float)",     exp(f1), 2.718281828459045);
+    check_d("exp(double)",    exp(1.0), 2.718281828459045);
+    check_f("log(float)",     log(fe), 1.0);
+    check_d("log(double)",    log(E), 1.0);
+    check_f("log2(float)",    log2(f8), 3.0);
+    check_d("log2(double)",   log2(8.0), 3.0);
+    check_f("log10(float)",   log10(f1000), 3.0);
+    check_d("log10(double)",  log10(1000.0), 3.0);
+
+    // Min, max, clamp
+    writeln "--- min / max / clamp ---";
+    check_i("min(int)",       min(3, 7), 3);
+    check_i("max(int)",       max(3, 7), 7);
+    check_i("clamp(int) hi",  clamp(15, 0, 10), 10);
+    check_i("clamp(int) lo",  clamp(-5, 0, 10), 0);
+    check_i("clamp(int) mid", clamp(5, 0, 10), 5);
+    check_l("min(long)",      min(la, lb), 5);
+    check_l("max(long)",      max(la, lb), 9);
+    check_l("clamp(long)",    clamp(lc, ld, lb), 9);
+    check_f("min(float)",     min(fa, fb), 1.5);
+    check_f("max(float)",     max(fa, fb), 2.5);
+    check_f("clamp(float)",   clamp(fc, fa, fb), 2.5);
+    check_d("min(double)",    min(1.5, 2.5), 1.5);
+    check_d("max(double)",    max(1.5, 2.5), 2.5);
+    check_d("clamp(double)",  clamp(9.0, 1.5, 2.5), 2.5);
+
+    // Sign (always returns int)
+    writeln "--- sign ---";
+    check_i("sign(int) -",     sign(-5), -1);
+    check_i("sign(int) 0",     sign(0), 0);
+    check_i("sign(int) +",     sign(7), 1);
+    check_i("sign(long)",      sign(lneg), -1);
+    check_i("sign(float)",     sign(fneg), -1);
+    check_i("sign(double) +",  sign(2.5), 1);
+
+    // Integer math
+    writeln "--- gcd / lcm / factorial / prime ---";
+    check_i("gcd(int)",        gcd(48, 18), 6);
+    check_l("gcd(long)",       gcd(l48, l18), 6);
+    check_i("lcm(int)",        lcm(4, 6), 12);
+    check_l("lcm(long)",       lcm(l4, l6), 12);
+    check_l("factorial(5)",    factorial(5), 120);
+    check_l("factorial(0)",    factorial(0), 1);
+    check_ll("factorial(20)",  factorial(20), f20);
+    check_l("factorial(21) overflow",  factorial(21), -1);
+    check_l("factorial(-1) error",     factorial(-1), -1);
+    check_b("is_prime(int) 97",   is_prime(97), true);
+    check_b("is_prime(int) 100",  is_prime(100), false);
+    check_b("is_prime(int) 1",    is_prime(1), false);
+    check_b("is_prime(int) 2",    is_prime(2), true);
+    check_b("is_prime(long)",     is_prime(lp), true);
+
+    // Value checks
+    writeln "--- is_nan / is_inf / is_finite ---";
+    float fnan = nan();
+    float finf = inf();
+
+    check_b("is_nan(double) nan",   is_nan(nan()), true);
+    check_b("is_nan(double) 1.0",   is_nan(1.0), false);
+    check_b("is_nan(float) nan",    is_nan(fnan), true);
+    check_b("is_nan(float) 1.0",    is_nan(f1), false);
+    check_b("is_inf(double) inf",   is_inf(inf()), true);
+    check_b("is_inf(double) 1.0",   is_inf(1.0), false);
+    check_b("is_inf(float) inf",    is_inf(finf), true);
+    check_b("is_inf(float) 1.0",    is_inf(f1), false);
+    check_b("is_finite(double) 1.0", is_finite(1.0), true);
+    check_b("is_finite(double) inf", is_finite(inf()), false);
+    check_b("is_finite(float) 1.0",  is_finite(f1), true);
+    check_b("is_finite(float) inf",  is_finite(finf), false);
+    check_b("is_finite(double) nan", is_finite(nan()), false);
+
+    // Angles, lerp
+    writeln "--- angles / lerp ---";
+    check_d("to_rad(double)", to_rad(180.0), 3.141592653589793);
+    check_f("to_rad(float)",  to_rad(f180), 3.141592653589793);
+    check_d("to_deg(double)", to_deg(PI), 180.0);
+    check_f("to_deg(float)",  to_deg(f1), 57.29577951308232);
+    check_d("lerp(double)",   lerp(0.0, 10.0, 0.25), 2.5);
+    check_f("lerp(float)",    lerp(f0, f8, fq), 2.0);
+
+    writeln "--- done ---";
 }

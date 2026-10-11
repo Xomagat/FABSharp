@@ -1,26 +1,125 @@
-# Math functions    v0.1
-# Created on 26.09.2060
-# Last update 07.10.2026
+# Math functions    v0.2
+# Created on 26.09.2026
+# Last update 11.10.2026
 
 # Consts
-const PI double 3.14159265358979323846
+const PI      double 3.14159265358979323846
+const TAU     double 6.28318530717958647692
+const E       double 2.71828182845904523536
+const PHI     double 1.61803398874989484820
+const SQRT2   double 1.41421356237309504880
+const LN2     double 0.69314718055994530942
+const LN10    double 2.30258509299404568402
 
 # Vars
 
-# Funcs
-pow   fab_powd    double : double, double
-pow   fab_powl    long   : long, long
-pow   fab_powi    int    : int, int
-sqrt  fab_sqrtd   double : double
-sqrt  fab_sqrti   double : int
-abs   fab_absi    int    : int
-abs   fab_absl    long   : long
-abs   fab_absd    double : double
-fabs  fab_fabsf   float  : float
-fabs  fab_fabsd   double : double
-ceil  fab_ceilf   float  : float
-ceil  fab_ceild   double : double
-floor fab_floorf  float  : float
-floor fab_floord  double : double
-round fab_roundf  float  : float
-round fab_roundd  double : double
+# Abs
+abs       fab_absi        int    : int
+abs       fab_absl        long   : long
+abs       fab_absd        double : double
+fabs      fab_fabsf       float  : float
+fabs      fab_fabsd       double : double
+
+# Pow, sqrt, cbrt, hypot
+pow       fab_powi        int    : int, int
+pow       fab_powl        long   : long, long
+pow       fab_powf        float  : float, float
+pow       fab_powd        double : double, double
+sqrt      fab_sqrti       double : int
+sqrt      fab_sqrtf       float  : float
+sqrt      fab_sqrtd       double : double
+cbrt      fab_cbrtf       float  : float
+cbrt      fab_cbrtd       double : double
+hypot     fab_hypotf      float  : float, float
+hypot     fab_hypotd      double : double, double
+
+# Rounding
+ceil      fab_ceilf       float  : float
+ceil      fab_ceild       double : double
+floor     fab_floorf      float  : float
+floor     fab_floord      double : double
+round     fab_roundf      float  : float
+round     fab_roundd      double : double
+trunc     fab_truncf      float  : float
+trunc     fab_truncd      double : double
+fmod      fab_fmodf       float  : float, float
+fmod      fab_fmodd       double : double, double
+mod       fab_modi        int    : int, int
+
+# Trigonometry
+sin       fab_sinf        float  : float
+sin       fab_sind        double : double
+cos       fab_cosf        float  : float
+cos       fab_cosd        double : double
+tan       fab_tanf        float  : float
+tan       fab_tand        double : double
+asin      fab_asinf       float  : float
+asin      fab_asind       double : double
+acos      fab_acosf       float  : float
+acos      fab_acosd       double : double
+atan      fab_atanf       float  : float
+atan      fab_atand       double : double
+atan2     fab_atan2f      float  : float, float
+atan2     fab_atan2d      double : double, double
+sinh      fab_sinhf       float  : float
+sinh      fab_sinhd       double : double
+cosh      fab_coshf       float  : float
+cosh      fab_coshd       double : double
+tanh      fab_tanhf       float  : float
+tanh      fab_tanhd       double : double
+
+# Exp, log
+exp       fab_expf        float  : float
+exp       fab_expd        double : double
+log       fab_logf        float  : float
+log       fab_logd        double : double
+log       fab_logbased    double : double, double
+log2      fab_log2f       float  : float
+log2      fab_log2d       double : double
+log10     fab_log10f      float  : float
+log10     fab_log10d      double : double
+
+# Min, max, clamp, sign
+min       fab_mini        int    : int, int
+min       fab_minl        long   : long, long
+min       fab_minf        float  : float, float
+min       fab_mind        double : double, double
+max       fab_maxi        int    : int, int
+max       fab_maxl        long   : long, long
+max       fab_maxf        float  : float, float
+max       fab_maxd        double : double, double
+clamp     fab_clampi      int    : int, int, int
+clamp     fab_clampl      long   : long, long, long
+clamp     fab_clampf      float  : float, float, float
+clamp     fab_clampd      double : double, double, double
+sign      fab_signi       int    : int
+sign      fab_signl       int    : long
+sign      fab_signf       int    : float
+sign      fab_signd       int    : double
+
+# Integer math
+gcd       fab_gcdi        int    : int, int
+gcd       fab_gcdl        long   : long, long
+lcm       fab_lcmi        int    : int, int
+lcm       fab_lcml        long   : long, long
+factorial fab_factoriall  long   : int
+is_prime  fab_is_primei   bool   : int
+is_prime  fab_is_primel   bool   : long
+
+# Value checks
+is_nan    fab_is_nanf     bool   : float
+is_nan    fab_is_nand     bool   : double
+is_inf    fab_is_inff     bool   : float
+is_inf    fab_is_infd     bool   : double
+is_finite fab_is_finitef  bool   : float
+is_finite fab_is_finited  bool   : double
+inf       fab_infd        double :
+nan       fab_nand        double :
+
+# Angles, lerp
+to_rad    fab_to_radf     float  : float
+to_rad    fab_to_radd     double : double
+to_deg    fab_to_degf     float  : float
+to_deg    fab_to_degd     double : double
+lerp      fab_lerpf       float  : float, float, float
+lerp      fab_lerpd       double : double, double, double
