@@ -1,52 +1,38 @@
 define main() -> int
 {
-    list<int> arr = [3, 1, 4, 1, 5];
-    list<int> extra = [9, 2];
+    dict<string, int> ages;
+    dict<string, int> extra = {"Jonn": 15, "Jo": 24};
 
-    // ADD
-    arr.addend(6);                      // [3, 1, 4, 1, 5, 6]
-    arr.add(7);                         // [7, 3, 1, 4, 1, 5, 6]
-    arr.insert(2, 8);                   // [7, 3, 8, 1, 4, 1, 5, 6] (вставка 8 на индекс 2)
-    arr.extend(extra);                  // [7, 3, 8, 1, 4, 1, 5, 6, 9, 2]
+    // ADD, CHANGE
+    ages.set("Alice", 25);              // добавляет или обновляет ключ "Alice" значением 25
+    ages.set("Bob", 30);                // добавляет или обновляет ключ "Bob" значением 30
+    ages.merge(extra);                  // объединяет текущий словарь со словарем extra
 
     // SIZE
-    writeln arr.length();               // 10
-    writeln arr.empty();                // false
-    writeln arr.capacity();             // текущая емкость буфера памяти (int)
-    arr.reserve(20);                    // резервирует память под 20 элементов
+    writeln ages.length();              // 3
+    writeln ages.empty();               // false
+    writeln ages.capacity();            // текущая емкость буфера памяти словаря (int)
 
     // ACCESS
-    writeln arr.get(3);                 // 4
-    arr.set(3, 0);                      // изменяет элемент на индексе 3 со значения 4 на 0
-    writeln arr.first();                // 3
-    writeln arr.last();                 // 2
-
-    // REMOVE
-    arr.remove_at(2);                   // удаляет элемент на индексе 2 (число 8)
-    writeln arr.remove(1);              // true (удаляет первую найденную единицу)
-    writeln arr.pop();                  // 2 (удаляет и возвращает последний элемент)
-    writeln arr.pop_first();            // 3 (удаляет и возвращает первый элемент)
-    arr.clear();                        // массив становится пустым []
+    writeln ages.get("Alice");          // 25
+    writeln ages.get_or("Charlie", 18); // 18 (возвращает 18, так как ключа "Charlie" нет)
+    writeln ages.key_at(0);             // "Alice" (получает ключ по внутреннему индексу)
+    writeln ages.value_at(0);           // 25 (получает значение по внутреннему индексу)
 
     // SEARCH
-    arr = [3, 1, 4, 1, 5];
-    writeln arr.contains(4);            // true
-    writeln arr.index_of(4);            // 2
-    writeln arr.count(1);               // 2
+    writeln ages.contains("Bob");       // true
+    writeln ages.contains_value(30);    // true
 
-    // ORDER
-    arr.reverse();                      // [5, 1, 4, 1, 3]
-    arr.swap(0, 2);                     // [4, 1, 5, 1, 3] (меняет местами элементы на индексах 0 и 2)
-    arr.sort();                         // [1, 1, 3, 4, 5]
-    arr.sort_desc();                    // [5, 4, 3, 1, 1]
+    // REMOVE
+    writeln ages.remove("Bob");         // true (удаляет ключ "Bob" и возвращает статус)
+    writeln ages.pop("Alice");          // 25 (удаляет ключ "Alice" и возвращает его значение)
+    ages.clear();                       // очищает словарь, оставляя его пустым
 
-    // MIN, MAX, SUM
-    writeln arr.min();                  // 1
-    writeln arr.max();                  // 5
-    writeln arr.sum();                  // 14
+    // KEYS, VALUES, COPY
+    ages.set("Ivan", 20);
+    ages.set("Petr", 35);
 
-    // COPY, SLICE, JOIN
-    list<int> backup = arr.copy();      // создает независимую копию [5, 4, 3, 1, 1]
-    list<int> part = arr.slice(1, 3);   // [4, 3, 1] (подмассив с индекса 1 длиной 3 элемента)
-    writeln arr.join("-");              // "5-4-3-1-1"
+    list<string> all_keys = ages.keys(); // ["Ivan", "Petr"]
+    list<int> all_values = ages.values(); // [20, 35]
+    dict<string, int> backup = ages.copy(); // создает независимую копию словаря
 }

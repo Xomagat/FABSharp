@@ -236,9 +236,9 @@ public:
         {
             llvm::Value* val;
             if (expression->is_null_literal())
-                val = type.starts_with("list<")
-                ? emit_list_new(context, type)
-                : llvm::Constant::getNullValue(llvmType);
+                val = is_container(type)
+                    ? emit_container_new(context, type)
+                    : llvm::Constant::getNullValue(llvmType);
             else
                 val = expression->codegen_expected(context, type);
 

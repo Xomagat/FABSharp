@@ -1,9 +1,32 @@
-# Dict functions
+# Dict functions    v0.2
 # Create on 09.10.2026
-# Last update 09.10.2026
+# Last update 11.10.2026
 
-# Dict
-dict<K,V>.set       fab_dict_set       void : dict<K,V>, K, V
-dict<K,V>.get       fab_dict_get       V    : dict<K,V>, K
-dict<K,V>.contains  fab_dict_contains  bool : dict<K,V>, K
-dict<K,V>.length    fab_dict_length    int  : dict<K,V>
+# Add, change
+dict<K,V>.set            fab_dict_set            void       : dict<K,V>, K, V
+dict<K,V>.merge          fab_dict_merge          void       : dict<K,V>, dict<K,V>
+
+# Size
+dict<K,V>.length         fab_dict_length         int        : dict<K,V>
+dict<K,V>.empty          fab_dict_empty          bool       : dict<K,V>
+dict<K,V>.capacity       fab_dict_capacity       int        : dict<K,V>
+
+# Access
+dict<K,V>.get            fab_dict_get            V          : dict<K,V>, K
+dict<K,V>.get_or         fab_dict_get_or         V          : dict<K,V>, K, V
+dict<K,V>.key_at         fab_dict_key_at         K          : dict<K,V>, int
+dict<K,V>.value_at       fab_dict_value_at       V          : dict<K,V>, int
+
+# Search
+dict<K,V>.contains       fab_dict_contains       bool       : dict<K,V>, K
+dict<K,V>.contains_value fab_dict_contains_value bool       : dict<K,V>, V
+
+# Remove
+dict<K,V>.remove         fab_dict_remove         bool       : dict<K,V>, K
+dict<K,V>.pop            fab_dict_pop            V          : dict<K,V>, K
+dict<K,V>.clear          fab_dict_clear          void       : dict<K,V>
+
+# Keys, values, copy
+dict<K,V>.keys           fab_dict_keys           list<K>    : dict<K,V>
+dict<K,V>.values         fab_dict_values         list<V>    : dict<K,V>
+dict<K,V>.copy           fab_dict_copy           dict<K,V>  : dict<K,V>
