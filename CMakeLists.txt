@@ -90,13 +90,13 @@ if (NOT WIN32)
 endif()
 
 add_library(fabstd STATIC
-        lib/math.cpp
-        lib/string.cpp
-        lib/list.cpp
-        lib/integers.cpp
-        lib/char.cpp
-        lib/bool.cpp
-        lib/dict.cpp
+        lib/libs/math.cpp
+        lib/types/string.cpp
+        lib/types/list.cpp
+        lib/types/integers.cpp
+        lib/types/char.cpp
+        lib/types/bool.cpp
+        lib/types/dict.cpp
 )
 
 if (MSVC)

@@ -33,7 +33,7 @@ inline std::filesystem::path get_executable_dir()
 #endif
 
 // App Settings
-#define VERSION "0.1"
+#define VERSION "0.2"
 
 // System vars
 
