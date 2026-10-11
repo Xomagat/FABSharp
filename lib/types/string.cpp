@@ -2,9 +2,24 @@
 // Created by Xomagat on 05.10.2026.
 //
 
+#define _NO_CRT_STDIO_INLINE
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
+extern "C" void* fab_list_new_string();
+extern "C" void  fab_list_addend_string(void* l, const char* v);
+
+static char* str_dup_n(const char* s, size_t n)
+{
+    char* r = (char*)malloc(n + 1);
+    if (r == nullptr) return nullptr;
+
+    memcpy(r, s, n);
+    r[n] = '\0';
+
+    return r;
+}
 
 extern "C" int fab_length(const char* x)
 {
@@ -30,11 +45,16 @@ extern "C" int fab_findc(const char* x, const char y)
 
 extern "C" int fab_finds(const char* x, const char* y)
 {
-    char const *p = strstr(x, y);
-    return p - x;
+    const char* p = strstr(x, y);
+    return p ? (int)(p - x) : -1;
 }
 
-extern "C" char* fab_substr(const char *src, size_t start, size_t length)
+extern "C" bool fab_contains(const char* x, const char* y)
+{
+    return strstr(x, y) != nullptr;
+}
+
+extern "C" char* fab_substr(const char *src, int start, int length)
 {
     if (src == NULL || start < 0 || length <= 0) return NULL;
 
@@ -141,11 +161,6 @@ extern "C" char* fab_replace(const char* x, const char* y, const char* z)
     return result;
 }
 
-extern "C" bool fab_contains(const char* x, const char* y)
-{
-    return fab_finds(x, y) == 0;
-}
-
 extern "C" bool fab_start_with(const char* x, const char* y)
 {
     if (!x || !y) return false;
@@ -178,7 +193,7 @@ extern "C" int fab_to_int(const char* x)
     return strtol(x, &p, 10);
 }
 
-extern "C" long fab_to_long(const char* x)
+extern "C" long long fab_to_long(const char* x)
 {
     char *p = nullptr;
     return strtoll(x, &p, 10);
@@ -188,4 +203,157 @@ extern "C" double fab_to_double(const char* x)
 {
     char *p = nullptr;
     return strtod(x, &p);
+}
+
+extern "C" bool fab_to_bool(const char* x)
+{
+    return x != nullptr && strcmp(x, "true") == 0;
+}
+
+extern "C" bool fab_is_blank(const char* x)
+{
+    for (; *x; x++)
+        if (!isspace(static_cast<unsigned char>(*x))) return false;
+    return true;
+}
+
+extern "C" bool fab_is_numeric(const char* x)
+{
+    if (x == nullptr || *x == '\0') return false;
+
+    for (; *x; x++)
+        if (!isdigit(static_cast<unsigned char>(*x))) return false;
+    return true;
+}
+
+extern "C" char* fab_trim(const char* x)
+{
+    if (x == nullptr) return nullptr;
+
+    while (isspace(static_cast<unsigned char>(*x))) x++;
+
+    size_t len = strlen(x);
+    while (len > 0 && isspace(static_cast<unsigned char>(x[len - 1]))) len--;
+
+    return str_dup_n(x, len);
+}
+
+extern "C" char* fab_repeat(const char* x, int n)
+{
+    if (x == nullptr || n <= 0) return str_dup_n("", 0);
+
+    size_t len = strlen(x);
+    char* r = (char*)malloc(len * (size_t)n + 1);
+    if (r == nullptr) return nullptr;
+
+    for (int i = 0; i < n; i++)
+        memcpy(r + len * (size_t)i, x, len);
+
+    r[len * (size_t)n] = '\0';
+    return r;
+}
+
+extern "C" char* fab_reverse(const char* x)
+{
+    if (x == nullptr) return nullptr;
+
+    size_t len = strlen(x);
+    char* r = str_dup_n(x, len);
+    if (r == nullptr) return nullptr;
+
+    for (size_t i = 0; i < len / 2; i++)
+    {
+        char t = r[i];
+        r[i] = r[len - 1 - i];
+        r[len - 1 - i] = t;
+    }
+    return r;
+}
+
+extern "C" int fab_count(const char* x, const char* y)
+{
+    if (x == nullptr || y == nullptr || *y == '\0') return 0;
+
+    int c = 0;
+    size_t y_len = strlen(y);
+    for (const char* p = x; (p = strstr(p, y)); p += y_len) c++;
+
+    return c;
+}
+
+extern "C" char fab_at(const char* x, int i)
+{
+    if (x == nullptr || i < 0 || i >= (int)strlen(x)) return '\0';
+    return x[i];
+}
+
+extern "C" int fab_rfinds(const char* x, const char* y)
+{
+    const char* last = nullptr;
+    for (const char* p = x; (p = strstr(p, y)); p++) last = p;
+
+    return last ? (int)(last - x) : -1;
+}
+
+extern "C" char* fab_pad_left(const char* x, int width, char fill)
+{
+    if (x == nullptr) return nullptr;
+
+    size_t len = strlen(x);
+    if (width <= 0 || (size_t)width <= len) return str_dup_n(x, len);
+
+    char* r = (char*)malloc((size_t)width + 1);
+    if (r == nullptr) return nullptr;
+
+    size_t pad = (size_t)width - len;
+    memset(r, fill, pad);
+    memcpy(r + pad, x, len + 1);   // +1 copies the '\0'
+
+    return r;
+}
+
+extern "C" char* fab_capitalize(const char* x)
+{
+    if (x == nullptr) return nullptr;
+
+    char* r = str_dup_n(x, strlen(x));
+    if (r != nullptr && *r != '\0')
+        r[0] = static_cast<char>(toupper(static_cast<unsigned char>(r[0])));
+
+    return r;
+}
+
+extern "C" bool fab_equals_ignore_case(const char* x, const char* y)
+{
+    if (x == nullptr || y == nullptr) return false;
+
+    for (; *x && *y; x++, y++)
+        if (tolower(static_cast<unsigned char>(*x)) != tolower(static_cast<unsigned char>(*y)))
+            return false;
+
+    return *x == *y;
+}
+
+extern "C" void* fab_split(const char* x, const char* sep)
+{
+    void* list = fab_list_new_string();
+    if (x == nullptr) return list;
+
+    if (sep == nullptr || *sep == '\0')
+    {
+        fab_list_addend_string(list, str_dup_n(x, strlen(x)));
+        return list;
+    }
+
+    size_t sep_len = strlen(sep);
+    const char* start = x;
+
+    while (const char* p = strstr(start, sep))
+    {
+        fab_list_addend_string(list, str_dup_n(start, (size_t)(p - start)));
+        start = p + sep_len;
+    }
+    fab_list_addend_string(list, str_dup_n(start, strlen(start)));
+
+    return list;
 }

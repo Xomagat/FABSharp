@@ -1,22 +1,37 @@
 # String functions
 # Created on 05.10.2026
-# Last update 08.10.2026
+# Last update 11.10.2026
 
 # String
-string.length     fab_length      int    : string
-string.empty      fab_empty       bool   : string
-string.clear      fab_clear       void   : string
-string.find       fab_finds       int    : string, string
-string.substr     fab_substr      string : string, int, int
-string.compare    fab_compare     string : string, string
-string.first      fab_first       char   : string
-string.last       fab_last        char   : string
-string.to_upper   fab_to_upper    string : string
-string.to_lower   fab_to_lower    string : string
-string.replace    fab_replace     string : string, string, string
-string.contains   fab_contains    bool   : string, string
-string.start_with fab_start_with  bool   : string, string
-string.ends_with  fab_ends_with   bool   : string, string
-string.to_int     fab_to_int      int    : string
-string.to_long    fab_to_long     long   : string
-string.to_double  fab_to_double   double : string
+string.length               fab_length              int          : string
+string.empty                fab_empty               bool         : string
+string.clear                fab_clear               void         : string
+string.find                 fab_finds               int          : string, string
+string.substr               fab_substr              string       : string, int, int
+string.compare              fab_compare             string       : string, string
+string.first                fab_first               char         : string
+string.last                 fab_last                char         : string
+string.to_upper             fab_to_upper            string       : string
+string.to_lower             fab_to_lower            string       : string
+string.replace              fab_replace             string       : string, string, string
+string.contains             fab_contains            bool         : string, string
+string.start_with           fab_start_with          bool         : string, string
+string.ends_with            fab_ends_with           bool         : string, string
+string.to_int               fab_to_int              int          : string
+string.to_long              fab_to_long             long         : string
+string.to_double            fab_to_double           double       : string
+string.find                 fab_findc               int          : string, char
+string.rfind                fab_rfinds              int          : string, string
+string.at                   fab_at                  char         : string, int
+string.count                fab_count               int          : string, string
+string.trim                 fab_trim                string       : string
+string.repeat               fab_repeat              string       : string, int
+string.reverse              fab_reverse             string       : string
+string.capitalize           fab_capitalize          string       : string
+string.pad_left             fab_pad_left            string       : string, int, char
+string.pad_right            fab_pad_right           string       : string, int, char
+string.equals_ignore_case   fab_equals_ignore_case  bool         : string, string
+string.is_blank             fab_is_blank            bool         : string
+string.is_numeric           fab_is_numeric          bool         : string
+string.to_bool              fab_to_bool             bool         : string
+string.split                fab_split               list<string> : string, string

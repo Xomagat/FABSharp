@@ -44,7 +44,9 @@ public:
         for (size_t i = 0; i < vals.size(); ++i)
             coerced.push_back(coerceToType(vals[i], params[i], ctx.builder));
 
-        return ctx.builder.CreateCall(callee, coerced);
+        llvm::Value* r = ctx.builder.CreateCall(callee, coerced);
+        ctx.value_types[r] = info.return_type;
+        return r;
     }
 
     static llvm::Value* call(CodegenContext& context, const std::string& name,
