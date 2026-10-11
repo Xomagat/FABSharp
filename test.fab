@@ -1,54 +1,59 @@
 define main() -> int
 {
-    bool t = true;
-    bool f = false;
+    char a = 'a';
+    char Z = 'Z';
+    char d = '7';
+    char sp = ' ';
+    char p = '!';
+    char h = 'f';
+
+    // CHECK
+    writeln a.is_digit();               // false
+    writeln d.is_digit();               // true
+    writeln a.is_alpha();               // true
+    writeln d.is_alpha();               // false
+    writeln a.is_alnum();               // true
+    writeln p.is_alnum();               // false
+    writeln a.is_upper();               // false
+    writeln Z.is_upper();               // true
+    writeln a.is_lower();               // true
+    writeln sp.is_space();              // true
+    writeln p.is_punct();               // true
+    writeln h.is_hex();                 // true
+    writeln Z.is_hex();                 // false
+    writeln d.is_hex();                 // true
+    writeln a.is_printable();           // true
+    writeln a.is_ascii();               // true
+
+    // CASE
+    writeln a.to_upper();               // A
+    writeln Z.to_lower();               // z
+    writeln a.swap_case();              // A
+    writeln Z.swap_case();              // z
+    writeln d.swap_case();              // 7
 
     // CONVERT
-    writeln t.to_str();                 // true
-    writeln f.to_str();                 // false
-    writeln t.to_bin();                 // 1
-    writeln f.to_bin();                 // 0
-    writeln t.to_int();                 // 1
-    writeln f.to_int();                 // 0
-    writeln t.to_short();               // 1
-    writeln t.to_long();                // 1
-    writeln t.to_float();               // 1
-    writeln t.to_double();              // 1
-
-    // LOGIC
-    writeln t.negate();                 // false
-    writeln f.negate();                 // true
-    writeln t.xor(f);                   // true
-    writeln t.xor(t);                   // false
-    writeln t.and(t);                   // true
-    writeln t.and(f);                   // false
-    writeln f.or(f);                    // false
-    writeln t.or(f);                    // true
-    writeln t.nand(t);                  // false
-    writeln t.nand(f);                  // true
-    writeln f.nor(f);                   // true
-    writeln t.nor(f);                   // false
-    writeln t.xnor(t);                  // true
-    writeln t.xnor(f);                  // false
-    writeln t.implies(f);               // false
-    writeln f.implies(t);               // true
-    writeln f.implies(f);               // true
+    writeln a.to_int();                 // 97
+    writeln a.to_short();               // 97
+    writeln a.to_long();                // 97
+    writeln a.to_double();              // 97
+    writeln d.to_digit();               // 7
+    writeln a.to_digit();               // -1
+    writeln h.to_hex();                 // 15
+    writeln Z.to_hex();                 // -1
+    writeln a.to_str();                 // a
+    writeln a.repeat(3);                // aaa
+    writeln a.to_str() + d.to_str();    // a7
 
     // COMPARE
-    writeln t.compare(f);               // 1
-    writeln f.compare(t);               // -1
-    writeln t.compare(t);               // 0
+    writeln a.compare('b');             // -1
+    writeln 'b'.compare(a);             // 1
+    writeln a.compare(a);               // 0
+    writeln a.equals_ignore_case('A');  // true
+    writeln a.equals_ignore_case('b');  // false
 
-    // LITERALS, EXPRESSIONS, CHAINS
-    writeln true.to_str();              // true
-    writeln (5 > 3).to_str();           // true
-    writeln (5 < 3).to_str();           // false
-    writeln t.and(t).negate().to_str(); // false
-    writeln (1 == 1).xor(2 == 3);       // true
-
-    // IN CONDITIONS
-    if (t.xor(f))
-        writeln "xor ok";               // xor ok
-    if (f.implies(t) && t.xnor(t))
-        writeln "implies ok";           // implies ok
+    // LITERALS, CHAINS
+    writeln 'x'.to_upper();             // X
+    writeln a.to_upper().to_int();      // 65
+    writeln '\n'.is_space();            // true
 }

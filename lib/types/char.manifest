@@ -1,9 +1,35 @@
 # Chars functions
 # Create on 09.10.2026
-# Last update 09.10.2026
+# Last update 11.10.2026
 
-# Char functions
-char.is_digit  fab_char_is_digit  bool : char
-char.is_alpha  fab_char_is_alpha  bool : char
-char.to_upper  fab_char_to_upper  char : char
-char.to_lower  fab_char_to_lower  char : char
+# Check
+char.is_digit    fab_char_is_digit    bool : char
+char.is_alpha    fab_char_is_alpha    bool : char
+char.is_alnum    fab_char_is_alnum    bool : char
+char.is_upper    fab_char_is_upper    bool : char
+char.is_lower    fab_char_is_lower    bool : char
+char.is_space    fab_char_is_space    bool : char
+char.is_punct    fab_char_is_punct    bool : char
+char.is_hex      fab_char_is_hex      bool : char
+char.is_printable fab_char_is_printable bool : char
+char.is_ascii    fab_char_is_ascii    bool : char
+
+# Case
+char.to_upper    fab_char_to_upper    char : char
+char.to_lower    fab_char_to_lower    char : char
+char.swap_case   fab_char_swap_case   char : char
+
+# Convert
+char.to_int      fab_char_to_int      int    : char
+char.to_short    fab_char_to_short    short  : char
+char.to_long     fab_char_to_long     long   : char
+char.to_float    fab_char_to_float    float  : char
+char.to_double   fab_char_to_double   double : char
+char.to_digit    fab_char_to_digit    int    : char
+char.to_hex      fab_char_to_hex      int    : char
+char.to_str      fab_char_to_str      string : char
+char.repeat      fab_char_repeat      string : char, int
+
+# Compare
+char.compare     fab_char_compare     int  : char, char
+char.equals_ignore_case fab_char_equals_ignore_case bool : char, char
