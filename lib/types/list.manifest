@@ -1,9 +1,49 @@
-# List methods    v0.1
-# Created on 07.10.2060
-# Last update 07.10.2026
+# List methods    v0.2
+# Created on 07.10.2026
+# Last update 11.10.2026
 
-list<T>.addend   fab_list_addend   void : list<T>, T
-list<T>.add      fab_list_add      void : list<T>, T
-list<T>.length   fab_list_length   int  : list<T>
-list<T>.empty    fab_list_empty    int  : list<T>
-list<T>.capacity fab_list_capacity int  : list<T>
+# Add
+list<T>.addend    fab_list_addend    void   : list<T>, T
+list<T>.add       fab_list_add       void   : list<T>, T
+list<T>.insert    fab_list_insert    void   : list<T>, int, T
+list<T>.extend    fab_list_extend    void   : list<T>, list<T>
+
+# Size
+list<T>.length    fab_list_length    int    : list<T>
+list<T>.empty     fab_list_empty     bool   : list<T>
+list<T>.capacity  fab_list_capacity  int    : list<T>
+list<T>.reserve   fab_list_reserve   void   : list<T>, int
+
+# Access
+list<T>.get       fab_list_get       T      : list<T>, int
+list<T>.set       fab_list_set       void   : list<T>, int, T
+list<T>.first     fab_list_first     T      : list<T>
+list<T>.last      fab_list_last      T      : list<T>
+
+# Remove
+list<T>.remove_at fab_list_remove_at void   : list<T>, int
+list<T>.remove    fab_list_remove    bool   : list<T>, T
+list<T>.pop       fab_list_pop       T      : list<T>
+list<T>.pop_first fab_list_pop_first T      : list<T>
+list<T>.clear     fab_list_clear     void   : list<T>
+
+# Search
+list<T>.contains  fab_list_contains  bool   : list<T>, T
+list<T>.index_of  fab_list_index_of  int    : list<T>, T
+list<T>.count     fab_list_count     int    : list<T>, T
+
+# Order
+list<T>.reverse   fab_list_reverse   void   : list<T>
+list<T>.swap      fab_list_swap      void   : list<T>, int, int
+list<T>.sort      fab_list_sort      void   : list<T>
+list<T>.sort_desc fab_list_sort_desc void   : list<T>
+
+# Min, max, sum (sum: not for char and bool)
+list<T>.min       fab_list_min       T      : list<T>
+list<T>.max       fab_list_max       T      : list<T>
+list<T>.sum       fab_list_sum       T      : list<T>
+
+# Copy, slice, join
+list<T>.copy      fab_list_copy      list<T> : list<T>
+list<T>.slice     fab_list_slice     list<T> : list<T>, int, int
+list<T>.join      fab_list_join      string  : list<T>, string

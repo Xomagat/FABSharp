@@ -40,9 +40,17 @@ public:
         auto it = stdlib_methods.find(mangle_method(recv_type, name, tail_types));
         if (recv_type.starts_with("list<") || recv_type.starts_with("dict<"))
         {
+            auto find_generic = [&](const char* kind) {
+                std::string prefix = std::string(kind) + "::" + name + "#" + std::to_string(tail_types.size());
+                for (auto i = stdlib_methods.begin(); i != stdlib_methods.end(); ++i)
+                    if (i->first.starts_with(prefix) &&
+                        (i->first.size() == prefix.size() || i->first[prefix.size()] == '_'))
+                        return i;
+                return stdlib_methods.end();
+            };
+
             bool is_list = recv_type.starts_with("list<");
-            auto git = stdlib_methods.find(
-                std::string(is_list ? "list" : "dict") + "::" + name + "#" + std::to_string(tail_types.size()));
+            auto git = find_generic(is_list ? "list" : "dict");
             if (git == stdlib_methods.end())
                 throw std::runtime_error("Type '" + recv_type + "' has no method '" + name + "'");
 
