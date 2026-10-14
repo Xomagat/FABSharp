@@ -19,7 +19,12 @@ public:
     void codegen(CodegenContext &context) const override
     {
         if (expr)
-            context.builder.CreateRet(expr->codegen(context));
+        {
+            auto* it = type_to_llvm(context.current_ret, context.builder);
+            llvm::Value* v = expr->is_null_literal() ? llvm::Constant::getNullValue(it)
+                                             : expr->codegen_expected(context, context.current_ret);
+            context.builder.CreateRet(coerceToType(v, it, context.builder));
+        }
         else
             context.builder.CreateRetVoid();
     }

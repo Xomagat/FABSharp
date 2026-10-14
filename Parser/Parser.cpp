@@ -23,6 +23,10 @@ Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir, std::f
 
 std::vector<std::unique_ptr<Statement>> Parser::parse()
 {
+    for (int i = 0; i + 1 < size; ++i)
+        if (tokens[i].get_type() == token_type::CLASS && tokens[i + 1].get_type() == token_type::WORDS)
+            class_names.insert(tokens[i + 1].get_text());
+
     std::vector<std::unique_ptr<Statement>> result;
 
     if (!loaded_libs.contains("@types"))
@@ -148,18 +152,29 @@ std::unique_ptr<Statement> Parser::statement()
             consume(token_type::DEFINE);
             return define_function();
         }
+        case token_type::CLASS: {
+            consume(token_type::CLASS);
+            return class_definition();
+        }
         case token_type::WORDS: {
-            if (get(1).get_type() == token_type::LPARENT ||
-                get(1).get_type() == token_type::DOT)
+            if (class_names.contains(get(0).get_text()) && get(1).get_type() == token_type::WORDS)
+                return assigment_statement();
+
+            auto t1 = get(1).get_type();
+            if (t1 == token_type::LPARENT || t1 == token_type::DOT || t1 == token_type::LSQUARE)
             {
-                auto fn = std::make_unique<FunctionStatement>(expression());
-
-                if (!match(token_type::SEMI))
-                    throw std::runtime_error("You miss the ;");
-
-                return fn;
+                auto e = expression();
+                if (match(token_type::EQ))
+                {
+                    auto v = expression();
+                    if (!match(token_type::SEMI)) throw std::runtime_error("You miss the ;");
+                    if (dynamic_cast<FieldExpression*>(e.get()))
+                        return std::make_unique<FieldAssignStatement>(std::move(e), std::move(v));
+                    return std::make_unique<IndexAssignStatement>(std::move(e), std::move(v));
+                }
+                if (!match(token_type::SEMI)) throw std::runtime_error("You miss the ;");
+                return std::make_unique<FunctionStatement>(std::move(e));
             }
-
             return assigment_statement();
         }
         case token_type::TYPES: {
@@ -176,6 +191,9 @@ std::unique_ptr<Statement> Parser::statement()
 
 std::string Parser::parse_type()
 {
+    if (get(0).get_type() == token_type::WORDS && class_names.contains(get(0).get_text()))
+        return consume(token_type::WORDS).get_text();
+
     std::string t = consume(token_type::TYPES).get_text();
     if (t == "list")
     {
@@ -201,7 +219,11 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
     // type name = 33; or type name;
     Token current = get(0);
 
-    if (current.get_type() == token_type::TYPES)
+    bool class_decl = current.get_type() == token_type::WORDS
+               && class_names.contains(current.get_text())
+               && get(1).get_type() == token_type::WORDS;
+
+    if (current.get_type() == token_type::TYPES || class_decl)
     {
         std::string type = parse_type();
         std::string name = consume(token_type::WORDS).get_text();
@@ -209,6 +231,8 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
 
         if (match(token_type::EQ))
             expr = expression();
+        else if (class_decl)
+            expr = nullptr;
         else
             expr = std::make_unique<ValueExpression>(NullTag{});
 
@@ -312,6 +336,52 @@ std::unique_ptr<Statement> Parser::for_statement()
     std::unique_ptr<Statement> for_statement = statement_or_block();
 
     return std::make_unique<ForStatement>(std::move(init), std::move(expr), std::move(increment), std::move(for_statement));
+}
+
+std::unique_ptr<Statement> Parser::class_definition()
+{
+    std::string name = consume(token_type::WORDS).get_text();
+    consume(token_type::LBRACKET);
+
+    auto cls = std::make_unique<ClassDefineStatement>(name);
+    bool is_public = false;
+
+    while (!match(token_type::RBRACKET))
+    {
+        if (match(token_type::PRIVATE)) { consume(token_type::COLON); is_public = false; continue; }
+        if (match(token_type::PUBLIC))  { consume(token_type::COLON); is_public = true;  continue; }
+
+        if (match(token_type::DEFINE))
+        {
+            auto fn = define_function();
+            cls->add_method({fn->get_type(), fn->get_name(), fn->get_arg_types(),
+                             fn->get_arg_names(), fn->get_body(), is_public});
+            continue;
+        }
+
+        if (get(0).get_type() == token_type::WORDS && get(0).get_text() == name
+            && get(1).get_type() == token_type::LPARENT)
+        {
+            consume(token_type::WORDS);
+            consume(token_type::LPARENT);
+            std::vector<std::string> at, an;
+            while (!match(token_type::RPARENT))
+            {
+                at.push_back(parse_type());
+                an.push_back(consume(token_type::WORDS).get_text());
+                match(token_type::COMMA);
+            }
+            std::shared_ptr<Statement> body = block();
+            cls->set_ctor({"void", "new", at, an, body, true});
+            continue;
+        }
+
+        std::string type = parse_type();
+        std::string fname = consume(token_type::WORDS).get_text();
+        consume(token_type::SEMI);
+        cls->add_field({fname, type, is_public});
+    }
+    return cls;
 }
 
 std::unique_ptr<Statement> Parser::statement_or_block()
@@ -544,15 +614,18 @@ std::unique_ptr<Expression> Parser::postfix()
         if (match(token_type::DOT))
         {
             std::string name = consume(token_type::WORDS).get_text();
-            consume(token_type::LPARENT);
-
-            auto call = std::make_unique<MethodCallExpression>(name, std::move(expr));
-            while (!match(token_type::RPARENT))
+            if (match(token_type::LPARENT))
             {
-                call->add_arg(expression());
-                match(token_type::COMMA);
+                auto call = std::make_unique<MethodCallExpression>(name, std::move(expr));
+                while (!match(token_type::RPARENT))
+                {
+                    call->add_arg(expression());
+                    match(token_type::COMMA);
+                }
+                expr = std::move(call);
             }
-            expr = std::move(call);
+            else
+                expr = std::make_unique<FieldExpression>(std::move(expr), name);
         }
         else if (match(token_type::LSQUARE))
         {
@@ -607,6 +680,18 @@ std::unique_ptr<Expression> Parser::primary()
             match(token_type::COMMA);
         }
         return list;
+    }
+    if (match(token_type::NEW))
+    {
+        std::string cls = consume(token_type::WORDS).get_text();
+        consume(token_type::LPARENT);
+        auto n = std::make_unique<NewExpression>(cls);
+        while (!match(token_type::RPARENT))
+        {
+            n->add_arg(expression());
+            match(token_type::COMMA);
+        }
+        return n;
     }
     if (match(token_type::NULLVAL))
         return std::make_unique<ValueExpression>(NullTag{});

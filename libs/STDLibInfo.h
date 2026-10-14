@@ -23,6 +23,8 @@ struct StdlibVarInfo
     bool is_const;
 };
 
+inline std::unordered_set<std::string> class_names;
+
 inline std::unordered_map<std::string, StdlibVarInfo> stdlib_vars;
 
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_symbols;

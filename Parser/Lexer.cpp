@@ -143,6 +143,10 @@ void Lexer::tokenize_word()
         {"list",    token_type::TYPES},
         {"dict",    token_type::TYPES},
         {"const",   token_type::CONST},
+        {"class",   token_type::CLASS},
+        {"new",     token_type::NEW},
+        {"private", token_type::PRIVATE},
+        {"public",  token_type::PUBLIC},
     };
 
     auto it = keywords.find(buffer);

@@ -33,6 +33,11 @@ enum token_type
     CONTINUE,       // For loop command (continue)
     DEFINE,         // Functions command (define)
     RETURN,         // Functions command (return)
+    CLASS,          // Class
+    NEW,            // New class
+    PRIVATE,        // Private methods
+    PUBLIC,         // Public methods
+
     NULLVAL,        // Value null
     TRUEVAL,        // Value true
     FALSEVAL,       // Value false
@@ -97,7 +102,14 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {CONTINUE,   "continue"},
     {DEFINE,     "define"},
     {RETURN,     "return"},
+    {CLASS,      "class"},
+    {NEW,        "new"},
+    {PRIVATE,    "private"},
+    {PUBLIC,     "public"},
+
     {NULLVAL,    "null"},
+    {TRUEVAL,    "true"},
+    {FALSEVAL,   "false"},
 
     {PLUS,       "+"},
     {MINUS,      "-"},

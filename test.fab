@@ -1,59 +1,28 @@
+class Obj
+{
+private:
+    int x; int y;
+public:
+    Obj(int x, int y)
+    {
+          this.x = x;
+          this.y = y;
+    }
+
+    define get_position() -> string
+        return x.to_str() + " " + y.to_str();
+
+    define set_position(int x, int y) -> void
+    {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+define create_obj(int x, int y) -> Obj
+    return new Obj(x, y);
+
 define main() -> int
 {
-    char a = 'a';
-    char Z = 'Z';
-    char d = '7';
-    char sp = ' ';
-    char p = '!';
-    char h = 'f';
-
-    // CHECK
-    writeln a.is_digit();               // false
-    writeln d.is_digit();               // true
-    writeln a.is_alpha();               // true
-    writeln d.is_alpha();               // false
-    writeln a.is_alnum();               // true
-    writeln p.is_alnum();               // false
-    writeln a.is_upper();               // false
-    writeln Z.is_upper();               // true
-    writeln a.is_lower();               // true
-    writeln sp.is_space();              // true
-    writeln p.is_punct();               // true
-    writeln h.is_hex();                 // true
-    writeln Z.is_hex();                 // false
-    writeln d.is_hex();                 // true
-    writeln a.is_printable();           // true
-    writeln a.is_ascii();               // true
-
-    // CASE
-    writeln a.to_upper();               // A
-    writeln Z.to_lower();               // z
-    writeln a.swap_case();              // A
-    writeln Z.swap_case();              // z
-    writeln d.swap_case();              // 7
-
-    // CONVERT
-    writeln a.to_int();                 // 97
-    writeln a.to_short();               // 97
-    writeln a.to_long();                // 97
-    writeln a.to_double();              // 97
-    writeln d.to_digit();               // 7
-    writeln a.to_digit();               // -1
-    writeln h.to_hex();                 // 15
-    writeln Z.to_hex();                 // -1
-    writeln a.to_str();                 // a
-    writeln a.repeat(3);                // aaa
-    writeln a.to_str() + d.to_str();    // a7
-
-    // COMPARE
-    writeln a.compare('b');             // -1
-    writeln 'b'.compare(a);             // 1
-    writeln a.compare(a);               // 0
-    writeln a.equals_ignore_case('A');  // true
-    writeln a.equals_ignore_case('b');  // false
-
-    // LITERALS, CHAINS
-    writeln 'x'.to_upper();             // X
-    writeln a.to_upper().to_int();      // 65
-    writeln '\n'.is_space();            // true
+    writeln create_obj(12, 43).get_position();
 }

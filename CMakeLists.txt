@@ -59,6 +59,7 @@ add_executable(fab main.cpp
         Parser/AST/ListLiteralExpression.h
         Parser/AST/DictLiteralExpression.h
         Parser/AST/IndexExprAndStat.h
+        Parser/AST/ClassStatement.h
 )
 
 if (NOT WIN32)

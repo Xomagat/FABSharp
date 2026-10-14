@@ -90,18 +90,114 @@ inline bool is_container(const std::string& t)
     return t.starts_with("list<") || t.starts_with("dict<");
 }
 
+inline bool emit_container_print(CodegenContext& ctx, llvm::Value* val, const std::string& t)
+{
+    auto& b = ctx.builder;
+    std::string sym;
+    if      (t.starts_with("list<")) sym = "fab_list_print_" + list_elem(t);
+    else if (t.starts_with("dict<")) { auto [k, v] = dict_kv(t); sym = "fab_dict_print_" + k + "_" + v; }
+    else return false;
+
+    auto fn = ctx.module.getOrInsertFunction(sym,
+        llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false));
+    b.CreateCall(fn, {val});
+    return true;
+}
+
+inline bool is_class(const std::string& t) { return class_names.contains(t); }
+
+inline ClassInfo& get_class(CodegenContext& ctx, const std::string& n)
+{
+    auto it = ctx.classes.find(n);
+    if (it == ctx.classes.end()) throw std::runtime_error("Unknown class '" + n + "'!");
+    return it->second;
+}
+
+inline void emit_null_check(CodegenContext& ctx, llvm::Value* obj, const std::string& msg)
+{
+    auto& b = ctx.builder;
+    llvm::Function* fn = b.GetInsertBlock()->getParent();
+    auto* bad = llvm::BasicBlock::Create(ctx.context, "null.bad", fn);
+    auto* ok  = llvm::BasicBlock::Create(ctx.context, "null.ok", fn);
+
+    b.CreateCondBr(b.CreateIsNull(obj), bad, ok);
+
+    b.SetInsertPoint(bad);
+    auto putsFn = ctx.module.getOrInsertFunction("puts",
+        llvm::FunctionType::get(b.getInt32Ty(), {b.getPtrTy()}, false));
+    auto exitFn = ctx.module.getOrInsertFunction("exit",
+        llvm::FunctionType::get(b.getVoidTy(), {b.getInt32Ty()}, false));
+    b.CreateCall(putsFn, {b.CreateGlobalStringPtr(msg)});
+    b.CreateCall(exitFn, {b.getInt32(1)});
+    b.CreateUnreachable();
+
+    b.SetInsertPoint(ok);
+}
+
+inline llvm::Value* emit_field_ptr(CodegenContext& ctx, llvm::Value* obj, const std::string& cls,
+                                   const std::string& field, std::string& type_out)
+{
+    auto& ci = get_class(ctx, cls);
+    int i = ci.field_index(field);
+    if (i < 0)
+        throw std::runtime_error("Class '" + cls + "' has no field '" + field + "'!");
+    if (!ci.fields[i].is_public && ctx.current_class != cls)
+        throw std::runtime_error("Field '" + field + "' of class '" + cls + "' is private!");
+
+    type_out = ci.fields[i].type;
+    emit_null_check(ctx, obj, "Null reference: field '" + field + "' of " + cls);
+    return ctx.builder.CreateStructGEP(ci.st, obj, i, field);
+}
+
+inline llvm::Value* emit_this_field_ptr(CodegenContext& ctx, const std::string& name, std::string& ftype)
+{
+    auto self = ctx.variables.find("this");
+    if (self == ctx.variables.end()) return nullptr;
+
+    const std::string& cls = ctx.var_types["this"];
+    if (get_class(ctx, cls).field_index(name) < 0) return nullptr;
+
+    llvm::Value* obj = ctx.builder.CreateLoad(ctx.builder.getPtrTy(), self->second);
+    return emit_field_ptr(ctx, obj, cls, name, ftype);
+}
+
+inline llvm::Value* emit_object_alloc(CodegenContext& ctx, const std::string& cls)
+{
+    auto& b = ctx.builder;
+    auto& cl = get_class(ctx, cls);
+
+    auto* nullp = llvm::ConstantPointerNull::get(b.getPtrTy());
+    auto* size = b.CreatePtrToInt(b.CreateGEP(cl.st, nullp, {b.getInt32(1)}), b.getInt64Ty());
+
+    auto callocFn = ctx.module.getOrInsertFunction("calloc",
+        llvm::FunctionType::get(b.getPtrTy(), {b.getInt64Ty(), b.getInt64Ty()}, false));
+    llvm::Value* obj = b.CreateCall(callocFn, {b.getInt64(1), size});
+    ctx.value_types[obj] = cls;
+
+    for (size_t i = 0; i < cl.fields.size(); ++i)
+    {
+        auto& f = cl.fields[i];
+        llvm::Value* init = nullptr;
+        if (is_container(f.type))    init = emit_container_new(ctx, f.type);
+        else if (f.type == "string") init = b.CreateGlobalStringPtr("");
+        if (init) b.CreateStore(init, b.CreateStructGEP(cl.st, obj, (unsigned)i));
+    }
+    return obj;
+}
+
 inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& builder)
 {
-    if (type == "void")   return builder.getVoidTy();
-    if (type == "int")    return builder.getInt32Ty();
-    if (type == "short")  return builder.getInt16Ty();
-    if (type == "long")   return builder.getInt64Ty();
-    if (type == "char")   return builder.getInt8Ty();
-    if (type == "double") return builder.getDoubleTy();
-    if (type == "float")  return builder.getFloatTy();
-    if (type == "bool")   return builder.getInt1Ty();
-    if (type == "string") return builder.getInt8Ty()->getPointerTo();
+    if (type == "void")     return builder.getVoidTy();
+    if (type == "int")      return builder.getInt32Ty();
+    if (type == "short")    return builder.getInt16Ty();
+    if (type == "long")     return builder.getInt64Ty();
+    if (type == "char")     return builder.getInt8Ty();
+    if (type == "double")   return builder.getDoubleTy();
+    if (type == "float")    return builder.getFloatTy();
+    if (type == "bool")     return builder.getInt1Ty();
+    if (type == "string")   return builder.getInt8Ty()->getPointerTo();
     if (is_container(type)) return builder.getPtrTy();
+    if (is_class(type))     return builder.getPtrTy();
 
     throw std::runtime_error("Unknown type for codegen: " + type);
 }
@@ -169,20 +265,6 @@ inline std::string type_of(CodegenContext& ctx, llvm::Value* v)
     return llvm_to_type(v->getType());
 }
 
-inline bool emit_container_print(CodegenContext& ctx, llvm::Value* val, const std::string& t)
-{
-    auto& b = ctx.builder;
-    std::string sym;
-    if      (t.starts_with("list<")) sym = "fab_list_print_" + list_elem(t);
-    else if (t.starts_with("dict<")) { auto [k, v] = dict_kv(t); sym = "fab_dict_print_" + k + "_" + v; }
-    else return false;
-
-    auto fn = ctx.module.getOrInsertFunction(sym,
-        llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false));
-    b.CreateCall(fn, {val});
-    return true;
-}
-
 class AssigementStatement : public Statement
 {
 private:
@@ -207,6 +289,13 @@ public:
             auto it = context.variables.find(name);
             if (it == context.variables.end())
             {
+                std::string ft;
+                if (auto* p = emit_this_field_ptr(context, name, ft))
+                {
+                    auto* v = context.builder.CreateLoad(type_to_llvm(ft, context.builder), p, name);
+                    context.value_types[v] = ft;
+                    return;
+                }
                 auto lib = stdlib_vars.find(name);
                 if (lib == stdlib_vars.end())
                     throw std::runtime_error("Variable " + name + " not found!");
@@ -232,7 +321,15 @@ public:
         context.variables[name] = alloc;
         context.var_types[name] = type;
 
-        if (expression)
+        if (!expression && is_class(type))
+        {
+            llvm::Value* obj = emit_object_alloc(context, type);
+            auto& ci = get_class(context, type);
+            if (ci.ctor && ci.ctor_args.empty())
+                context.builder.CreateCall(ci.ctor, {obj});
+            context.builder.CreateStore(obj, alloc);
+        }
+        else if (expression)
         {
             llvm::Value* val;
             if (expression->is_null_literal())

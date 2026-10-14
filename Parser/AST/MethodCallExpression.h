@@ -37,6 +37,26 @@ public:
             tail_types.push_back(type_of(ctx, vals.back()));
         }
 
+        if (is_class(recv_type))
+        {
+            auto& ci = get_class(ctx, recv_type);
+            auto m = ci.methods.find(mangle_name(name, tail_types));
+            if (m == ci.methods.end())
+                throw std::runtime_error("Class '" + recv_type + "' has no method '" + name + "' with these arguments");
+            if (!m->second.is_public && ctx.current_class != recv_type)
+                throw std::runtime_error("Method '" + name + "' is private!");
+
+            std::vector<llvm::Value*> cargs{self};
+            for (size_t i = 0; i < m->second.args.size(); ++i)
+                cargs.push_back(coerceToType(vals[i + 1], type_to_llvm(m->second.args[i], ctx.builder), ctx.builder));
+
+            emit_null_check(ctx, self, "Null reference: method '" + name + "'");
+
+            llvm::Value* r = ctx.builder.CreateCall(m->second.fn, cargs);
+            if (m->second.ret != "void") ctx.value_types[r] = m->second.ret;
+            return r;
+        }
+
         auto it = stdlib_methods.find(mangle_method(recv_type, name, tail_types));
         if (recv_type.starts_with("list<") || recv_type.starts_with("dict<"))
         {

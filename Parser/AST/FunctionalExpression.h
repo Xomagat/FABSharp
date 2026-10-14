@@ -60,7 +60,12 @@ public:
 
         auto it = context.functions.find(key);
         if (it != context.functions.end())
-            return context.builder.CreateCall(it->second, args_values);
+        {
+            auto* r = context.builder.CreateCall(it->second, args_values);
+            auto& rt = context.func_ret[key];
+            if (rt != "void") context.value_types[r] = rt;
+            return r;
+        }
 
         auto libIt = stdlib_symbols.find(key);
         if (libIt != stdlib_symbols.end())

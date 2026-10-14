@@ -5,6 +5,7 @@
 #pragma once
 #include <string>
 
+#include "AssigementStatement.h"
 #include "Expression.h"
 
 class VariableExpression : public Expression
@@ -20,6 +21,13 @@ public:
         auto it = context.variables.find(name);
         if (it == context.variables.end())
         {
+            std::string ft;
+            if (auto* p = emit_this_field_ptr(context, name, ft))
+            {
+                auto* v = context.builder.CreateLoad(type_to_llvm(ft, context.builder), p, name);
+                context.value_types[v] = ft;
+                return v;
+            }
             auto lib = stdlib_vars.find(name);
             if (lib == stdlib_vars.end())
                 throw std::runtime_error("Variable {" + name + "} not found!");

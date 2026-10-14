@@ -10,6 +10,56 @@
 #include "FunctionalExpression.h"
 #include "Statement.h"
 
+inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const std::string& this_class,
+                               const std::vector<std::string>& arg_names,
+                               const std::vector<std::string>& arg_types,
+                               const std::string& ret, Statement& body)
+{
+    auto* saved_bb   = ctx.builder.GetInsertBlock();
+    auto saved_vars  = ctx.variables;
+    auto saved_types = ctx.var_types;
+    auto saved_const = ctx.const_vars;
+    auto saved_cls   = ctx.current_class;
+    auto saved_ret   = ctx.current_ret;
+
+    ctx.variables.clear(); ctx.var_types.clear(); ctx.const_vars.clear();
+    ctx.current_class = this_class;
+    ctx.current_ret = ret;
+
+    ctx.builder.SetInsertPoint(llvm::BasicBlock::Create(ctx.context, "entry", fn));
+
+    auto arg = fn->arg_begin();
+    if (!this_class.empty())
+    {
+        arg->setName("this");
+        auto* a = ctx.builder.CreateAlloca(ctx.builder.getPtrTy(), nullptr, "this");
+        ctx.builder.CreateStore(&*arg, a);
+        ctx.variables["this"] = a;
+        ctx.var_types["this"] = this_class;
+        ++arg;
+    }
+    for (size_t i = 0; i < arg_names.size(); ++i, ++arg)
+    {
+        arg->setName(arg_names[i]);
+        auto* a = ctx.builder.CreateAlloca(type_to_llvm(arg_types[i], ctx.builder), nullptr, arg_names[i]);
+        ctx.builder.CreateStore(&*arg, a);
+        ctx.variables[arg_names[i]] = a;
+        ctx.var_types[arg_names[i]] = arg_types[i];
+    }
+
+    body.codegen(ctx);
+
+    if (!ctx.builder.GetInsertBlock()->getTerminator())
+    {
+        if (ret == "void") ctx.builder.CreateRetVoid();
+        else ctx.builder.CreateRet(llvm::Constant::getNullValue(type_to_llvm(ret, ctx.builder)));
+    }
+
+    ctx.variables = saved_vars; ctx.var_types = saved_types; ctx.const_vars = saved_const;
+    ctx.current_class = saved_cls; ctx.current_ret = saved_ret;
+    if (saved_bb) ctx.builder.SetInsertPoint(saved_bb);
+}
+
 class FunctionStatement : public Statement
 {
 private:
@@ -50,6 +100,7 @@ public:
             fn_type, llvm::Function::ExternalLinkage, name, context.module);
 
         context.functions[mangle_name(name, arg_types)] = function;
+        context.func_ret[mangle_name(name, arg_types)]  = type;
 
         llvm::BasicBlock* entry = llvm::BasicBlock::Create(context.context, "entry", function);
         auto save_insert_block = context.builder.GetInsertBlock();
@@ -57,6 +108,12 @@ public:
 
         auto save_variables = context.variables;
         auto save_var_types = context.var_types;
+        auto save_const     = context.const_vars;
+        auto save_ret       = context.current_ret;
+        auto save_class     = context.current_class;
+
+        context.current_ret   = type;
+        context.current_class = "";
 
         int i = 0;
         for (auto& arg : function->args())
@@ -81,7 +138,30 @@ public:
 
         context.variables = save_variables;
         context.var_types = save_var_types;
+        context.const_vars    = save_const;
+        context.current_ret   = save_ret;
+        context.current_class = save_class;
         context.builder.SetInsertPoint(save_insert_block);
+    }
+
+    std::string get_type()
+    {
+        return type;
+    }
+
+    std::vector<std::string> get_arg_types()
+    {
+        return arg_types;
+    }
+
+    std::vector<std::string> get_arg_names()
+    {
+        return arg_names;
+    }
+
+    std::shared_ptr<Statement> get_body()
+    {
+        return body;
     }
 
     std::string get_name() const

@@ -28,6 +28,7 @@
 #include "AST/IfStatement.h"
 #include "AST/LoopStatement.h"
 #include "AST/BreakStatement.h"
+#include "AST/ClassStatement.h"
 #include "AST/ContinueStatement.h"
 #include "AST/ReturnStatement.h"
 #include "AST/FunctionStatement.h"
@@ -65,6 +66,7 @@ private:
     std::unique_ptr<Statement> while_statement();
     std::unique_ptr<Statement> do_while_statement();
     std::unique_ptr<Statement> for_statement();
+    std::unique_ptr<Statement> class_definition();
     std::unique_ptr<Statement> statement_or_block();
     std::unique_ptr<Statement> block();
 
