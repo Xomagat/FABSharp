@@ -15,9 +15,11 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/FileSystem.h"
 
 #include "../Parser/AST/FunctionStatement.h"
+#include "../Parser/AST/ClassStatement.h"
 #include "../Parser/AST/Statement.h"
 #include "CodegenContext.h"
 

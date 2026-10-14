@@ -17,6 +17,25 @@ struct LoopTargets
     llvm::BasicBlock* breakTarget;
 };
 
+struct FieldInfo  { std::string name, type; bool is_public; };
+struct MethodInfo { llvm::Function* fn; std::string ret; std::vector<std::string> args; bool is_public; };
+
+struct ClassInfo
+{
+    llvm::StructType* st = nullptr;
+    std::vector<FieldInfo> fields;
+    std::unordered_map<std::string, MethodInfo> methods;
+    llvm::Function* ctor = nullptr;
+    std::vector<std::string> ctor_args;
+
+    int field_index(const std::string& n) const
+    {
+        for (size_t i = 0; i < fields.size(); ++i)
+            if (fields[i].name == n) return (int)i;
+        return -1;
+    }
+};
+
 struct CodegenContext
 {
     llvm::LLVMContext& context;
@@ -30,5 +49,10 @@ struct CodegenContext
 
     std::unordered_map<std::string, std::string> var_types;
     std::unordered_map<llvm::Value*, std::string> value_types;
+
+    std::unordered_map<std::string, ClassInfo> classes;
+    std::unordered_map<std::string, std::string> func_ret;
+    std::string current_class;
+    std::string current_ret;
 };
 

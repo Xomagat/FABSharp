@@ -23,15 +23,25 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::str
         builder.SetInsertPoint(entry);
 
         for (auto& stmt : statements)
+        {
+            if (auto* c = dynamic_cast<ClassDefineStatement*>(stmt.get()))
+                c->declare(ctx);
             stmt->codegen(ctx);
+        }
 
         builder.CreateRet(builder.getInt32(0));
     }
     else
     {
         for (auto& stmt : statements)
+        {
+            if (auto* c = dynamic_cast<ClassDefineStatement*>(stmt.get()))
+                c->declare(ctx);
             stmt->codegen(ctx);
+        }
     }
+
+    if (llvm::verifyModule(module, &llvm::errs())) return;
 
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
