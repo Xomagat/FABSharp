@@ -37,6 +37,7 @@ enum token_type
     NEW,            // New class
     PRIVATE,        // Private methods
     PUBLIC,         // Public methods
+    DELETE_KW,      // Delete command
 
     NULLVAL,        // Value null
     TRUEVAL,        // Value true
@@ -106,6 +107,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {NEW,        "new"},
     {PRIVATE,    "private"},
     {PUBLIC,     "public"},
+    {DELETE_KW,  "delete"},
 
     {NULLVAL,    "null"},
     {TRUEVAL,    "true"},

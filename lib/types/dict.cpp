@@ -30,6 +30,16 @@ template <class K, class V> struct FabDict {
     int  len, cap, icap;
 };
 
+template<class T> void dict_free_key(T) {}
+inline void dict_free_key(const char* s) { free((void*)s); }
+
+template<class K, class V> void dict_free(FabDict<K,V>* d)
+{
+    if (!d) return;
+    for (int i = 0; i < d->len; ++i) dict_free_key(d->keys[i]);
+    free(d->keys); free(d->vals); free(d->index); free(d);
+}
+
 // Hash
 inline unsigned hash_key(long long x) {
     unsigned long long z = (unsigned long long)x + 0x9e3779b97f4a7c15ULL;
@@ -269,7 +279,8 @@ template<class K, class V> void dict_print(FabDict<K,V>* d)
       void* l = fab_list_new_##VN(); \
       for (int i = 0; i < x->len; ++i) fab_list_addend_##VN(l, x->vals[i]); \
       return l; \
-  }
+  } \
+  extern "C" void fab_dict_free_##KN##_##VN(void* d) { dict_free<K,V>((FabDict<K,V>*)d); }
 
 #define FAB_DICT_VALUES(KN, K) \
     FAB_DICT(KN, K, int,    int) \

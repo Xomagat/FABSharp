@@ -361,7 +361,8 @@ template<class T> char* list_join(FabList<T>* l, const char* sep)
     extern "C" void*  fab_list_copy_##NAME(void* l)                 { return list_copy<T>((FabList<T>*)l); } \
     extern "C" void*  fab_list_slice_##NAME(void* l, int s, int n)  { return list_slice<T>((FabList<T>*)l, s, n); } \
     extern "C" void   fab_list_extend_##NAME(void* l, void* o)      { list_extend<T>((FabList<T>*)l, (FabList<T>*)o); } \
-    extern "C" char*  fab_list_join_##NAME(void* l, const char* sep) { return list_join<T>((FabList<T>*)l, sep); }
+    extern "C" char*  fab_list_join_##NAME(void* l, const char* sep) { return list_join<T>((FabList<T>*)l, sep); } \
+    extern "C" void   fab_list_free_##NAME(void* l)                 { auto* x = (FabList<T>*)l; if (!x) return; free(x->data); free(x); }
 
 // sum: numbers are added up, strings are concatenated (not available for char and bool)
 #define FAB_LIST_SUM(NAME, T) \

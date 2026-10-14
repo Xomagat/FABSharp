@@ -185,6 +185,18 @@ inline llvm::Value* emit_object_alloc(CodegenContext& ctx, const std::string& cl
     return obj;
 }
 
+inline void emit_free_container(CodegenContext& ctx, llvm::Value* v, const std::string& t)
+{
+    auto& b = ctx.builder;
+    std::string sym;
+    if (t.starts_with("list<")) sym = "fab_list_free_" + list_elem(t);
+    else { auto [k, val] = dict_kv(t); sym = "fab_dict_free_" + k + "_" + val; }
+
+    auto fn = ctx.module.getOrInsertFunction(sym,
+        llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false));
+    b.CreateCall(fn, {v});
+}
+
 inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& builder)
 {
     if (type == "void")     return builder.getVoidTy();

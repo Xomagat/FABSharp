@@ -147,6 +147,7 @@ void Lexer::tokenize_word()
         {"new",     token_type::NEW},
         {"private", token_type::PRIVATE},
         {"public",  token_type::PUBLIC},
+        {"delete",  token_type::DELETE_KW},
     };
 
     auto it = keywords.find(buffer);

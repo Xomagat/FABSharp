@@ -156,6 +156,13 @@ std::unique_ptr<Statement> Parser::statement()
             consume(token_type::CLASS);
             return class_definition();
         }
+        case token_type::DELETE_KW: {
+            consume(token_type::DELETE_KW);
+            std::string name = consume(token_type::WORDS).get_text();
+            if (!match(token_type::SEMI)) throw std::runtime_error("You miss the ;");
+            return std::make_unique<DeleteStatement>(name);
+        }
+
         case token_type::WORDS: {
             if (class_names.contains(get(0).get_text()) && get(1).get_type() == token_type::WORDS)
                 return assigment_statement();

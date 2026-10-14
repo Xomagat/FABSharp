@@ -166,3 +166,55 @@ public:
         ctx.builder.CreateStore(coerceToType(v, lt, ctx.builder), ptr);
     }
 };
+
+class DeleteStatement : public Statement
+{
+    std::string name;
+
+public:
+    explicit DeleteStatement(std::string n) : name(std::move(n)) {}
+
+    void codegen(CodegenContext& ctx) const override
+    {
+        auto& b = ctx.builder;
+
+        llvm::Value* slot = nullptr;
+        std::string type;
+        auto it = ctx.variables.find(name);
+        if (it != ctx.variables.end()) { slot = it->second; type = ctx.var_types[name]; }
+        else slot = emit_this_field_ptr(ctx, name, type);
+        if (!slot) throw std::runtime_error("Variable {" + name + "} not found!");
+
+        llvm::Value* v = b.CreateLoad(b.getPtrTy(), slot);
+
+        if (is_container(type))
+            emit_free_container(ctx, v, type);
+        else if (is_class(type))
+        {
+            auto& ci = get_class(ctx, type);
+            llvm::Function* fn = b.GetInsertBlock()->getParent();
+            auto* body = llvm::BasicBlock::Create(ctx.context, "del.body", fn);
+            auto* done = llvm::BasicBlock::Create(ctx.context, "del.done", fn);
+
+            b.CreateCondBr(b.CreateIsNull(v), done, body);
+
+            b.SetInsertPoint(body);
+            for (size_t i = 0; i < ci.fields.size(); ++i)
+                if (is_container(ci.fields[i].type))
+                {
+                    auto* p = b.CreateStructGEP(ci.st, v, (unsigned)i);
+                    emit_free_container(ctx, b.CreateLoad(b.getPtrTy(), p), ci.fields[i].type);
+                }
+            auto freeFn = ctx.module.getOrInsertFunction("free",
+                llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false));
+            b.CreateCall(freeFn, {v});
+            b.CreateBr(done);
+
+            b.SetInsertPoint(done);
+        }
+        else
+            throw std::runtime_error("Cannot delete a value of type '" + type + "'!");
+
+        b.CreateStore(llvm::Constant::getNullValue(b.getPtrTy()), slot);
+    }
+};

@@ -24,5 +24,9 @@ define create_obj(int x, int y) -> Obj
 
 define main() -> int
 {
-    writeln create_obj(12, 43).get_position();
+    Obj o = new Obj(1, 2);
+    writeln o.get_position();
+    delete o;      // o теперь null
+    delete o;      // ничего не делает
+    writeln o.get_position();
 }
