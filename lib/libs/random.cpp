@@ -2,15 +2,14 @@
 // Created by Xomagat on 15.10.2026.
 //
 
-#include <random>
-#include <ctime>
+#include <time.h>
 
 static unsigned long long g_state;
 static bool g_seeded = false;
 
 static inline unsigned long long next_u64()
 {
-    if (!g_seeded) { g_state = (unsigned long long)std::time(nullptr); g_seeded = true; }
+    if (!g_seeded) { g_state = (unsigned long long)time(nullptr); g_seeded = true; }
 
     unsigned long long z = (g_state += 0x9E3779B97F4A7C15ULL);
     z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;

@@ -8,6 +8,8 @@
 #include <vector>
 
 #include "FunctionalExpression.h"
+
+#include "AssigementStatement.h"
 #include "Statement.h"
 
 inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const std::string& this_class,
@@ -32,7 +34,7 @@ inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const st
     if (!this_class.empty())
     {
         arg->setName("this");
-        auto* a = ctx.builder.CreateAlloca(ctx.builder.getPtrTy(), nullptr, "this");
+        auto* a = entry_alloca(ctx.builder, ctx.builder.getPtrTy(), "this");
         ctx.builder.CreateStore(&*arg, a);
         ctx.variables["this"] = a;
         ctx.var_types["this"] = this_class;
@@ -41,7 +43,7 @@ inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const st
     for (size_t i = 0; i < arg_names.size(); ++i, ++arg)
     {
         arg->setName(arg_names[i]);
-        auto* a = ctx.builder.CreateAlloca(type_to_llvm(arg_types[i], ctx.builder), nullptr, arg_names[i]);
+        auto* a = entry_alloca(ctx.builder, type_to_llvm(arg_types[i], ctx.builder), arg_names[i]);
         ctx.builder.CreateStore(&*arg, a);
         ctx.variables[arg_names[i]] = a;
         ctx.var_types[arg_names[i]] = arg_types[i];
@@ -119,7 +121,7 @@ public:
         for (auto& arg : function->args())
         {
             arg.setName(arg_names[i]);
-            llvm::AllocaInst* alloc = context.builder.CreateAlloca(param_types[i], nullptr, arg_names[i]);
+            llvm::AllocaInst* alloc = entry_alloca(context.builder, param_types[i], arg_names[i]);
             context.builder.CreateStore(&arg, alloc);
             context.variables[arg_names[i]] = alloc;
             context.var_types[arg_names[i]] = arg_types[i];

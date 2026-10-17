@@ -71,9 +71,8 @@ if (NOT WIN32)
             message(FATAL_ERROR "${lib} not found. Install glibc-static.")
         endif()
 
-        # libm.a и libc.a могут быть текстовыми скриптами GROUP(...)
         file(READ "${_p}" _head LIMIT 64 HEX)
-        if (_head MATCHES "^2169726368") # "!<arch" = настоящий архив
+        if (_head MATCHES "^2169726368")
             set(_files "${_p}")
         else()
             file(READ "${_p}" _txt)
@@ -105,10 +104,12 @@ if (MSVC)
     target_compile_options(fabstd PRIVATE /Zl /GS- /utf-8)
 endif()
 
+target_compile_options(fabstd PRIVATE -O2 -fno-exceptions -fno-rtti)
+
 set_target_properties(fabstd PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:fab>/lib")
 
-llvm_map_components_to_libnames(llvm_libs core support target x86asmparser x86codegen)
+llvm_map_components_to_libnames(llvm_libs core support target passes x86asmparser x86codegen)
 target_link_libraries(fab ${llvm_libs})
 
 if (MINGW)

@@ -17,6 +17,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Passes/PassBuilder.h"
 
 #include "../Parser/AST/FunctionStatement.h"
 #include "../Parser/AST/ClassStatement.h"

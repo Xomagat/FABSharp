@@ -77,11 +77,17 @@ public:
         if (!left->getType()->isIntegerTy() || !right->getType()->isIntegerTy())
             throw std::runtime_error("Codegen only supports integer/float arithmetic for now!");
 
+        unsigned lw = left->getType()->getIntegerBitWidth();
+        unsigned rw = right->getType()->getIntegerBitWidth();
+        llvm::Type* wide = (lw >= rw) ? left->getType() : right->getType();
+        left  = coerceToType(left,  wide, context.builder);
+        right = coerceToType(right, wide, context.builder);
+
         switch (op)
         {
-        case '+': return context.builder.CreateAdd(left, right);
-        case '-': return context.builder.CreateSub(left, right);
-        case '*': return context.builder.CreateMul(left, right);
+        case '+': return context.builder.CreateNSWAdd(left, right);
+        case '-': return context.builder.CreateNSWSub(left, right);
+        case '*': return context.builder.CreateNSWMul(left, right);
         case '/': return context.builder.CreateSDiv(left, right);
         case '%': return context.builder.CreateSRem(left, right);
         default: throw std::runtime_error("Codegen for this operator not implemented yet!");

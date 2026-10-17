@@ -41,8 +41,6 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::str
         }
     }
 
-    if (llvm::verifyModule(module, &llvm::errs())) return;
-
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
 
@@ -64,11 +62,29 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::str
     }
 
     auto targetMachine = target->createTargetMachine(
-    targetTriple, "generic", "", llvm::TargetOptions(),
+    targetTriple, "x86-64-v3", "", llvm::TargetOptions(),
     std::optional<llvm::Reloc::Model>(llvm::Reloc::PIC_));
 
     module.setDataLayout(targetMachine->createDataLayout());
     module.setTargetTriple(llvm::Triple(targetTriple));
+
+    llvm::LoopAnalysisManager LAM;
+    llvm::FunctionAnalysisManager FAM;
+    llvm::CGSCCAnalysisManager CGAM;
+    llvm::ModuleAnalysisManager MAM;
+
+    llvm::PassBuilder PB(targetMachine);
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    if (llvm::verifyModule(module, &llvm::errs())) return;
+
+    llvm::ModulePassManager MPM =
+        PB.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
+    MPM.run(module, MAM);
 
     std::error_code EC;
     if (EC) { std::cerr << "Cannot open output: " << EC.message() << std::endl; return; }

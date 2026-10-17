@@ -265,6 +265,13 @@ inline llvm::Value* emit_stdlib_const(CodegenContext& ctx, const StdlibVarInfo& 
     throw std::runtime_error("Unsupported library const type: " + v.type);
 }
 
+inline llvm::AllocaInst* entry_alloca(llvm::IRBuilder<>& b, llvm::Type* t, const std::string& name)
+{
+    llvm::Function* fn = b.GetInsertBlock()->getParent();
+    llvm::IRBuilder<> tmp(&fn->getEntryBlock(), fn->getEntryBlock().begin());
+    return tmp.CreateAlloca(t, nullptr, name);
+}
+
 inline llvm::GlobalVariable* stdlib_global(CodegenContext& ctx, const StdlibVarInfo& v)
 {
     llvm::Type* t = type_to_llvm(v.type, ctx.builder);
@@ -330,7 +337,7 @@ public:
 
         llvm::Type* llvmType = type_to_llvm(type, context.builder);
 
-        llvm::AllocaInst* alloc = context.builder.CreateAlloca(llvmType, nullptr, name);
+        llvm::AllocaInst* alloc = entry_alloca(context.builder, llvmType, name);
         context.variables[name] = alloc;
         context.var_types[name] = type;
 

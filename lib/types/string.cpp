@@ -318,7 +318,7 @@ extern "C" char* fab_pad_right(const char* x, int width, char fill)
 
     size_t pad = (size_t)width - len;
     memset(r, fill, pad);
-    memcpy(r - pad, x, len + 1);   // +1 copies the '\0'
+    memcpy(r - pad, x, len + 1);
 
     return r;
 }

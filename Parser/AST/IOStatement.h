@@ -7,6 +7,8 @@
 #include <iostream>
 
 #include "Expression.h"
+
+#include "AssigementStatement.h"
 #include "Statement.h"
 
 #include "../../CodeGen/CodegenContext.h"
@@ -214,7 +216,7 @@ public:
         else if (varType->isPointerTy()) // string (i8*)
         {
             llvm::Value* arraySize = context.builder.getInt32(256);
-            llvm::Value* stringBuffer = context.builder.CreateAlloca(context.builder.getInt8Ty(), arraySize, name + "_buf");
+            llvm::Value* stringBuffer = entry_alloca(context.builder, context.builder.getInt8Ty(), name + "_buf");
 
             context.builder.CreateStore(stringBuffer, alloc);
 
@@ -223,7 +225,7 @@ public:
         }
         else if (varType->isIntegerTy(1)) // bool
         {
-            llvm::AllocaInst* tmpAlloc = context.builder.CreateAlloca(context.builder.getInt32Ty(), nullptr, "tmp_bool");
+            llvm::AllocaInst* tmpAlloc = entry_alloca(context.builder, context.builder.getInt32Ty(), "tmp_bool");
             fmt = context.builder.CreateGlobalStringPtr("%d");
 
             context.builder.CreateCall(scanfFunc, {fmt, tmpAlloc});

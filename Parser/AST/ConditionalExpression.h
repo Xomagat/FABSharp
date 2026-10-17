@@ -51,6 +51,15 @@ public:
             throw std::runtime_error("Codegen for this conditional operator not implemented yet!");
         }
 
+        if (left->getType()->isIntegerTy() && right->getType()->isIntegerTy())
+        {
+            unsigned lw = left->getType()->getIntegerBitWidth();
+            unsigned rw = right->getType()->getIntegerBitWidth();
+            llvm::Type* wide = (lw >= rw) ? left->getType() : right->getType();
+            left  = coerceToType(left,  wide, ctx.builder);
+            right = coerceToType(right, wide, ctx.builder);
+        }
+
         if (op == "==") return ctx.builder.CreateICmpEQ(left, right);
         if (op == "!=") return ctx.builder.CreateICmpNE(left, right);
         if (op == "<")  return ctx.builder.CreateICmpSLT(left, right);
