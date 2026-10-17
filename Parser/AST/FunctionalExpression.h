@@ -11,6 +11,57 @@
 #include "Expression.h"
 #include "../../libs/STDLibInfo.h"
 
+inline int numeric_rank(const std::string& t)
+{
+    if (t == "short")  return 1;
+    if (t == "int")    return 2;
+    if (t == "long")   return 3;
+    if (t == "float")  return 4;
+    if (t == "double") return 5;
+    return 0;
+}
+
+inline int conversion_cost(const std::string& from, const std::string& to)
+{
+    if (from == to) return 0;
+
+    int a = numeric_rank(from), b = numeric_rank(to);
+    if (!a || !b) return -1;
+    if (a >= 4 && b <= 3) return -1;
+
+    return std::abs(a - b);
+}
+
+inline const StdlibFunctionInfo* find_with_conversion(const std::string& name,
+                                                      const std::vector<std::string>& actual)
+{
+    const std::string prefix = name + "#" + std::to_string(actual.size()) + "_";
+
+    const StdlibFunctionInfo* best = nullptr;
+    int  best_cost = INT_MAX;
+    bool tie = false;
+
+    for (auto& [key, info] : stdlib_symbols)
+    {
+        if (!key.starts_with(prefix) || info.arg_types.size() != actual.size()) continue;
+
+        int total = 0;
+        bool ok = true;
+        for (size_t i = 0; i < actual.size() && ok; ++i)
+        {
+            int c = conversion_cost(actual[i], info.arg_types[i]);
+            if (c < 0) ok = false; else total += c;
+        }
+        if (!ok) continue;
+
+        if (total < best_cost) { best = &info; best_cost = total; tie = false; }
+        else if (total == best_cost) tie = true;
+    }
+
+    if (tie) throw std::runtime_error("Ambiguous call to '" + name + "'");
+    return best;
+}
+
 class FunctionalExpression : public Expression
 {
 private:
@@ -102,6 +153,9 @@ public:
         for (size_t i = 0; i < arg_type_names.size(); ++i)
             sig += (i ? ", " : "") + arg_type_names[i];
         sig += ")";
+
+        if (auto* info = find_with_conversion(name, arg_type_names))
+            return emit_stdlib_call(context, *info, args_values);
 
         throw std::runtime_error("Unknown function or overload for codegen: " + sig);
     }

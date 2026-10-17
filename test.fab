@@ -1,32 +1,7 @@
-class Obj
-{
-private:
-    int x; int y;
-public:
-    Obj(int x, int y)
-    {
-          this.x = x;
-          this.y = y;
-    }
-
-    define get_position() -> string
-        return x.to_str() + " " + y.to_str();
-
-    define set_position(int x, int y) -> void
-    {
-        this.x = x;
-        this.y = y;
-    }
-}
-
-define create_obj(int x, int y) -> Obj
-    return new Obj(x, y);
+use random;
 
 define main() -> int
 {
-    Obj o = new Obj(1, 2);
-    writeln o.get_position();
-    delete o;      // o теперь null
-    delete o;      // ничего не делает
-    writeln o.get_position();
+    writeln rands(1, 10);
+    writeln randd(0, 0.1);
 }

@@ -1,0 +1,10 @@
+# Randoms functions v0.3
+# Created on 15.10.2026
+# Last update 15.10.2026
+
+set_seed fab_set_seed void    : int
+randi    fab_randi    int     : int, int
+rands    fab_rands    short   : short, short
+randl    fab_randl    long    : long, long
+randf    fab_randf    float   : float, float
+randd    fab_randd    double  : double, double

@@ -98,6 +98,7 @@ add_library(fabstd STATIC
         lib/types/char.cpp
         lib/types/bool.cpp
         lib/types/dict.cpp
+        lib/libs/random.cpp
 )
 
 if (MSVC)
