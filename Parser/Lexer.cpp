@@ -11,7 +11,7 @@
 // funcs
 Lexer::Lexer(std::string code)
 {
-    OPERATION_CHARS = "+-*/%(){}[]=;:.,<>!&|";
+    OPERATION_CHARS = "+-*/%(){}[]=;:.,<>!&|~";
     OPERATORS = {
         {"+", token_type::PLUS},
         {"-", token_type::MINUS},
@@ -51,6 +51,7 @@ Lexer::Lexer(std::string code)
         {"&&", token_type::AND},
         {"||", token_type::OR},
         {"->", token_type::ARROW},
+        {"~",  token_type::TILDE},
     };
 
     this->code = code;

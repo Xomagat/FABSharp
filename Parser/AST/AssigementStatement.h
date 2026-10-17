@@ -146,7 +146,7 @@ inline llvm::Value* emit_field_ptr(CodegenContext& ctx, llvm::Value* obj, const 
 
     type_out = ci.fields[i].type;
     emit_null_check(ctx, obj, "Null reference: field '" + field + "' of " + cls);
-    return ctx.builder.CreateStructGEP(ci.st, obj, i, field);
+    return ctx.builder.CreateStructGEP(ci.st, obj, i + 1, field);
 }
 
 inline llvm::Value* emit_this_field_ptr(CodegenContext& ctx, const std::string& name, std::string& ftype)
@@ -173,6 +173,7 @@ inline llvm::Value* emit_object_alloc(CodegenContext& ctx, const std::string& cl
         llvm::FunctionType::get(b.getPtrTy(), {b.getInt64Ty(), b.getInt64Ty()}, false));
     llvm::Value* obj = b.CreateCall(callocFn, {b.getInt64(1), size});
     ctx.value_types[obj] = cls;
+    b.CreateStore(cl.vtable, b.CreateStructGEP(cl.st, obj, 0));
 
     for (size_t i = 0; i < cl.fields.size(); ++i)
     {
@@ -180,7 +181,7 @@ inline llvm::Value* emit_object_alloc(CodegenContext& ctx, const std::string& cl
         llvm::Value* init = nullptr;
         if (is_container(f.type))    init = emit_container_new(ctx, f.type);
         else if (f.type == "string") init = b.CreateGlobalStringPtr("");
-        if (init) b.CreateStore(init, b.CreateStructGEP(cl.st, obj, (unsigned)i));
+        if (init) b.CreateStore(init, b.CreateStructGEP(cl.st, obj, (unsigned)i + 1));
     }
     return obj;
 }

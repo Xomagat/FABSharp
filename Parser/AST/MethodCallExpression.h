@@ -52,7 +52,11 @@ public:
 
             emit_null_check(ctx, self, "Null reference: method '" + name + "'");
 
-            llvm::Value* r = ctx.builder.CreateCall(m->second.fn, cargs);
+            auto& b = ctx.builder;
+            llvm::Value* vptr = b.CreateLoad(b.getPtrTy(), self);
+            llvm::Value* fp   = b.CreateLoad(b.getPtrTy(),
+                                    b.CreateConstGEP1_32(b.getPtrTy(), vptr, m->second.slot));
+            llvm::Value* r = b.CreateCall(m->second.fn->getFunctionType(), fp, cargs);
             if (m->second.ret != "void") ctx.value_types[r] = m->second.ret;
             return r;
         }

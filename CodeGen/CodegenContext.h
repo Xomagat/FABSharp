@@ -17,16 +17,21 @@ struct LoopTargets
     llvm::BasicBlock* breakTarget;
 };
 
-struct FieldInfo  { std::string name, type; bool is_public; };
-struct MethodInfo { llvm::Function* fn; std::string ret; std::vector<std::string> args; bool is_public; };
+struct FieldInfo  { std::string name, type; bool is_public; std::string owner; };
+struct MethodInfo { llvm::Function* fn; std::string ret; std::vector<std::string> args;
+    bool is_public; int slot = -1; };
 
 struct ClassInfo
 {
     llvm::StructType* st = nullptr;
+    std::string parent;
     std::vector<FieldInfo> fields;
     std::unordered_map<std::string, MethodInfo> methods;
     llvm::Function* ctor = nullptr;
     std::vector<std::string> ctor_args;
+    llvm::Function* dtor = nullptr;
+    std::vector<llvm::Function*> vslots;
+    llvm::GlobalVariable* vtable = nullptr;
 
     int field_index(const std::string& n) const
     {

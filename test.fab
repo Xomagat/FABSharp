@@ -1,7 +1,24 @@
-use random;
+class Animal {
+public:
+    string name;
+    Animal(string n) { name = n; }
+    ~Animal() { writeln "~Animal"; }
+    define speak() { writeln "..."; }
+}
+
+class Dog : Animal {
+public:
+    Dog(string n) : Animal(n) { writeln "Dog created"; }
+    ~Dog() { writeln "~Dog"; }
+
+    define speak() { writeln "Woof"; }
+}
 
 define main() -> int
 {
-    writeln rands(1, 10);
-    writeln randd(0, 0.1);
+    Animal a = new Dog("Rex");
+    a.speak();   // Woof (virtual)
+    delete a;    // ~Dog, затем ~Animal
+
+    return 0;
 }

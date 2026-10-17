@@ -167,6 +167,16 @@ std::unique_ptr<Statement> Parser::statement()
             if (class_names.contains(get(0).get_text()) && get(1).get_type() == token_type::WORDS)
                 return assigment_statement();
 
+            if (get(0).get_type() == token_type::WORDS && get(0).get_text() == "super"
+                        && get(1).get_type() == token_type::LPARENT)
+            {
+                consume(token_type::WORDS); consume(token_type::LPARENT);
+                auto s = std::make_unique<SuperCallStatement>();
+                while (!match(token_type::RPARENT)) { s->add_arg(expression()); match(token_type::COMMA); }
+                if (!match(token_type::SEMI)) throw std::runtime_error("You miss the ;");
+                return s;
+            }
+
             auto t1 = get(1).get_type();
             if (t1 == token_type::LPARENT || t1 == token_type::DOT || t1 == token_type::LSQUARE)
             {
@@ -348,9 +358,15 @@ std::unique_ptr<Statement> Parser::for_statement()
 std::unique_ptr<Statement> Parser::class_definition()
 {
     std::string name = consume(token_type::WORDS).get_text();
+    std::string parent;
+    if (match(token_type::COLON))
+    {
+        parent = consume(token_type::WORDS).get_text();
+        if (!class_names.contains(parent))
+            throw std::runtime_error("Unknown parent class '" + parent + "'!");
+    }
     consume(token_type::LBRACKET);
-
-    auto cls = std::make_unique<ClassDefineStatement>(name);
+    auto cls = std::make_unique<ClassDefineStatement>(name, parent);
     bool is_public = false;
 
     while (!match(token_type::RBRACKET))
@@ -366,6 +382,16 @@ std::unique_ptr<Statement> Parser::class_definition()
             continue;
         }
 
+        if (match(token_type::TILDE))
+        {
+            if (consume(token_type::WORDS).get_text() != name)
+                throw std::runtime_error("Destructor name must match class name!");
+            consume(token_type::LPARENT);
+            consume(token_type::RPARENT);
+            cls->set_dtor(block());
+            continue;
+        }
+
         if (get(0).get_type() == token_type::WORDS && get(0).get_text() == name
             && get(1).get_type() == token_type::LPARENT)
         {
@@ -378,8 +404,25 @@ std::unique_ptr<Statement> Parser::class_definition()
                 an.push_back(consume(token_type::WORDS).get_text());
                 match(token_type::COMMA);
             }
+
+            std::vector<std::shared_ptr<Expression>> base_args;
+            if (match(token_type::COLON))
+            {
+                std::string base = consume(token_type::WORDS).get_text();
+                if (base != parent)
+                    throw std::runtime_error("'" + base + "' is not the parent of '" + name + "'!");
+                consume(token_type::LPARENT);
+                while (!match(token_type::RPARENT))
+                {
+                    base_args.push_back(expression());
+                    match(token_type::COMMA);
+                }
+            }
+
             std::shared_ptr<Statement> body = block();
-            cls->set_ctor({"void", "new", at, an, body, true});
+            MethodDecl d{"void", "new", at, an, body, true};
+            d.base_args = std::move(base_args);
+            cls->set_ctor(std::move(d));
             continue;
         }
 
