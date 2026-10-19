@@ -41,6 +41,14 @@ struct ClassInfo
     }
 };
 
+class Expression;
+
+struct FuncDefaults
+{
+    std::vector<std::string> arg_types;
+    std::vector<std::shared_ptr<Expression>> defaults;
+};
+
 struct CodegenContext
 {
     llvm::LLVMContext& context;
@@ -48,6 +56,7 @@ struct CodegenContext
     llvm::IRBuilder<>& builder;
     std::unordered_map<std::string, llvm::AllocaInst*> variables;
     std::unordered_map<std::string, llvm::Function*> functions;
+    std::unordered_map<std::string, FuncDefaults> func_defaults;
     std::vector<LoopTargets> loop_stack;
     std::unordered_set<std::string> const_vars;
     std::unordered_map<std::string, llvm::Function*> methods;

@@ -1,56 +1,14 @@
-use io;
+use math;
+
+define _double_pow(int a, int b = 2) -> int
+{
+    return pow(a, b) * 2;
+}
 
 define main() -> int
 {
-    long h = file_open("data.txt", "w");
-
-    if h == 0
-    {
-        writeln io_error();
-        return 1;
-    }
-
-    int  n1;
-    int  n2;
-    char op;
-
-    while (true)
-    {
-        input_in op;
-
-        if op == 's' break;
-
-        input_in n1;
-        input_in n2;
-
-        if op == '+'
-        {
-            writeln n1 + n2;
-            file_putln(h, (n1 + n2).to_str());
-        }
-        else if op == '-'
-        {
-            writeln n1 - n2;
-            file_putln(h, (n1 - n2).to_str());
-        }
-        else if op == '*'
-        {
-            writeln n1 * n2;
-            file_putln(h, (n1 * n2).to_str());
-        }
-        else if op == '/'
-        {
-            writeln n1 / n2;
-            file_putln(h, (n1 / n2).to_str());
-        }
-        else if op == '%'
-        {
-            writeln n1 % n2;
-            file_putln(h, (n1 % n2).to_str());
-        }
-    }
-
-    file_close(h);
+    writeln _double_pow(10);
+    writeln _double_pow(10, 5);
 
     return 0;
 }

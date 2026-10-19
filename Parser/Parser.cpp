@@ -463,10 +463,25 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function()
     std::vector<std::string> arg_type;
     std::vector<std::string> arg_name;
 
+    std::vector<std::shared_ptr<Expression>> arg_def;
+    bool seen_def = false;
+
     while (!match(token_type::RPARENT))
     {
         arg_type.push_back(parse_type());
         arg_name.push_back(consume(token_type::WORDS).get_text());
+
+        if (match(token_type::EQ))
+        {
+            arg_def.push_back(expression());
+            seen_def = true;
+        }
+        else
+        {
+            if (seen_def)
+                throw std::runtime_error("Parameter without default value after parameter with default!");
+            arg_def.push_back(nullptr);
+        }
         match(token_type::COMMA);
     }
 
@@ -475,7 +490,9 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function()
 
     std::unique_ptr<Statement> body = statement_or_block();
 
-    return std::make_unique<FunctionDefineStatement>(type, name, arg_type, arg_name, std::move(body));
+    auto fn = std::make_unique<FunctionDefineStatement>(type, name, arg_type, arg_name, std::move(body));
+    fn->set_defaults(std::move(arg_def));
+    return fn;
 }
 
 std::unique_ptr<Expression> Parser::function()
@@ -871,17 +888,37 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         std::string fab_name, symbol, ret, colon, arg;
         iss >> fab_name >> symbol >> ret >> colon;
 
-        std::vector<std::string> args;
+        std::vector<std::string> args, defs;
         while (iss >> arg)
         {
             if (arg.back() == ',') arg.pop_back();
+            std::string def;
+            if (auto eq = arg.find('='); eq != std::string::npos)
+            {
+                def = arg.substr(eq + 1);
+                arg.resize(eq);
+                if (def.empty()) throw std::runtime_error("Manifest: empty default in " + fab_name);
+            }
+            else if (!defs.empty() && std::any_of(defs.begin(), defs.end(), [](auto& s){ return !s.empty(); }))
+                throw std::runtime_error("Manifest: required argument after default in " + fab_name);
+
             args.push_back(arg);
+            defs.push_back(def);
         }
+
+        size_t first_def = args.size();
+        for (size_t i = 0; i < defs.size(); ++i)
+            if (!defs[i].empty()) { first_def = i; break; }
 
         auto dot = fab_name.find('.');
         if (dot == std::string::npos)
         {
-            stdlib_symbols[mangle_name(fab_name, args)] = {symbol, ret, args};
+            StdlibFunctionInfo info{symbol, ret, args, defs};
+            stdlib_symbols[mangle_name(fab_name, args)] = info;
+
+            for (size_t n = first_def; n < args.size(); ++n)
+                stdlib_symbols.emplace(
+                    mangle_name(fab_name, std::vector<std::string>(args.begin(), args.begin() + n)), info);
             continue;
         }
 
@@ -900,10 +937,18 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         std::vector<std::string> tail(args.begin() + 1, args.end());
         auto key = mangle_method(type, name, tail);
 
+        if (first_def < 1)
+            throw std::runtime_error("Manifest: receiver of " + fab_name + " cannot have a default");
+
         if (stdlib_methods.contains(key))
             throw std::runtime_error("Manifest: duplicate method " + fab_name);
 
-        stdlib_methods[key] = {symbol, ret, args};
+        StdlibFunctionInfo info{symbol, ret, args, defs};
+        stdlib_methods[key] = info;
+
+        for (size_t n = first_def; n < args.size(); ++n)
+            stdlib_methods.emplace(
+                mangle_method(type, name, std::vector<std::string>(args.begin() + 1, args.begin() + n)), info);
     }
 }
 

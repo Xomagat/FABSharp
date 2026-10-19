@@ -79,8 +79,16 @@ public:
     }
 
     static llvm::Value* emit_stdlib_call(CodegenContext& ctx, const StdlibFunctionInfo& info,
-                                     const std::vector<llvm::Value*>& vals)
+                                     const std::vector<llvm::Value*>& given)
     {
+        std::vector<llvm::Value*> vals = given;
+        for (size_t i = vals.size(); i < info.arg_types.size(); ++i)
+        {
+            if (i >= info.defaults.size() || info.defaults[i].empty())
+                throw std::runtime_error("Missing argument for " + info.symbol);
+            vals.push_back(emit_stdlib_const(ctx, {"", info.arg_types[i], info.defaults[i], true}));
+        }
+
         std::vector<llvm::Type*> params;
         for (auto& t : info.arg_types)
             params.push_back(type_to_llvm(t, ctx.builder));
@@ -112,29 +120,33 @@ public:
         auto it = context.functions.find(key);
         if (it != context.functions.end())
         {
-            auto* r = context.builder.CreateCall(it->second, args_values);
-            auto& rt = context.func_ret[key];
-            if (rt != "void") context.value_types[r] = rt;
-            return r;
+            auto it = context.functions.find(key);
+            if (it != context.functions.end())
+            {
+                auto vals = args_values;
+
+                auto d = context.func_defaults.find(key);
+                if (d != context.func_defaults.end())
+                {
+                    auto& fd = d->second;
+                    for (size_t i = vals.size(); i < fd.arg_types.size(); ++i)
+                        vals.push_back(fd.defaults[i]->codegen_expected(context, fd.arg_types[i]));
+                }
+
+                auto* fty = it->second->getFunctionType();
+                for (size_t i = 0; i < vals.size(); ++i)
+                    vals[i] = coerceToType(vals[i], fty->getParamType(i), context.builder);
+
+                auto* r = context.builder.CreateCall(it->second, vals);
+                auto& rt = context.func_ret[key];
+                if (rt != "void") context.value_types[r] = rt;
+                return r;
+            }
         }
 
         auto libIt = stdlib_symbols.find(key);
         if (libIt != stdlib_symbols.end())
-        {
-            std::vector<llvm::Type*> param_types;
-            for (auto& t : libIt->second.arg_types)
-                param_types.push_back(type_to_llvm(t, context.builder));
-
-            auto fnType = llvm::FunctionType::get(
-                type_to_llvm(libIt->second.return_type, context.builder), param_types, false);
-            auto fn = context.module.getOrInsertFunction(libIt->second.symbol, fnType);
-
-            std::vector<llvm::Value*> coerced;
-            for (size_t i = 0; i < args_values.size(); i++)
-                coerced.push_back(coerceToType(args_values[i], param_types[i], context.builder));
-
-            return context.builder.CreateCall(fn, coerced);
-        }
+            return emit_stdlib_call(context, libIt->second, args_values);
 
         std::vector<std::string> widened = arg_type_names;
         bool changed = false;

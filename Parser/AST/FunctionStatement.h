@@ -84,10 +84,14 @@ private:
     std::vector<std::string> arg_names;
     std::vector<std::string> arg_types;
     std::shared_ptr<Statement> body;
+    std::vector<std::shared_ptr<Expression>> defaults;
 
 public:
     explicit FunctionDefineStatement(std::string& type, std::string& name, std::vector<std::string>& arg_types, std::vector<std::string>& arg_names, std::unique_ptr<Statement> body)
         : type(type), name(name), arg_types(arg_types), arg_names(arg_names), body(std::move(body)) {}
+
+    void set_defaults(std::vector<std::shared_ptr<Expression>> d) { defaults = std::move(d); }
+    auto get_defaults() const { return defaults; }
 
     void codegen(CodegenContext &context) const override
     {
@@ -103,6 +107,19 @@ public:
 
         context.functions[mangle_name(name, arg_types)] = function;
         context.func_ret[mangle_name(name, arg_types)]  = type;
+
+        size_t first_def = arg_types.size();
+        for (size_t i = 0; i < defaults.size(); ++i)
+            if (defaults[i]) { first_def = i; break; }
+
+        for (size_t n = first_def; n < arg_types.size(); ++n)
+        {
+            std::vector<std::string> sub(arg_types.begin(), arg_types.begin() + n);
+            auto k = mangle_name(name, sub);
+            context.functions[k] = function;
+            context.func_ret[k]  = type;
+            context.func_defaults[k] = {arg_types, defaults};
+        }
 
         llvm::BasicBlock* entry = llvm::BasicBlock::Create(context.context, "entry", function);
         auto save_insert_block = context.builder.GetInsertBlock();
