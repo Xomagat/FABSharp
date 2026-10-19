@@ -1,24 +1,56 @@
-class Animal {
-public:
-    string name;
-    Animal(string n) { name = n; }
-    ~Animal() { writeln "~Animal"; }
-    define speak() { writeln "..."; }
-}
-
-class Dog : Animal {
-public:
-    Dog(string n) : Animal(n) { writeln "Dog created"; }
-    ~Dog() { writeln "~Dog"; }
-
-    define speak() { writeln "Woof"; }
-}
+use io;
 
 define main() -> int
 {
-    Animal a = new Dog("Rex");
-    a.speak();   // Woof (virtual)
-    delete a;    // ~Dog, затем ~Animal
+    long h = file_open("data.txt", "w");
+
+    if h == 0
+    {
+        writeln io_error();
+        return 1;
+    }
+
+    int  n1;
+    int  n2;
+    char op;
+
+    while (true)
+    {
+        input_in op;
+
+        if op == 's' break;
+
+        input_in n1;
+        input_in n2;
+
+        if op == '+'
+        {
+            writeln n1 + n2;
+            file_putln(h, (n1 + n2).to_str());
+        }
+        else if op == '-'
+        {
+            writeln n1 - n2;
+            file_putln(h, (n1 - n2).to_str());
+        }
+        else if op == '*'
+        {
+            writeln n1 * n2;
+            file_putln(h, (n1 * n2).to_str());
+        }
+        else if op == '/'
+        {
+            writeln n1 / n2;
+            file_putln(h, (n1 / n2).to_str());
+        }
+        else if op == '%'
+        {
+            writeln n1 % n2;
+            file_putln(h, (n1 % n2).to_str());
+        }
+    }
+
+    file_close(h);
 
     return 0;
 }
