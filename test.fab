@@ -1,14 +1,10 @@
-use math;
-
-define _double_pow(int a, int b = 2) -> int
-{
-    return pow(a, b) * 2;
-}
+use io;
 
 define main() -> int
 {
-    writeln _double_pow(10);
-    writeln _double_pow(10, 5);
+    file f = file_open("test.cpp", "w");
 
-    return 0;
+    f.put("#include <iostream>\nint main() {\n\tstd::cout << \"Hello, World!\" << std::endl;\n}");
+
+    f.close();
 }

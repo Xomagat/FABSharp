@@ -164,6 +164,10 @@ std::unique_ptr<Statement> Parser::statement()
         }
 
         case token_type::WORDS: {
+            if ((class_names.contains(get(0).get_text()) || is_lib_type(get(0).get_text()))
+                    && get(1).get_type() == token_type::WORDS)
+                return assigment_statement();
+
             if (class_names.contains(get(0).get_text()) && get(1).get_type() == token_type::WORDS)
                 return assigment_statement();
 
@@ -208,7 +212,8 @@ std::unique_ptr<Statement> Parser::statement()
 
 std::string Parser::parse_type()
 {
-    if (get(0).get_type() == token_type::WORDS && class_names.contains(get(0).get_text()))
+    if (get(0).get_type() == token_type::WORDS &&
+    (class_names.contains(get(0).get_text()) || is_lib_type(get(0).get_text())))
         return consume(token_type::WORDS).get_text();
 
     std::string t = consume(token_type::TYPES).get_text();
@@ -240,7 +245,11 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
                && class_names.contains(current.get_text())
                && get(1).get_type() == token_type::WORDS;
 
-    if (current.get_type() == token_type::TYPES || class_decl)
+    bool lib_decl = current.get_type() == token_type::WORDS
+             && is_lib_type(current.get_text())
+             && get(1).get_type() == token_type::WORDS;
+
+    if (current.get_type() == token_type::TYPES || class_decl || lib_decl)
     {
         std::string type = parse_type();
         std::string name = consume(token_type::WORDS).get_text();
@@ -819,17 +828,18 @@ Token Parser::consume(token_type type)
 
 bool is_known_type(std::string& type)
 {
-    if (type == "string") return true;
-    if (type == "int")    return true;
-    if (type == "short")  return true;
-    if (type == "byte")   return true;
-    if (type == "long")   return true;
-    if (type == "float")  return true;
-    if (type == "double") return true;
-    if (type == "bool")   return true;
-    if (type == "char")   return true;
-    if (type == "list")   return true;
-    if (type == "dict")   return true;
+    if (type == "string")  return true;
+    if (type == "int")     return true;
+    if (type == "short")   return true;
+    if (type == "byte")    return true;
+    if (type == "long")    return true;
+    if (type == "float")   return true;
+    if (type == "double")  return true;
+    if (type == "bool")    return true;
+    if (type == "char")    return true;
+    if (type == "list")    return true;
+    if (type == "dict")    return true;
+    if (is_lib_type(type)) return true;
 
     return false;
 }
@@ -879,6 +889,29 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
                 iss >> symbol >> type;
                 stdlib_vars[name] = {symbol, type, "", false};
             }
+            continue;
+        }
+        if (head == "class")
+        {
+            LibTypeInfo t;
+            iss >> t.name;
+            if (t.name.empty())
+                throw std::runtime_error("Manifest: class has no name");
+
+            std::string tok;
+            while (iss >> tok)
+            {
+                if (tok == ":")         iss >> t.parent;
+                else if (tok == "free") iss >> t.free_symbol;
+                else throw std::runtime_error("Manifest: unexpected '" + tok + "' in class " + t.name);
+            }
+
+            if (lib_types.contains(t.name) || class_names.contains(t.name))
+                throw std::runtime_error("Manifest: type " + t.name + " already exists");
+            if (!t.parent.empty() && !lib_types.contains(t.parent))
+                throw std::runtime_error("Manifest: unknown parent '" + t.parent + "' of " + t.name);
+
+            lib_types[t.name] = t;
             continue;
         }
 

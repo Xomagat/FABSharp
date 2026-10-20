@@ -61,7 +61,7 @@ public:
             return r;
         }
 
-        auto it = stdlib_methods.find(mangle_method(recv_type, name, tail_types));
+        const StdlibFunctionInfo* it = find_lib_method(recv_type, name, tail_types);
         if (recv_type.starts_with("list<") || recv_type.starts_with("dict<"))
         {
             auto find_generic = [&](const char* kind) {
@@ -97,10 +97,10 @@ public:
             return FunctionalExpression::emit_stdlib_call(ctx, info, vals);
         }
 
-        if (it == stdlib_methods.end())
+        if (!it)
             throw std::runtime_error("Type '" + recv_type + "' has no method '" + name + "' with these arguments");
 
-        return FunctionalExpression::emit_stdlib_call(ctx, it->second, vals);
+        return FunctionalExpression::emit_stdlib_call(ctx, *it, vals);
     }
 
     std::string to_str() const override

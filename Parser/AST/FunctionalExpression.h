@@ -24,6 +24,7 @@ inline int numeric_rank(const std::string& t)
 inline int conversion_cost(const std::string& from, const std::string& to)
 {
     if (from == to) return 0;
+    if (lib_is_a(from, to)) return 1;
 
     int a = numeric_rank(from), b = numeric_rank(to);
     if (!a || !b) return -1;

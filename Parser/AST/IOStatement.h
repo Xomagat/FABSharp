@@ -30,7 +30,7 @@ public:
         llvm::Value* val = expr->codegen(context);
 
         std::string t = type_of(context, val);
-        if (is_class(t))
+        if (is_class(t) || is_lib_type(t))
             throw std::runtime_error("Cannot print an object of class '" + t + "': classes are not built-in types!");
         if (t.starts_with("list<"))
         {
@@ -107,7 +107,7 @@ public:
         llvm::Value* val = expr->codegen(context);
 
         std::string t = type_of(context, val);
-        if (is_class(t))
+        if (is_class(t) || is_lib_type(t))
             throw std::runtime_error("Cannot print an object of class '" + t + "': classes are not built-in types!");
         if (t.starts_with("list<"))
         {

@@ -35,9 +35,12 @@ public:
         for (size_t i = 0; i < ci.fields.size(); ++i)
         {
             auto& f = ci.fields[i];
-            if (f.owner != cls || !is_container(f.type)) continue;
+            if (f.owner != cls) continue;
             auto* p = b.CreateStructGEP(ci.st, self, (unsigned)i + 1);
-            emit_free_container(ctx, b.CreateLoad(b.getPtrTy(), p), f.type);
+            if (is_container(f.type))
+                emit_free_container(ctx, b.CreateLoad(b.getPtrTy(), p), f.type);
+            else if (is_lib_type(f.type) && !lib_free_symbol(f.type).empty())
+                emit_free_lib(ctx, b.CreateLoad(b.getPtrTy(), p), f.type);
         }
         if (!parent.empty())
             b.CreateCall(get_class(ctx, parent).dtor, {self});
@@ -312,6 +315,8 @@ public:
 
         if (is_container(type))
             emit_free_container(ctx, v, type);
+        else if (is_lib_type(type))
+            emit_free_lib(ctx, v, type);
         else if (is_class(type))
         {
             llvm::Function* fn = b.GetInsertBlock()->getParent();

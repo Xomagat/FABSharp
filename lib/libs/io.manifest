@@ -1,21 +1,48 @@
-# IO functions v0.1
+# IO functions v0.2
 
-# Whole files
-file_exists   fab_file_exists   bool         : string
-file_size     fab_file_size     long         : string
-file_read     fab_file_read     string       : string
-file_write    fab_file_write    bool         : string, string
-file_append   fab_file_append   bool         : string, string
-file_lines    fab_file_lines    list<string> : string
-file_delete   fab_file_delete   bool         : string
-file_rename   fab_file_rename   bool         : string, string
+class file free fab_file_free
 
-# Handles (mode: "r", "w", "a", "rb", "wb")
-file_open     fab_file_open     long         : string, string
-file_close    fab_file_close    bool         : long
-file_eof      fab_file_eof      bool         : long
-file_get_line fab_file_get_line string       : long
-file_put      fab_file_put      bool         : long, string
-file_putln    fab_file_putln    bool         : long, string
+# Create
+file_open     fab_file_open     file         : string, string
+file_stdin    fab_file_stdin    file         :
+file_stdout   fab_file_stdout   file         :
+file_stderr   fab_file_stderr   file         :
+
+# Paths (no handle needed)
+file_exists   fab_path_exists   bool         : string
+file_size     fab_path_size     long         : string
+file_read     fab_path_read     string       : string
+file_write    fab_path_write    bool         : string, string
+file_append   fab_path_append   bool         : string, string
+file_lines    fab_path_lines    list<string> : string
+file_delete   fab_path_delete   bool         : string
+file_rename   fab_path_rename   bool         : string, string
 
 io_error      fab_io_error      string       :
+
+# State
+file.close      fab_file_close     bool         : file
+file.is_open    fab_file_is_open   bool         : file
+file.eof        fab_file_eof       bool         : file
+file.flush      fab_file_flush     bool         : file
+file.path       fab_file_path      string       : file
+file.mode       fab_file_mode      string       : file
+
+# Read
+file.get_line   fab_file_get_line  string       : file
+file.get_char   fab_file_get_char  char         : file
+file.read       fab_file_read      string       : file, int
+file.read_all   fab_file_read_all  string       : file
+file.lines      fab_file_lines     list<string> : file
+
+# Write
+file.put        fab_file_put       bool         : file, string
+file.putln      fab_file_putln     bool         : file, string
+file.put_char   fab_file_put_char  bool         : file, char
+
+# Position
+file.size       fab_file_size      long         : file
+file.tell       fab_file_tell      long         : file
+file.seek       fab_file_seek      bool         : file, long
+file.seek       fab_file_seek_i    bool         : file, int
+file.rewind     fab_file_rewind    void         : file

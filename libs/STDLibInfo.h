@@ -47,3 +47,50 @@ inline std::string mangle_method(const std::string& type, const std::string& nam
 {
     return type + "::" + mangle_name(name, args_without_receiver);
 }
+
+struct LibTypeInfo
+{
+    std::string name;
+    std::string parent;
+    std::string free_symbol;
+};
+
+inline std::unordered_map<std::string, LibTypeInfo> lib_types;
+
+inline bool is_lib_type(const std::string& t) { return lib_types.contains(t); }
+
+inline bool lib_is_a(std::string from, const std::string& to)
+{
+    while (lib_types.contains(from))
+    {
+        if (from == to) return true;
+        from = lib_types.at(from).parent;
+    }
+    return false;
+}
+
+inline std::string lib_free_symbol(std::string t)
+{
+    while (lib_types.contains(t))
+    {
+        auto& i = lib_types.at(t);
+        if (!i.free_symbol.empty()) return i.free_symbol;
+        t = i.parent;
+    }
+    return "";
+}
+
+inline const StdlibFunctionInfo* find_lib_method(const std::string& type, const std::string& name,
+                                                 const std::vector<std::string>& tail)
+{
+    for (std::string t = type; !t.empty(); )
+    {
+        auto it = stdlib_methods.find(mangle_method(t, name, tail));
+        if (it != stdlib_methods.end()) return &it->second;
+
+        auto lt = lib_types.find(t);
+        if (lt == lib_types.end()) break;
+        t = lt->second.parent;
+    }
+    return nullptr;
+}

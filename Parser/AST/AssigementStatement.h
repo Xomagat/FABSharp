@@ -211,6 +211,7 @@ inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& buil
     if (type == "string")   return builder.getInt8Ty()->getPointerTo();
     if (is_container(type)) return builder.getPtrTy();
     if (is_class(type))     return builder.getPtrTy();
+    if (is_lib_type(type))  return builder.getPtrTy();
 
     throw std::runtime_error("Unknown type for codegen: " + type);
 }
@@ -283,6 +284,18 @@ inline std::string type_of(CodegenContext& ctx, llvm::Value* v)
     auto it = ctx.value_types.find(v);
     if (it != ctx.value_types.end()) return it->second;
     return llvm_to_type(v->getType());
+}
+
+inline void emit_free_lib(CodegenContext& ctx, llvm::Value* v, const std::string& t)
+{
+    std::string sym = lib_free_symbol(t);
+    if (sym.empty())
+        throw std::runtime_error("Type '" + t + "' cannot be deleted!");
+
+    auto& b = ctx.builder;
+    auto fn = ctx.module.getOrInsertFunction(sym,
+        llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false));
+    b.CreateCall(fn, {v});
 }
 
 class AssigementStatement : public Statement
