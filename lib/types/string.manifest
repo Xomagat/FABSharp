@@ -7,7 +7,7 @@ string.length               fab_length              int          : string
 string.empty                fab_empty               bool         : string
 string.find                 fab_finds               int          : string, string
 string.substr               fab_substr              string       : string, int, int
-string.compare              fab_compare             string       : string, string
+string.compare              fab_compare             int          : string, string
 string.first                fab_first               char         : string
 string.last                 fab_last                char         : string
 string.to_upper             fab_to_upper            string       : string

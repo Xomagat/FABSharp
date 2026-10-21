@@ -317,8 +317,8 @@ extern "C" char* fab_pad_right(const char* x, int width, char fill)
     if (r == nullptr) return nullptr;
 
     size_t pad = (size_t)width - len;
-    memset(r, fill, pad);
-    memcpy(r - pad, x, len + 1);
+    memcpy(r, x, len);
+    memset(r + len, fill, pad);
 
     return r;
 }
