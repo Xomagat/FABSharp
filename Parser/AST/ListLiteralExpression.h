@@ -19,9 +19,40 @@ public:
 
     void add_item(std::unique_ptr<Expression> item) { items.push_back(std::move(item)); }
 
-    llvm::Value *codegen(CodegenContext &context) const override
+    llvm::Value* codegen(CodegenContext& ctx) const override
     {
-        return llvm::Constant::getNullValue(0);
+        if (items.empty())
+            throw std::runtime_error("Empty list literal needs a type context: list<T> x = [];");
+
+        std::vector<llvm::Value*> vals;
+        std::string elem;
+
+        for (auto& item : items)
+        {
+            if (item->is_null_literal())
+                throw std::runtime_error("null inside a list literal needs a type context: list<T> x = [...];");
+
+            llvm::Value* v = item->codegen(ctx);
+            vals.push_back(v);
+
+            std::string t = type_of(ctx, v);
+            if (elem.empty()) { elem = t; continue; }
+            if (elem == t) continue;
+
+            int a = numeric_rank(elem), b = numeric_rank(t);
+            if (a && b) { if (b > a) elem = t; }
+            else
+                throw std::runtime_error("List literal has mixed element types: '" + elem + "' and '" + t + "'!");
+        }
+
+        std::string list_type = "list<" + elem + ">";
+        llvm::Value* list = emit_list_new(ctx, list_type);
+
+        StdlibFunctionInfo info{"fab_list_addend_" + elem, "void", {list_type, elem}};
+        for (auto* v : vals)
+            FunctionalExpression::emit_stdlib_call(ctx, info, {list, v});
+
+        return list;
     }
 
     llvm::Value* codegen_expected(CodegenContext& ctx, const std::string& expected) const override

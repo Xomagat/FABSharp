@@ -43,6 +43,7 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::str
 
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
 
 #ifdef _WIN32
     std::string targetTriple = "x86_64-w64-windows-gnu";

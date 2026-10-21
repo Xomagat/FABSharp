@@ -60,6 +60,7 @@ add_executable(fab main.cpp
         Parser/AST/DictLiteralExpression.h
         Parser/AST/IndexExprAndStat.h
         Parser/AST/ClassStatement.h
+        Parser/AST/BuiltinExpression.h
 )
 
 if (NOT WIN32)
@@ -99,6 +100,7 @@ add_library(fabstd STATIC
         lib/types/dict.cpp
         lib/libs/random.cpp
         lib/libs/io.cpp
+        lib/libs/system.cpp
 )
 
 if (MSVC)

@@ -180,6 +180,20 @@ std::unique_ptr<Statement> Parser::statement()
                 if (!match(token_type::SEMI)) throw std::runtime_error("You miss the ;");
                 return s;
             }
+            if (get(0).get_text() == "asm" && get(1).get_type() == token_type::LPARENT)
+            {
+                consume(token_type::WORDS); consume(token_type::LPARENT);
+                std::string code = consume(token_type::TEXT).get_text();
+                std::string cons;
+                if (match(token_type::COMMA)) cons = consume(token_type::TEXT).get_text();
+
+                auto s = std::make_unique<AsmStatement>(code, cons);
+                while (match(token_type::COMMA)) s->add_arg(expression());
+
+                consume(token_type::RPARENT);
+                if (!match(token_type::SEMI)) throw std::runtime_error("You miss the ;");
+                return s;
+            }
 
             auto t1 = get(1).get_type();
             if (t1 == token_type::LPARENT || t1 == token_type::DOT || t1 == token_type::LSQUARE)
@@ -718,6 +732,33 @@ std::unique_ptr<Expression> Parser::primary()
 {
     Token current = get(0);
 
+    if (current.get_type() == token_type::WORDS && get(1).get_type() == token_type::LPARENT)
+    {
+        std::string fname = current.get_text();
+
+        if (fname == "size_of")
+        {
+            consume(token_type::WORDS); consume(token_type::LPARENT);
+
+            bool is_type = get(0).get_type() == token_type::TYPES
+                        || (get(0).get_type() == token_type::WORDS && class_names.contains(get(0).get_text()));
+
+            std::unique_ptr<Expression> r = is_type
+                ? std::make_unique<SizeOfExpression>(parse_type())
+                : std::make_unique<SizeOfExpression>(expression());
+
+            consume(token_type::RPARENT);
+            return r;
+        }
+        if (fname == "type")
+        {
+            consume(token_type::WORDS); consume(token_type::LPARENT);
+            auto e = expression();
+            consume(token_type::RPARENT);
+            return std::make_unique<TypeOfExpression>(std::move(e));
+        }
+        return function();
+    }
     if (match(token_type::NUMBER))
     {
         if (current.get_text().find('.') == std::string::npos)

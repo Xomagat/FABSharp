@@ -1,10 +1,16 @@
-use io;
+use system;
 
-define main() -> int
+define main()
 {
-    file f = file_open("test.cpp", "w");
+    int x = 5;
+    writeln size_of(int);        // 4
+    writeln size_of(x);          // 4
+    writeln size_of(double);     // 8
+    writeln type(x);             // int
+    writeln type([1, 2]);        // (нужен expected-тип, см. ниже)
 
-    f.put("#include <iostream>\nint main() {\n\tstd::cout << \"Hello, World!\" << std::endl;\n}");
-
-    f.close();
+    asm("nop");
+    asm("movl $0, %eax", "r", x);        // inputs: "r" на каждый аргумент
+    asm("xor %eax, %eax\n\tnop", "~{eax}");  // только clobber
+    system("echo hi");
 }
