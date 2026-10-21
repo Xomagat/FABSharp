@@ -24,7 +24,19 @@
 #include "../Parser/AST/Statement.h"
 #include "CodegenContext.h"
 
-void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::string& name);
+struct CompileOptions
+{
+    int  opt_level = 2;               // 0,1,2,3
+    char size_opt  = 0;               // 's' или 'z' (перекрывает opt_level)
+    std::string cpu = "x86-64-v3";
+    std::string ir_path;              // не пусто -> записать .ll
+    std::string asm_path;             // не пусто -> записать .s
+    bool skip_obj = false;            // не писать объектный файл
+    bool verbose  = false;
+};
+
+void compile(std::vector<std::unique_ptr<Statement>>& statements,
+             const std::string& obj_path, const CompileOptions& opts);
 
 #ifdef _WIN32
 inline constexpr const char* OBJ_EXT = ".obj";

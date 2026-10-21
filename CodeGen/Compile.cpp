@@ -1,6 +1,7 @@
 #include "Compile.h"
 
-void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::string& name)
+void compile(std::vector<std::unique_ptr<Statement>>& statements,
+             const std::string& obj_path, const CompileOptions& opts)
 {
     llvm::LLVMContext context;
     llvm::Module module("fabsharp_module", context);
@@ -47,27 +48,24 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::str
 
 #ifdef _WIN32
     std::string targetTriple = "x86_64-w64-windows-gnu";
-    const char* obj_ext = ".obj";
 #else
     std::string targetTriple = "x86_64-unknown-linux-gnu";
-    const char* obj_ext = ".o";
 #endif
 
     std::string error;
     auto target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
-
     if (!target)
-    {
-        std::cerr << "Target lookup failed: " << error << std::endl;
-        return;
-    }
+        throw std::runtime_error("Target lookup failed: " + error);
 
     auto targetMachine = target->createTargetMachine(
-    targetTriple, "x86-64-v3", "", llvm::TargetOptions(),
-    std::optional<llvm::Reloc::Model>(llvm::Reloc::PIC_));
+        targetTriple, opts.cpu, "", llvm::TargetOptions(),
+        std::optional<llvm::Reloc::Model>(llvm::Reloc::PIC_));
 
     module.setDataLayout(targetMachine->createDataLayout());
     module.setTargetTriple(llvm::Triple(targetTriple));
+
+    if (llvm::verifyModule(module, &llvm::errs()))
+        throw std::runtime_error("LLVM module verification failed!");
 
     llvm::LoopAnalysisManager LAM;
     llvm::FunctionAnalysisManager FAM;
@@ -81,20 +79,49 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements, const std::str
     PB.registerLoopAnalyses(LAM);
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-    if (llvm::verifyModule(module, &llvm::errs())) return;
+    llvm::OptimizationLevel level = llvm::OptimizationLevel::O2;
+    if      (opts.size_opt == 's') level = llvm::OptimizationLevel::Os;
+    else if (opts.size_opt == 'z') level = llvm::OptimizationLevel::Oz;
+    else switch (opts.opt_level)
+    {
+        case 0: level = llvm::OptimizationLevel::O0; break;
+        case 1: level = llvm::OptimizationLevel::O1; break;
+        case 3: level = llvm::OptimizationLevel::O3; break;
+        default: break;
+    }
 
-    llvm::ModulePassManager MPM =
-        PB.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O2);
+    llvm::ModulePassManager MPM = (level == llvm::OptimizationLevel::O0)
+        ? PB.buildO0DefaultPipeline(level)
+        : PB.buildPerModuleDefaultPipeline(level);
+
+    if (opts.verbose) std::cout << "[fab] optimizing\n";
     MPM.run(module, MAM);
 
     std::error_code EC;
-    if (EC) { std::cerr << "Cannot open output: " << EC.message() << std::endl; return; }
 
-    llvm::raw_fd_ostream dest(name + obj_ext, EC, llvm::sys::fs::OF_None);
+    if (!opts.ir_path.empty())
+    {
+        llvm::raw_fd_ostream ir(opts.ir_path, EC, llvm::sys::fs::OF_Text);
+        if (EC) throw std::runtime_error("Cannot open " + opts.ir_path + ": " + EC.message());
+        module.print(ir, nullptr);
+    }
 
-    llvm::legacy::PassManager pass;
-    targetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile);
-    pass.run(module);
-    dest.flush();
-    dest.close();
+    auto emit = [&](const std::string& path, llvm::CodeGenFileType type)
+    {
+        std::error_code ec;
+        llvm::raw_fd_ostream dest(path, ec, llvm::sys::fs::OF_None);
+        if (ec) throw std::runtime_error("Cannot open " + path + ": " + ec.message());
+
+        llvm::legacy::PassManager pass;
+        if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, type))
+            throw std::runtime_error("Target cannot emit this file type!");
+        pass.run(module);
+        dest.flush();
+    };
+
+    if (!opts.asm_path.empty())
+        emit(opts.asm_path, llvm::CodeGenFileType::AssemblyFile);
+
+    if (!opts.skip_obj)
+        emit(obj_path, llvm::CodeGenFileType::ObjectFile);
 }
