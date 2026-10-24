@@ -13,6 +13,11 @@ if (NOT WIN32)
     find_library(ZSTD_STATIC NAMES libzstd.a REQUIRED)
 endif()
 
+if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+    add_compile_definitions(_ITERATOR_DEBUG_LEVEL=0)
+endif()
+
 foreach(t zstd::libzstd_shared zstd::libzstd_static)
     if (TARGET ${t})
         set_target_properties(${t} PROPERTIES
@@ -104,10 +109,12 @@ add_library(fabstd STATIC
 )
 
 if (MSVC)
-    target_compile_options(fabstd PRIVATE /Zl /GS- /utf-8)
-endif()
+    string(REGEX REPLACE "/RTC[1su]+" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
-target_compile_options(fabstd PRIVATE -O2 -fno-exceptions -fno-rtti)
+    target_compile_options(fabstd PRIVATE /Zl /GS- /utf-8 /O2 /GR-)
+else()
+    target_compile_options(fabstd PRIVATE -O2 -fno-exceptions -fno-rtti)
+endif()
 
 set_target_properties(fabstd PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY "$<TARGET_FILE_DIR:fab>/lib")
