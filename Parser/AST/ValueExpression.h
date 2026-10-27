@@ -22,6 +22,7 @@ class ValueExpression : public Expression
 {
 private:
     Literal value;
+    std::string text;
 
 public:
 
@@ -31,6 +32,15 @@ public:
     explicit ValueExpression(char v)        : value(v) {}
     explicit ValueExpression(BoolTag v)     : value(v.b) {}
     explicit ValueExpression(NullTag)       : value(NullTag{}) {}
+    explicit ValueExpression(long double v, std::string t) : value(v), text(std::move(t)) {}
+
+    llvm::Value* codegen_expected(CodegenContext& ctx, const std::string& expected) const override
+    {
+        if (expected == "ldouble" && std::holds_alternative<long double>(value))
+            return llvm::ConstantFP::get(
+                llvm::Type::getX86_FP80Ty(ctx.context), llvm::StringRef(text));
+        return codegen(ctx);
+    }
 
     llvm::Value* codegen(CodegenContext& ctx) const override {
         return std::visit(overloaded {

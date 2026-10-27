@@ -1,16 +1,9 @@
-use system;
-
-define main()
+define main() -> int
 {
-    int x = 5;
-    writeln size_of(int);        // 4
-    writeln size_of(x);          // 4
-    writeln size_of(double);     // 8
-    writeln type(x);             // int
-    writeln type([1, 2]);        // (нужен expected-тип, см. ниже)
+    auto a = 3;
+    writeln type(a); // int
 
-    asm("nop");
-    asm("movl $0, %eax", "r", x);        // inputs: "r" на каждый аргумент
-    asm("xor %eax, %eax\n\tnop", "~{eax}");  // только clobber
-    system("echo hi");
+    long double ld = 3.14159265358979323846264338327950288;
+    writeln ld;       // 2.1856961327812511e-312
+    writeln type(ld); // ldouble
 }

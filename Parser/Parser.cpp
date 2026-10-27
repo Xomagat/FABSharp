@@ -231,6 +231,11 @@ std::string Parser::parse_type()
         return consume(token_type::WORDS).get_text();
 
     std::string t = consume(token_type::TYPES).get_text();
+    if (t == "long" && get(0).get_type() == token_type::TYPES && get(0).get_text() == "double")
+    {
+        consume(token_type::TYPES);
+        t = "ldouble";
+    }
     if (t == "list")
     {
         consume(token_type::LT);
@@ -880,6 +885,7 @@ bool is_known_type(std::string& type)
     if (type == "char")    return true;
     if (type == "list")    return true;
     if (type == "dict")    return true;
+    if (type == "ldouble") return true;
     if (is_lib_type(type)) return true;
 
     return false;

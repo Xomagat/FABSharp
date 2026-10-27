@@ -33,9 +33,7 @@ public:
         llvm::Value* right = expr2->codegen(ctx);
 
         bool isFloat = left->getType()->isFloatingPointTy() || right->getType()->isFloatingPointTy();
-        llvm::Type* fp_type = (left->getType()->isDoubleTy() || right->getType()->isDoubleTy())
-                    ? left->getType()->getContext(), ctx.builder.getDoubleTy()
-                    : ctx.builder.getFloatTy();
+        llvm::Type* fp_type = fp_result_type(left, right, ctx.builder);
 
         if (isFloat)
         {

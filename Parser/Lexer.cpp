@@ -143,6 +143,7 @@ void Lexer::tokenize_word()
         {"char",    token_type::TYPES},
         {"list",    token_type::TYPES},
         {"dict",    token_type::TYPES},
+        {"auto",    token_type::TYPES},
         {"const",   token_type::CONST},
         {"class",   token_type::CLASS},
         {"new",     token_type::NEW},

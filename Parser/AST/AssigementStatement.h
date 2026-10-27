@@ -31,13 +31,22 @@ inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm:
     if (srcType->isFloatingPointTy() && targetType->isIntegerTy())
         return builder.CreateFPToSI(val, targetType);
     if (srcType->isFloatingPointTy() && targetType->isFloatingPointTy())
-        return targetType->isDoubleTy()
+        return srcType->getPrimitiveSizeInBits() < targetType->getPrimitiveSizeInBits()
             ? builder.CreateFPExt(val, targetType)
             : builder.CreateFPTrunc(val, targetType);
     if (srcType->isIntegerTy() && targetType->isIntegerTy())
         return builder.CreateIntCast(val, targetType, true);
 
     throw std::runtime_error("Cannot coerce between these types in codegen!");
+}
+
+inline llvm::Type* fp_result_type(llvm::Value* l, llvm::Value* r, llvm::IRBuilder<>& b)
+{
+    if (l->getType()->isX86_FP80Ty() || r->getType()->isX86_FP80Ty())
+        return llvm::Type::getX86_FP80Ty(b.getContext());
+    if (l->getType()->isDoubleTy() || r->getType()->isDoubleTy())
+        return b.getDoubleTy();
+    return b.getFloatTy();
 }
 
 inline std::string list_elem(const std::string& t)
@@ -209,6 +218,7 @@ inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& buil
     if (type == "float")    return builder.getFloatTy();
     if (type == "bool")     return builder.getInt1Ty();
     if (type == "string")   return builder.getInt8Ty()->getPointerTo();
+    if (type == "ldouble")  return llvm::Type::getX86_FP80Ty(builder.getContext());
     if (is_container(type)) return builder.getPtrTy();
     if (is_class(type))     return builder.getPtrTy();
     if (is_lib_type(type))  return builder.getPtrTy();
@@ -226,6 +236,7 @@ inline std::string llvm_to_type(llvm::Type* t)
     if (t->isIntegerTy(64))     return "long";
     if (t->isFloatTy())                return "float";
     if (t->isDoubleTy())               return "double";
+    if (t->isX86_FP80Ty())             return "ldouble";
     if (t->isPointerTy())              return "string";
 
     throw std::runtime_error("Cannot demangle llvm type for overload resolution!");
@@ -259,7 +270,7 @@ inline llvm::Value* emit_stdlib_const(CodegenContext& ctx, const StdlibVarInfo& 
     if (v.type == "bool")
         return b.getInt1(s == "true" || s == "1");
     if (t->isFloatingPointTy())
-        return llvm::ConstantFP::get(t, std::stod(s));
+        return llvm::ConstantFP::get(t, llvm::StringRef(s));
     if (t->isIntegerTy())
         return llvm::ConstantInt::get(t, std::stoll(s), true);
 
@@ -313,6 +324,23 @@ public:
     {
         if (type == "void")
             throw std::runtime_error("Cannot declare a variable of type 'void'!");
+
+        if (type == "auto")
+        {
+            if (!expression || expression->is_null_literal())
+                throw std::runtime_error("'auto' needs an initializer: auto x = ...;");
+
+            llvm::Value* val = expression->codegen(context);
+            std::string real = type_of(context, val);
+
+            llvm::AllocaInst* alloc = entry_alloca(context.builder, type_to_llvm(real, context.builder), name);
+            context.builder.CreateStore(val, alloc);
+
+            context.variables[name] = alloc;
+            context.var_types[name] = real;
+            if (is_const) context.const_vars.insert(name);
+            return;
+        }
 
         if (type.empty())
         {

@@ -24,14 +24,14 @@ public:
         switch (op)
         {
         case '-':
-            if (val->getType()->isDoubleTy())
+            if (val->getType()->isFloatingPointTy())
                 return ctx.builder.CreateFNeg(val);
             if (val->getType()->isIntegerTy())
                 return ctx.builder.CreateNeg(val);
             throw std::runtime_error("Codegen unary '-' not supported for this type!");
 
         case '+':
-            if (val->getType()->isDoubleTy() || val->getType()->isIntegerTy())
+            if (val->getType()->isFloatingPointTy() || val->getType()->isIntegerTy())
                 return val;
             throw std::runtime_error("Codegen unary '+' not supported for this type!");
 

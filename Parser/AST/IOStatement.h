@@ -51,12 +51,17 @@ public:
         if (val->getType()->isIntegerTy(1))
             val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
 
-        if (val->getType()->isFloatingPointTy())
+        if (val->getType()->isX86_FP80Ty())
+        {
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%.21Lg\n");
+            context.builder.CreateCall(printfFunc, {fmt, val});
+        }
+        else if (val->getType()->isFloatingPointTy())
         {
             llvm::Value* fmt = nullptr;
             if (val->getType()->isFloatTy())
             {
-                val = context.builder.CreateFPExt(val, context.builder.getFloatTy());
+                val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
                 fmt = context.builder.CreateGlobalStringPtr("%.9g\n");
             }
             else
@@ -128,12 +133,17 @@ public:
         if (val->getType()->isIntegerTy(1))
             val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
 
-        if (val->getType()->isFloatingPointTy())
+        if (val->getType()->isX86_FP80Ty())
+        {
+            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%.21Lg");
+            context.builder.CreateCall(printfFunc, {fmt, val});
+        }
+        else if (val->getType()->isFloatingPointTy())
         {
             llvm::Value* fmt = nullptr;
             if (val->getType()->isFloatTy())
             {
-                val = context.builder.CreateFPExt(val, context.builder.getFloatTy());
+                val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
                 fmt = context.builder.CreateGlobalStringPtr("%.9g");
             }
             else

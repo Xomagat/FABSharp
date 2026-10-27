@@ -18,6 +18,7 @@ inline int numeric_rank(const std::string& t)
     if (t == "long")   return 3;
     if (t == "float")  return 4;
     if (t == "double") return 5;
+    if (t == "ldouble") return 6;
     return 0;
 }
 

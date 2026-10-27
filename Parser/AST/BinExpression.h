@@ -27,9 +27,7 @@ public:
         llvm::Value* left = expr1->codegen(context);
         llvm::Value* right = expr2->codegen(context);
 
-        llvm::Type* fp_type = (left->getType()->isDoubleTy() || right->getType()->isDoubleTy())
-                    ? left->getType()->getContext(), context.builder.getDoubleTy()
-                    : context.builder.getFloatTy();
+        llvm::Type* fp_type = fp_result_type(left, right, context.builder);
 
         if (left->getType()->isPointerTy() || right->getType()->isPointerTy())
         {
