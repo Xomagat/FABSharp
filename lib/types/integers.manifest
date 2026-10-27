@@ -17,6 +17,9 @@ const FLOAT_EPSILON float 1.19209290e-07
 const DOUBLE_MIN double 2.2250738585072014e-308
 const DOUBLE_MAX double 1.7976931348623157e+308
 const DOUBLE_EPSILON double 2.2204460492503131e-16
+const LDOUBLE_MIN ldouble 3.36210314311209350626e-4932
+const LDOUBLE_MAX ldouble 1.18973149535723176502e+4932
+const LDOUBLE_EPSILON ldouble 1.08420217248550443401e-19
 
 # Short
 short.to_str      fab_to_str_short      string : short
@@ -33,6 +36,7 @@ short.to_int      fab_to_int_short      int    : short
 short.to_long     fab_to_long_short     long   : short
 short.to_float    fab_to_float_short    float  : short
 short.to_double   fab_to_double_short   double : short
+short.to_ldouble  fab_to_ldouble_short  ldouble : short
 
 # Int
 int.to_str      fab_to_str_int      string : int
@@ -49,6 +53,7 @@ int.to_short    fab_to_short_int    short  : int
 int.to_long     fab_to_long_int     long   : int
 int.to_float    fab_to_float_int    float  : int
 int.to_double   fab_to_double_int   double : int
+int.to_ldouble  fab_to_ldouble_int  ldouble : int
 
 # Long
 long.to_str      fab_to_str_long      string : long
@@ -64,7 +69,7 @@ long.to_char     fab_to_char_long     char   : long
 long.to_short    fab_to_short_long    short  : long
 long.to_int      fab_to_int_long      int    : long
 long.to_float    fab_to_float_long    float  : long
-long.to_double   fab_to_double_long   double : long
+long.to_ldouble  fab_to_ldouble_long  ldouble : long
 
 # Float
 float.to_str      fab_to_str_float      string : float
@@ -86,6 +91,7 @@ float.to_short    fab_to_short_float    short  : float
 float.to_int      fab_to_int_float      int    : float
 float.to_long     fab_to_long_float     long   : float
 float.to_double   fab_to_double_float   double : float
+float.to_ldouble  fab_to_ldouble_float  ldouble : float
 
 # Double
 double.to_str      fab_to_str_double      string : double
@@ -107,3 +113,26 @@ double.to_short    fab_to_short_double    short  : double
 double.to_int      fab_to_int_double      int    : double
 double.to_long     fab_to_long_double     long   : double
 double.to_float    fab_to_float_double    float  : double
+double.to_ldouble  fab_to_ldouble_double  ldouble  : double
+
+# Long double
+ldouble.to_str      fab_to_str_ldouble      string  : ldouble
+ldouble.is_positive fab_is_positive_ldouble bool    : ldouble
+ldouble.is_negative fab_is_negative_ldouble bool    : ldouble
+ldouble.is_zero     fab_is_zero_ldouble     bool    : ldouble
+ldouble.is_nan      fab_is_nan_ldouble      bool    : ldouble
+ldouble.is_inf      fab_is_inf_ldouble      bool    : ldouble
+ldouble.is_finite   fab_is_finite_ldouble   bool    : ldouble
+ldouble.abs         fab_abs_ldouble         ldouble : ldouble
+ldouble.sign        fab_sign_ldouble        int     : ldouble
+ldouble.floor       fab_floor_ldouble       ldouble : ldouble
+ldouble.ceil        fab_ceil_ldouble        ldouble : ldouble
+ldouble.trunc       fab_trunc_ldouble       ldouble : ldouble
+ldouble.round       fab_round_ldouble       ldouble : ldouble
+ldouble.to_bool     fab_to_bool_ldouble     bool    : ldouble
+ldouble.to_char     fab_to_char_ldouble     char    : ldouble
+ldouble.to_short    fab_to_short_ldouble    short   : ldouble
+ldouble.to_int      fab_to_int_ldouble      int     : ldouble
+ldouble.to_long     fab_to_long_ldouble     long    : ldouble
+ldouble.to_float    fab_to_float_ldouble    float   : ldouble
+ldouble.to_double   fab_to_double_ldouble   double  : ldouble
