@@ -1,5 +1,40 @@
-# System functions v0.1
+# System functions v0.2
 # Created on 21.10.2026
 # Last update 28.10.2026
 
-system fab_system int : string
+# Run
+system         fab_system         int    : string
+system_output  fab_system_output  string : string
+
+# Exit
+exit           fab_exit           void   : int
+abort          fab_abort          void   :
+
+# Args
+arg_count      fab_arg_count      int          :
+arg            fab_arg            string       : int
+args           fab_args           list<string> :
+
+# Env
+get_env         fab_getenv        string : string
+has_env         fab_has_env       bool   : string
+set_env         fab_setenv        bool   : string, string
+
+# Time
+sleep          fab_sleep          void   : int
+sleep_ms       fab_sleep_ms       void   : int
+ticks_ms       fab_ticks_ms       long   :
+
+# Info
+get_platform       fab_platform       string :
+get_cpu_count      fab_cpu_count      int    :
+get_process_id     fab_pid            int    :
+get_hostname       fab_hostname       string :
+get_username       fab_username       string :
+
+# Directories
+cwd            fab_cwd            string :
+chdir          fab_chdir          bool   : string
+mkdir          fab_mkdir          bool   : string
+rmdir          fab_rmdir          bool   : string
+is_dir         fab_is_dir         bool   : string
