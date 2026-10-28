@@ -360,6 +360,8 @@ public:
                 auto lib = stdlib_vars.find(name);
                 if (lib == stdlib_vars.end())
                     throw std::runtime_error("Variable " + name + " not found!");
+                if (lib->second.is_getter)
+                    throw std::runtime_error("Library variable '" + name + "' is read-only!");
                 if (lib->second.is_const)
                     throw std::runtime_error("Cannot assign to library const '" + name + "'!");
 

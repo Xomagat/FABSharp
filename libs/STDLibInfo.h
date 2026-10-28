@@ -22,6 +22,7 @@ struct StdlibVarInfo
     std::string type;
     std::string value;
     bool is_const;
+    bool is_getter = false;
 };
 
 inline std::unordered_set<std::string> class_names;

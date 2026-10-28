@@ -32,6 +32,15 @@ public:
             if (lib == stdlib_vars.end())
                 throw std::runtime_error("Variable {" + name + "} not found!");
 
+            if (lib->second.is_getter)
+            {
+                auto& b = context.builder;
+                auto fn = context.module.getOrInsertFunction(lib->second.symbol,
+                    llvm::FunctionType::get(type_to_llvm(lib->second.type, b), {}, false));
+                llvm::Value* v = b.CreateCall(fn);
+                context.value_types[v] = lib->second.type;
+                return v;
+            }
             if (lib->second.is_const)
                 return emit_stdlib_const(context, lib->second);
 

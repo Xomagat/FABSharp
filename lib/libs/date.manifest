@@ -1,0 +1,74 @@
+# Date and time v0.1
+# Created on 28.10.2026
+# Created on 28.10.2026
+
+class date free fab_date_free
+class time free fab_time_free
+
+# Now (computed variables, read-only)
+getter year_now    fab_year_now    int
+getter month_now   fab_month_now   int
+getter day_now     fab_day_now     int
+getter hour_now    fab_hour_now    int
+getter min_now     fab_min_now     int
+getter sec_now     fab_sec_now     int
+getter weekday_now fab_weekday_now int
+getter yday_now    fab_yday_now    int
+getter unix_now    fab_unix_now    long
+
+# Create (null on invalid values)
+date_new         fab_date_new          date : int, int, int
+date_now         fab_date_now          date :
+date_parse       fab_date_parse        date : string
+date_from_days   fab_date_from_days    date : long
+date_valid       fab_date_valid        bool : int, int, int
+time_new         fab_time_new          time : int, int, int
+time_now         fab_time_now          time :
+time_parse       fab_time_parse        time : string
+time_from_seconds fab_time_from_seconds time : int
+
+# Date: access
+date.year          fab_date_year          int    : date
+date.month         fab_date_month         int    : date
+date.day           fab_date_day           int    : date
+date.weekday       fab_date_weekday       int    : date
+date.day_of_year   fab_date_day_of_year   int    : date
+date.days_in_month fab_date_days_in_month int    : date
+date.is_leap       fab_date_is_leap       bool   : date
+date.to_days       fab_date_to_days       long   : date
+date.month_name    fab_date_month_name    string : date
+date.weekday_name  fab_date_weekday_name  string : date
+
+# Date: change
+date.add_days      fab_date_add_days      void   : date, int
+date.add_months    fab_date_add_months    void   : date, int
+date.add_years     fab_date_add_years     void   : date, int
+date.copy          fab_date_copy          date   : date
+
+# Date: compare
+date.diff_days     fab_date_diff_days     long   : date, date
+date.compare       fab_date_compare       int    : date, date
+date.equals        fab_date_equals        bool   : date, date
+date.is_before     fab_date_is_before     bool   : date, date
+date.is_after      fab_date_is_after      bool   : date, date
+
+# Date: text
+date.to_str        fab_date_to_str        string : date
+date.format        fab_date_format        string : date, string
+
+# Time
+time.hour          fab_time_hour          int    : time
+time.minute        fab_time_minute        int    : time
+time.second        fab_time_second        int    : time
+time.to_seconds    fab_time_to_seconds    int    : time
+time.add_seconds   fab_time_add_seconds   void   : time, int
+time.add_minutes   fab_time_add_minutes   void   : time, int
+time.add_hours     fab_time_add_hours     void   : time, int
+time.copy          fab_time_copy          time   : time
+time.diff_seconds  fab_time_diff_seconds  int    : time, time
+time.compare       fab_time_compare       int    : time, time
+time.equals        fab_time_equals        bool   : time, time
+time.is_before     fab_time_is_before     bool   : time, time
+time.is_after      fab_time_is_after      bool   : time, time
+time.to_str        fab_time_to_str        string : time
+time.format        fab_time_format        string : time, string

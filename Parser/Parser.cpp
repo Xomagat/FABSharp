@@ -907,6 +907,21 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         std::string head;
         iss >> head;
 
+        if (head == "getter")
+        {
+            std::string name, symbol, type;
+            iss >> name >> symbol >> type;
+            if (name.empty() || symbol.empty() || type.empty())
+                throw std::runtime_error("Manifest: bad getter line");
+            if (stdlib_vars.contains(name))
+                throw std::runtime_error("Manifest: duplicate variable " + name);
+
+            StdlibVarInfo v{symbol, type, "", false};
+            v.is_getter = true;
+            stdlib_vars[name] = v;
+            continue;
+        }
+
         if (head == "const" || head == "var")
         {
             bool is_const = (head == "const");

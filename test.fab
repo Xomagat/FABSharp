@@ -1,9 +1,26 @@
+use date;
+
 define main() -> int
 {
-    auto a = 3;
-    writeln type(a); // int
+    writeln year_now;                 // 2026
+    writeln hour_now;                 // your hour now
 
-    long double ld = 3.14159265358979323846264338327950288;
-    writeln ld;       // 2.1856961327812511e-312
-    writeln type(ld); // ldouble
+    date d = date_now();
+    writeln d.to_str();               // 2026-10-28 (or your date)
+    writeln d.weekday_name();         // wednesday (or your weekday)
+    d.add_days(30);
+    writeln d.format("%d.%m.%Y");     // 27.11.2026
+
+    date a = date_new(2026, 1, 31);
+    a.add_months(1);
+    writeln a.to_str();               // 2026-02-28
+
+    writeln d.diff_days(a);
+
+    time t = time_new(23, 30, 0);
+    t.add_minutes(90);
+    writeln t.to_str();               // 01:00:00
+
+    delete d; delete a; delete t;
+    return 0;
 }
