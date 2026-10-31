@@ -1,13 +1,11 @@
+class Util
+{
+public:
+    static define twice(int x) -> int { return x * 2; }
+}
+
 define main() -> int
 {
-    writeln true;
-    writeln false;
-
-    writeln 1 != 1;
-
-    auto a = 123;
-    write type(a) == "int";
-    write "\n";
-
+    writeln Util.twice(21);
     return 0;
 }

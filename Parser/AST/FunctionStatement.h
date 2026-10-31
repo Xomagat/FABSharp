@@ -15,7 +15,8 @@
 inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const std::string& this_class,
                                const std::vector<std::string>& arg_names,
                                const std::vector<std::string>& arg_types,
-                               const std::string& ret, Statement& body)
+                               const std::string& ret, Statement& body,
+                               bool is_static = false)
 {
     auto* saved_bb   = ctx.builder.GetInsertBlock();
     auto saved_vars  = ctx.variables;
@@ -31,7 +32,7 @@ inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const st
     ctx.builder.SetInsertPoint(llvm::BasicBlock::Create(ctx.context, "entry", fn));
 
     auto arg = fn->arg_begin();
-    if (!this_class.empty())
+    if (!this_class.empty() && !is_static)
     {
         arg->setName("this");
         auto* a = entry_alloca(ctx.builder, ctx.builder.getPtrTy(), "this");

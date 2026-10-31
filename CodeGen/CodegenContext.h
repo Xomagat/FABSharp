@@ -19,7 +19,7 @@ struct LoopTargets
 
 struct FieldInfo  { std::string name, type; bool is_public; std::string owner; };
 struct MethodInfo { llvm::Function* fn; std::string ret; std::vector<std::string> args;
-    bool is_public; int slot = -1; };
+    bool is_public; int slot = -1; bool is_static; };
 
 struct ClassInfo
 {
@@ -27,6 +27,7 @@ struct ClassInfo
     std::string parent;
     std::vector<FieldInfo> fields;
     std::unordered_map<std::string, MethodInfo> methods;
+    std::unordered_map<std::string, MethodInfo> statics;
     llvm::Function* ctor = nullptr;
     std::vector<std::string> ctor_args;
     llvm::Function* dtor = nullptr;

@@ -147,6 +147,7 @@ void Lexer::tokenize_word()
         {"const",   token_type::CONST},
         {"class",   token_type::CLASS},
         {"new",     token_type::NEW},
+        {"static",  token_type::STATIC},
         {"private", token_type::PRIVATE},
         {"public",  token_type::PUBLIC},
         {"delete",  token_type::DELETE_KW},

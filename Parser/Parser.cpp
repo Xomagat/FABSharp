@@ -402,13 +402,17 @@ std::unique_ptr<Statement> Parser::class_definition()
         if (match(token_type::PRIVATE)) { consume(token_type::COLON); is_public = false; continue; }
         if (match(token_type::PUBLIC))  { consume(token_type::COLON); is_public = true;  continue; }
 
+        bool st = match(token_type::STATIC);
         if (match(token_type::DEFINE))
         {
             auto fn = define_function();
-            cls->add_method({fn->get_type(), fn->get_name(), fn->get_arg_types(),
-                             fn->get_arg_names(), fn->get_body(), is_public});
+            MethodDecl d{fn->get_type(), fn->get_name(), fn->get_arg_types(),
+                         fn->get_arg_names(), fn->get_body(), is_public};
+            d.is_static = st;
+            cls->add_method(std::move(d));
             continue;
         }
+        if (st) throw std::runtime_error("'static' must be followed by 'define'!");
 
         if (match(token_type::TILDE))
         {
@@ -737,6 +741,24 @@ std::unique_ptr<Expression> Parser::primary()
 {
     Token current = get(0);
 
+    if (current.get_type() == token_type::WORDS
+    && class_names.contains(current.get_text())
+    && get(1).get_type() == token_type::DOT
+    && get(2).get_type() == token_type::WORDS
+    && get(3).get_type() == token_type::LPARENT)
+    {
+        std::string cls = consume(token_type::WORDS).get_text();
+        consume(token_type::DOT);
+        std::string name = consume(token_type::WORDS).get_text();
+        consume(token_type::LPARENT);
+        auto c = std::make_unique<StaticCallExpression>(cls, name);
+        while (!match(token_type::RPARENT))
+        {
+            c->add_arg(expression());
+            match(token_type::COMMA);
+        }
+        return c;
+    }
     if (current.get_type() == token_type::WORDS && get(1).get_type() == token_type::LPARENT)
     {
         std::string fname = current.get_text();

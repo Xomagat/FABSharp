@@ -35,6 +35,7 @@ enum token_type
     RETURN,         // Functions command (return)
     CLASS,          // Class
     NEW,            // New class
+    STATIC,         // Static class
     PRIVATE,        // Private methods
     PUBLIC,         // Public methods
     DELETE_KW,      // Delete command

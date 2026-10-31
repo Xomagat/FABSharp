@@ -14,6 +14,7 @@ struct MethodDecl
     std::shared_ptr<Statement> body;
     bool is_public;
     std::vector<std::shared_ptr<Expression>> base_args;
+    bool is_static;
 };
 
 class DtorBody : public Statement
@@ -140,6 +141,7 @@ public:
             ci.fields  = p.fields;
             ci.methods = p.methods;
             ci.vslots  = p.vslots;
+            ci.statics = p.statics;
             ci.ctor = p.ctor; ci.ctor_args = p.ctor_args;
         }
         else ci.vslots.push_back(nullptr);
@@ -151,7 +153,8 @@ public:
         ci.st->setBody(ft);
 
         auto make = [&](const MethodDecl& m, const std::string& sym) {
-            std::vector<llvm::Type*> p{b.getPtrTy()};
+            std::vector<llvm::Type*> p;
+            if (!m.is_static) p.push_back(b.getPtrTy());
             for (auto& t : m.arg_types) p.push_back(type_to_llvm(t, b));
             auto* fty = llvm::FunctionType::get(type_to_llvm(m.ret, b), p, false);
             return llvm::Function::Create(fty, llvm::Function::ExternalLinkage, sym, ctx.module);
@@ -167,6 +170,12 @@ public:
         for (auto& m : methods)
         {
             auto key = mangle_name(m.name, m.arg_types);
+            if (m.is_static)
+            {
+                auto* fn = make(m, name + ".static." + key);
+                ci.statics[key] = {fn, m.ret, m.arg_types, m.is_public, -1};
+                continue;
+            }
             auto* fn = make(m, name + "." + key);
             int slot;
             auto it = ci.methods.find(key);
@@ -202,8 +211,11 @@ public:
         emit_function_body(ctx, ci.dtor, name, {}, {}, "void", db);
 
         for (auto& m : methods)
-            emit_function_body(ctx, ci.methods.at(mangle_name(m.name, m.arg_types)).fn, name,
-                               m.arg_names, m.arg_types, m.ret, *m.body);
+        {
+            auto key = mangle_name(m.name, m.arg_types);
+            auto& mi = m.is_static ? ci.statics.at(key) : ci.methods.at(key);
+            emit_function_body(ctx, mi.fn, name, m.arg_names, m.arg_types, m.ret, *m.body, m.is_static);
+        }
     }
 };
 
@@ -340,4 +352,41 @@ public:
 
         b.CreateStore(llvm::Constant::getNullValue(b.getPtrTy()), slot);
     }
+};
+
+class StaticCallExpression : public Expression
+{
+    std::string cls, name;
+    std::vector<std::unique_ptr<Expression>> args;
+public:
+    StaticCallExpression(std::string c, std::string n) : cls(std::move(c)), name(std::move(n)) {}
+    void add_arg(std::unique_ptr<Expression> a) { args.push_back(std::move(a)); }
+
+    llvm::Value* codegen(CodegenContext& ctx) const override
+    {
+        auto& ci = get_class(ctx, cls);
+
+        std::vector<llvm::Value*> vals;
+        std::vector<std::string> types;
+        for (auto& a : args)
+        {
+            vals.push_back(a->codegen(ctx));
+            types.push_back(type_of(ctx, vals.back()));
+        }
+
+        auto m = ci.statics.find(mangle_name(name, types));
+        if (m == ci.statics.end())
+            throw std::runtime_error("Class '" + cls + "' has no static method '" + name + "' with these arguments");
+        if (!m->second.is_public && ctx.current_class != cls)
+            throw std::runtime_error("Static method '" + name + "' is private!");
+
+        for (size_t i = 0; i < vals.size(); ++i)
+            vals[i] = coerceToType(vals[i], type_to_llvm(m->second.args[i], ctx.builder), ctx.builder);
+
+        llvm::Value* r = ctx.builder.CreateCall(m->second.fn, vals);
+        if (m->second.ret != "void") ctx.value_types[r] = m->second.ret;
+        return r;
+    }
+
+    std::string to_str() const override { return cls + "." + name + "(...)"; }
 };
