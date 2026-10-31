@@ -49,7 +49,7 @@ public:
         }
 
         if (val->getType()->isIntegerTy(1))
-            val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
+            val = context.builder.CreateSelect(val, context.builder.CreateGlobalStringPtr("true"), context.builder.CreateGlobalStringPtr("false"));
 
         if (val->getType()->isX86_FP80Ty())
         {
@@ -131,7 +131,7 @@ public:
 
 
         if (val->getType()->isIntegerTy(1))
-            val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
+            val = context.builder.CreateSelect(val, context.builder.CreateGlobalStringPtr("true"), context.builder.CreateGlobalStringPtr("false"));
 
         if (val->getType()->isX86_FP80Ty())
         {

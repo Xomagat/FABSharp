@@ -1,18 +1,13 @@
-use system;
-
 define main() -> int
 {
-    writeln get_process_id();
-    writeln get_platform();
-    writeln get_hostname();
-    writeln get_cpu_count();
+    writeln true;
+    writeln false;
 
-    sleep(1);
-    writeln get_username();
+    writeln 1 != 1;
 
-    sleep_ms(1000);
-
-    writeln is_dir("C:\Windows\System32");
+    auto a = 123;
+    write type(a) == "int";
+    write "\n";
 
     return 0;
 }
