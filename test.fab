@@ -1,9 +1,29 @@
-use "t.fab";
+use console;
 
 define main() -> int
 {
-    writeln twin(default_val);
-    writeln default_val;
-
-    return 0;
+    console.color(color_grey);
+    writeln "Hi!";
+    console.reset();
+    console.color(color_red);
+    writeln "Hi!";
+    console.reset();
+    console.color(color_green);
+    writeln "Hi!";
+    console.reset();
+    console.color(color_yellow);
+    writeln "Hi!";
+    console.reset();
+    console.color(color_blue);
+    writeln "Hi!";
+    console.reset();
+    console.color(color_purple);
+    writeln "Hi!";
+    console.reset();
+    console.color(color_cyan);
+    writeln "Hi!";
+    console.reset();
+    console.color(color_white);
+    writeln "Hi!";
+    console.reset();
 }

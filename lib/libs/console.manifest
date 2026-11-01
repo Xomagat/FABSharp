@@ -1,0 +1,23 @@
+# Console v0.1
+# Created on 01.11.2026
+# Created on 01.11.2026
+
+const color_grey    int 0
+const color_red     int 1
+const color_green   int 2
+const color_yellow  int 3
+const color_blue    int 4
+const color_purple  int 5
+const color_cyan    int 6
+const color_white   int 7
+
+static console.error     fab_con_error           void : string
+static console.errorln   fab_con_errorln         void : string
+static console.flush     fab_con_flush           void :
+static console.read_line fab_con_read_line       string :
+static console.read_char fab_con_read_char       char :
+static console.clear     fab_con_clear           void :
+static console.color     fab_con_color           void : int
+static console.reset     fab_con_reset           void :
+static console.beep      fab_con_beep            void :
+static console.title     fab_con_title           void : string

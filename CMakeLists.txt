@@ -107,6 +107,7 @@ add_library(fabstd STATIC
         lib/libs/io.cpp
         lib/libs/system.cpp
         lib/libs/date.cpp
+        lib/libs/console.cpp
 )
 
 if (MSVC)
