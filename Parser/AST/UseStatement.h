@@ -19,3 +19,11 @@ public:
         Symbols are registered in `stdlib_symbols` during the parsing stage,
         while the `UseStatement` in the AST remains merely a "marker."*/ }
 };
+
+class FileScopeStatement : public Statement
+{
+    std::string file;
+public:
+    explicit FileScopeStatement(std::string f) : file(std::move(f)) {}
+    void codegen(CodegenContext& ctx) const override { ctx.current_file = file; }
+};

@@ -1,11 +1,9 @@
-class Util
-{
-public:
-    static define twice(int x) -> int { return x * 2; }
-}
+int a = 1256;
+static double g = 9.8;
 
 define main() -> int
 {
-    writeln Util.twice(21);
+    writeln a;
+    writeln g;
     return 0;
 }

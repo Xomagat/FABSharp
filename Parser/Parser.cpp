@@ -39,12 +39,18 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
 
     while (!match(token_type::eof))
     {
+        bool is_static = match(token_type::STATIC);
+
         auto stmt = statement();
 
-        for (auto& imported : pending_imports)
-            result.push_back(std::move(imported));
-        pending_imports.clear();
+        auto* decl = dynamic_cast<AssigementStatement*>(stmt.get());
+        if (decl && decl->is_declaration())
+            decl->make_global(is_static);
+        else if (is_static)
+            throw std::runtime_error("'static' at top level must be followed by a variable declaration!");
 
+        for (auto& imported : pending_imports) result.push_back(std::move(imported));
+        pending_imports.clear();
         result.push_back(std::move(stmt));
     }
 
@@ -80,8 +86,10 @@ std::unique_ptr<Statement> Parser::statement()
                 if (!loaded_fab_modules.contains(path))
                 {
                     auto module_statements = load_fab_module(path);
+                    pending_imports.push_back(std::make_unique<FileScopeStatement>(path));
                     for (auto& s : module_statements)
                         pending_imports.push_back(std::move(s));
+                    pending_imports.push_back(std::make_unique<FileScopeStatement>(file_id));
                 }
 
                 if (!match(token_type::SEMI))
@@ -1083,7 +1091,8 @@ std::vector<std::unique_ptr<Statement>> Parser::load_fab_module(const std::files
     buffer << file.rdbuf();
 
     auto tokens = Lexer(buffer.str()).tokenize();
-    Parser module_parser(tokens, path.parent_path(), exe_dir);;
+    Parser module_parser(tokens, path.parent_path(), exe_dir);
+    module_parser.file_id = canonical;
 
     return module_parser.parse();
 }

@@ -146,6 +146,9 @@ public:
             i++;
         }
 
+        if (name == "main" && context.init_fn)
+            context.builder.CreateCall(context.init_fn);
+
         body->codegen(context);
 
         if (!context.builder.GetInsertBlock()->getTerminator())
@@ -161,7 +164,8 @@ public:
         context.const_vars    = save_const;
         context.current_ret   = save_ret;
         context.current_class = save_class;
-        context.builder.SetInsertPoint(save_insert_block);
+        if (save_insert_block) context.builder.SetInsertPoint(save_insert_block);
+        else                   context.builder.ClearInsertionPoint();
     }
 
     std::string get_type()

@@ -309,6 +309,14 @@ inline void emit_free_lib(CodegenContext& ctx, llvm::Value* v, const std::string
     b.CreateCall(fn, {v});
 }
 
+inline GlobalInfo* find_global(CodegenContext& ctx, const std::string& name)
+{
+    auto it = ctx.globals.find(ctx.current_file + "::" + name);   // сначала static этого файла
+    if (it != ctx.globals.end()) return &it->second;
+    it = ctx.globals.find(name);
+    return it != ctx.globals.end() ? &it->second : nullptr;
+}
+
 class AssigementStatement : public Statement
 {
 private:
@@ -316,6 +324,68 @@ private:
     std::unique_ptr<Expression> expression;
     bool is_const;
 
+    bool is_global = false, is_static = false;
+public:
+    bool is_declaration() const { return !type.empty(); }
+    void make_global(bool st) { is_global = true; is_static = st; }
+
+private:
+    llvm::Value* init_value(CodegenContext& ctx, const std::string& t, llvm::Type* lt) const
+    {
+        auto& b = ctx.builder;
+        if (!expression && is_class(t))
+        {
+            llvm::Value* obj = emit_object_alloc(ctx, t);
+            auto& ci = get_class(ctx, t);
+            if (ci.ctor && ci.ctor_args.empty()) b.CreateCall(ci.ctor, {obj});
+            return obj;
+        }
+        if (!expression) return llvm::Constant::getNullValue(lt);
+        if (expression->is_null_literal())
+            return is_container(t) ? emit_container_new(ctx, t) : llvm::Constant::getNullValue(lt);
+        return coerceToType(expression->codegen_expected(ctx, t), lt, b);
+    }
+
+    void codegen_global(CodegenContext& ctx) const
+    {
+        auto& b = ctx.builder;
+        if (type == "void") throw std::runtime_error("Cannot declare a variable of type 'void'!");
+        if (find_global(ctx, name))
+            throw std::runtime_error("Global '" + name + "' is already defined!");
+
+        // нет insert block -> верхний уровень при пользовательском main: пишем в init-функцию
+        llvm::BasicBlock* saved = b.GetInsertBlock();
+        if (!saved) b.SetInsertPoint(ctx.init_tail);
+
+        std::string real = type;
+        llvm::Value* val;
+        if (type == "auto")
+        {
+            if (!expression || expression->is_null_literal())
+                throw std::runtime_error("'auto' needs an initializer: auto x = ...;");
+            val  = expression->codegen(ctx);
+            real = type_of(ctx, val);
+        }
+        else
+            val = init_value(ctx, type, type_to_llvm(type, b));
+
+        llvm::Type* lt = type_to_llvm(real, b);
+        auto* gv = new llvm::GlobalVariable(ctx.module, lt, false,
+            is_static ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage,
+            llvm::Constant::getNullValue(lt), name);
+
+        if (auto* c = llvm::dyn_cast<llvm::Constant>(val))
+        {
+            gv->setInitializer(c);
+            gv->setConstant(is_const);       // constant-флаг только если есть константный инициализатор
+        }
+        else
+            b.CreateStore(val, gv);
+
+        ctx.globals[is_static ? ctx.current_file + "::" + name : name] = {gv, real, is_const};
+
+        if (!saved) { ctx.init_tail = b.GetInsertBlock(); b.ClearInsertionPoint(); }
+    }
 public:
     explicit AssigementStatement(std::string type, std::string name, std::unique_ptr<Expression> expr, bool is_const = false)
     : type(std::move(type)), name(std::move(name)), expression(std::move(expr)), is_const(is_const) {}
@@ -324,6 +394,8 @@ public:
     {
         if (type == "void")
             throw std::runtime_error("Cannot declare a variable of type 'void'!");
+
+        if (is_global && !type.empty()) { codegen_global(context); return; }
 
         if (type == "auto")
         {
@@ -355,6 +427,15 @@ public:
                 {
                     auto* v = context.builder.CreateLoad(type_to_llvm(ft, context.builder), p, name);
                     context.value_types[v] = ft;
+                    return;
+                }
+                if (auto* g = find_global(context, name))
+                {
+                    if (g->is_const) throw std::runtime_error("Cannot assign to const variable '" + name + "'!");
+                    llvm::Value* val = expression->is_null_literal()
+                        ? llvm::Constant::getNullValue(g->gv->getValueType())
+                        : expression->codegen_expected(context, g->type);
+                    context.builder.CreateStore(coerceToType(val, g->gv->getValueType(), context.builder), g->gv);
                     return;
                 }
                 auto lib = stdlib_vars.find(name);

@@ -28,6 +28,12 @@ public:
                 context.value_types[v] = ft;
                 return v;
             }
+            if (auto* g = find_global(context, name))
+            {
+                auto* v = context.builder.CreateLoad(g->gv->getValueType(), g->gv, name);
+                context.value_types[v] = g->type;
+                return v;
+            }
             auto lib = stdlib_vars.find(name);
             if (lib == stdlib_vars.end())
                 throw std::runtime_error("Variable {" + name + "} not found!");

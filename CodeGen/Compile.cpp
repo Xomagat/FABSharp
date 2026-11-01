@@ -9,6 +9,11 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements,
 
     CodegenContext ctx{context, module, builder};
 
+    ctx.init_fn = llvm::Function::Create(
+    llvm::FunctionType::get(builder.getVoidTy(), false),
+    llvm::Function::InternalLinkage, "__fab_init_globals", module);
+    ctx.init_tail = llvm::BasicBlock::Create(context, "entry", ctx.init_fn);
+
     bool has_user_main = false;
     for (auto& stmt : statements)
         if (auto fn = dynamic_cast<FunctionDefineStatement*>(stmt.get()))
@@ -41,6 +46,9 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements,
             stmt->codegen(ctx);
         }
     }
+
+    builder.SetInsertPoint(ctx.init_tail);
+    builder.CreateRetVoid();
 
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();

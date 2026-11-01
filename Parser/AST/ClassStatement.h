@@ -347,6 +347,7 @@ public:
 
             b.SetInsertPoint(done);
         }
+        else if (auto* g = find_global(ctx, name)) { slot = g->gv; type = g->type; }
         else
             throw std::runtime_error("Cannot delete a value of type '" + type + "'!");
 

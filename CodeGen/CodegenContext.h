@@ -11,6 +11,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 
+struct GlobalInfo { llvm::GlobalVariable* gv; std::string type; bool is_const; };
+
 struct LoopTargets
 {
     llvm::BasicBlock* continueTarget;
@@ -69,5 +71,10 @@ struct CodegenContext
     std::unordered_map<std::string, std::string> func_ret;
     std::string current_class;
     std::string current_ret;
+
+    std::unordered_map<std::string, GlobalInfo> globals;
+    std::string       current_file;
+    llvm::Function*   init_fn   = nullptr;
+    llvm::BasicBlock* init_tail = nullptr;
 };
 
