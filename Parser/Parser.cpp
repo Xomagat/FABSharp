@@ -796,19 +796,24 @@ std::unique_ptr<Expression> Parser::primary()
     }
     if (match(token_type::NUMBER))
     {
-        if (current.get_text().find('.') == std::string::npos)
+        std::string t = current.get_text();
+        std::string suffix;
+        if (isalpha((unsigned char)t.back())) { suffix = t.back(); t.pop_back(); }
+
+        bool has_frac = t.find_first_of(".e") != std::string::npos;
+
+        std::string type;
+        if      (suffix == "f") type = "float";
+        else if (suffix == "d") type = "double";
+        else if (suffix == "s") type = "short";
+        else if (suffix == "L") type = has_frac ? "ldouble" : "long";
+
+        if (!has_frac && type.empty())
         {
-            try
-            {
-                return std::make_unique<ValueExpression>(std::stoll(current.get_text()));
-            }
-            catch (...)
-            {
-                goto ld_convert;
-            }
+            try { return std::make_unique<ValueExpression>(std::stoll(t)); }
+            catch (...) {}
         }
-        ld_convert:
-        return std::make_unique<ValueExpression>(std::stold(current.get_text()));
+        return std::make_unique<ValueExpression>(std::stold(t), t, type);
     }
     if (match(token_type::LBRACKET))
     {

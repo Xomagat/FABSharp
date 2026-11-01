@@ -23,6 +23,7 @@ class ValueExpression : public Expression
 private:
     Literal value;
     std::string text;
+    std::string num_type;
 
 public:
 
@@ -32,17 +33,31 @@ public:
     explicit ValueExpression(char v)        : value(v) {}
     explicit ValueExpression(BoolTag v)     : value(v.b) {}
     explicit ValueExpression(NullTag)       : value(NullTag{}) {}
-    explicit ValueExpression(long double v, std::string t) : value(v), text(std::move(t)) {}
+    explicit ValueExpression(long double v, std::string t, std::string ty)
+        : value(v), text(std::move(t)), num_type(std::move(ty)) {}
+
+    llvm::Value* typed(CodegenContext& ctx) const
+    {
+        auto& b = ctx.builder;
+        if (num_type == "float")   return llvm::ConstantFP::get(b.getFloatTy(),  llvm::StringRef(text));
+        if (num_type == "double")  return llvm::ConstantFP::get(b.getDoubleTy(), llvm::StringRef(text));
+        if (num_type == "ldouble") return llvm::ConstantFP::get(llvm::Type::getX86_FP80Ty(ctx.context), llvm::StringRef(text));
+        if (num_type == "long")    return llvm::ConstantInt::get(b.getInt64Ty(), std::stoll(text), true);
+        if (num_type == "short")   return llvm::ConstantInt::get(b.getInt16Ty(), std::stoll(text), true);
+        return nullptr;
+    }
 
     llvm::Value* codegen_expected(CodegenContext& ctx, const std::string& expected) const override
     {
+        if (!num_type.empty()) return typed(ctx);
         if (expected == "ldouble" && std::holds_alternative<long double>(value))
-            return llvm::ConstantFP::get(
-                llvm::Type::getX86_FP80Ty(ctx.context), llvm::StringRef(text));
+            return llvm::ConstantFP::get(llvm::Type::getX86_FP80Ty(ctx.context), llvm::StringRef(text));
         return codegen(ctx);
     }
 
-    llvm::Value* codegen(CodegenContext& ctx) const override {
+    llvm::Value* codegen(CodegenContext& ctx) const override
+    {
+        if (!num_type.empty()) return typed(ctx);
         return std::visit(overloaded {
             [&](long long v) {
                             llvm::Type* t = (v >= INT32_MIN && v <= INT32_MAX)

@@ -1,9 +1,14 @@
-int a = 1256;
-static double g = 9.8;
-
 define main() -> int
 {
-    writeln a;
-    writeln g;
+    auto a = 9.8;
+    auto f = 9.8f;
+    auto s = 9e12L;
+
+    writeln type(a);
+    writeln type(f);
+    writeln type(s);
+
+    writeln s;
+
     return 0;
 }

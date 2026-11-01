@@ -231,20 +231,46 @@ void Lexer::tokenize_char()
 void Lexer::tokenize_number()
 {
     std::string buffer;
+    bool is_float = false;
     char current = peek(0);
 
     while (true)
     {
+        if (current == '_')
+        {
+            if (!isdigit(peek(1))) break;
+            current = next();
+            continue;
+        }
         if (current == '.')
         {
             if (!isdigit(peek(1))) break;
-            if (buffer.find('.') != std::string::npos)
+            if (is_float)
                 throw std::runtime_error("Incorrect notation of a real number!");
+            is_float = true;
         }
         else if (!isdigit(current))
             break;
+
         buffer.push_back(current);
         current = next();
+    }
+
+    if ((current == 'e' || current == 'E') &&
+        (isdigit(peek(1)) || ((peek(1) == '+' || peek(1) == '-') && isdigit(peek(2)))))
+    {
+        buffer.push_back('e');
+        current = next();
+        if (current == '+' || current == '-') { buffer.push_back(current); current = next(); }
+        while (isdigit(current)) { buffer.push_back(current); current = next(); }
+    }
+
+    char s = current;
+    if ((s == 'f' || s == 'F' || s == 'd' || s == 'D' || s == 'L' || s == 'l' || s == 's' || s == 'S')
+        && !isalnum((unsigned char)peek(1)) && peek(1) != '_')
+    {
+        buffer.push_back(s == 'l' ? 'L' : (char)tolower(s) == 'l' ? 'L' : (char)tolower(s));
+        next();
     }
 
     add_token(token_type::NUMBER, buffer);
