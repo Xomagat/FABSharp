@@ -1,14 +1,9 @@
+use "t.fab";
+
 define main() -> int
 {
-    auto a = 9.8;
-    auto f = 9.8f;
-    auto s = 9e12L;
-
-    writeln type(a);
-    writeln type(f);
-    writeln type(s);
-
-    writeln s;
+    writeln twin(default_val);
+    writeln default_val;
 
     return 0;
 }

@@ -81,7 +81,19 @@ std::unique_ptr<Statement> Parser::statement()
             }
             else if (get(0).get_type() == token_type::TEXT)
             {
-                std::string path = (exe_dir / consume(token_type::TEXT).get_text()).string();
+                std::filesystem::path rel = consume(token_type::TEXT).get_text();
+
+                std::filesystem::path found;
+                for (auto& dir : {base_dir, exe_dir})
+                {
+                    auto p = dir / rel;
+                    if (std::filesystem::exists(p)) { found = p; break; }
+                }
+                if (found.empty())
+                    throw std::runtime_error("Module '" + rel.string() + "' not found (looked in '"
+                                             + base_dir.string() + "' and '" + exe_dir.string() + "')!");
+
+                std::string path = std::filesystem::canonical(found).string();
 
                 if (!loaded_fab_modules.contains(path))
                 {
