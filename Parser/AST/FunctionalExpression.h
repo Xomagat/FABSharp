@@ -64,6 +64,34 @@ inline const StdlibFunctionInfo* find_with_conversion(const std::string& name,
     return best;
 }
 
+inline const StdlibFunctionInfo* find_static_with_conversion(const std::string& cls, const std::string& name,
+                                                             const std::vector<std::string>& actual)
+{
+    const std::string prefix = cls + "::" + name + "#" + std::to_string(actual.size()) + "_";
+
+    const StdlibFunctionInfo* best = nullptr;
+    int best_cost = INT_MAX;
+    bool tie = false;
+
+    for (auto& [key, info] : stdlib_statics)
+    {
+        if (!key.starts_with(prefix) || info.arg_types.size() != actual.size()) continue;
+
+        int total = 0; bool ok = true;
+        for (size_t i = 0; i < actual.size() && ok; ++i)
+        {
+            int c = conversion_cost(actual[i], info.arg_types[i]);
+            if (c < 0) ok = false; else total += c;
+        }
+        if (!ok) continue;
+
+        if (total < best_cost) { best = &info; best_cost = total; tie = false; }
+        else if (total == best_cost) tie = true;
+    }
+    if (tie) throw std::runtime_error("Ambiguous call to '" + cls + "." + name + "'");
+    return best;
+}
+
 class FunctionalExpression : public Expression
 {
 private:

@@ -365,6 +365,27 @@ public:
 
     llvm::Value* codegen(CodegenContext& ctx) const override
     {
+        if (static_classes.contains(cls) && !ctx.classes.contains(cls))
+        {
+            std::vector<llvm::Value*> vals;
+            std::vector<std::string> types;
+            for (auto& a : args)
+            {
+                vals.push_back(a->codegen(ctx));
+                types.push_back(type_of(ctx, vals.back()));
+            }
+
+            const StdlibFunctionInfo* info = nullptr;
+            auto it = stdlib_statics.find(mangle_method(cls, name, types));
+            if (it != stdlib_statics.end()) info = &it->second;
+            else info = find_static_with_conversion(cls, name, types);
+
+            if (!info)
+                throw std::runtime_error("'" + cls + "' has no static method '" + name + "' with these arguments");
+
+            return FunctionalExpression::emit_stdlib_call(ctx, *info, vals);
+        }
+
         auto& ci = get_class(ctx, cls);
 
         std::vector<llvm::Value*> vals;

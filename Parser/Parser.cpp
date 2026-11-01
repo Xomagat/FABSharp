@@ -7,6 +7,12 @@
 // vars
 
 // funcs
+static bool is_member_name(token_type t)
+{
+    return t == token_type::WORDS || t == token_type::WRITE
+        || t == token_type::WRITELN || t == token_type::INPUT_IN;
+}
+
 Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir, std::filesystem::path exe_dir)
 {
     eof = Token(token_type::eof, "");
@@ -762,14 +768,14 @@ std::unique_ptr<Expression> Parser::primary()
     Token current = get(0);
 
     if (current.get_type() == token_type::WORDS
-    && class_names.contains(current.get_text())
-    && get(1).get_type() == token_type::DOT
-    && get(2).get_type() == token_type::WORDS
-    && get(3).get_type() == token_type::LPARENT)
+&& (class_names.contains(current.get_text()) || static_classes.contains(current.get_text()))
+&& get(1).get_type() == token_type::DOT
+&& is_member_name(get(2).get_type())
+&& get(3).get_type() == token_type::LPARENT)
     {
         std::string cls = consume(token_type::WORDS).get_text();
         consume(token_type::DOT);
-        std::string name = consume(token_type::WORDS).get_text();
+        std::string name = get(0).get_text(); pos++;
         consume(token_type::LPARENT);
         auto c = std::make_unique<StaticCallExpression>(cls, name);
         while (!match(token_type::RPARENT))
@@ -1028,7 +1034,10 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         iss.seekg(0);
 
         std::string fab_name, symbol, ret, colon, arg;
-        iss >> fab_name >> symbol >> ret >> colon;
+        iss >> fab_name;
+        bool is_static = false;
+        if (fab_name == "static") { is_static = true; iss >> fab_name; }
+        iss >> symbol >> ret >> colon;
 
         std::vector<std::string> args, defs;
         while (iss >> arg)
@@ -1051,6 +1060,30 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         size_t first_def = args.size();
         for (size_t i = 0; i < defs.size(); ++i)
             if (!defs[i].empty()) { first_def = i; break; }
+
+        if (is_static)
+        {
+            auto d = fab_name.find('.');
+            if (d == std::string::npos)
+                throw std::runtime_error("Manifest: static " + fab_name + " must look like Class.method");
+
+            std::string cls = fab_name.substr(0, d), name = fab_name.substr(d + 1);
+            if (class_names.contains(cls) || lib_types.contains(cls))
+                throw std::runtime_error("Manifest: type " + cls + " already exists");
+
+            static_classes.insert(cls);
+
+            auto key = mangle_method(cls, name, args);
+            if (stdlib_statics.contains(key))
+                throw std::runtime_error("Manifest: duplicate static " + fab_name);
+
+            StdlibFunctionInfo info{symbol, ret, args, defs};
+            stdlib_statics[key] = info;
+            for (size_t n = first_def; n < args.size(); ++n)
+                stdlib_statics.emplace(
+                    mangle_method(cls, name, std::vector<std::string>(args.begin(), args.begin() + n)), info);
+            continue;
+        }
 
         auto dot = fab_name.find('.');
         if (dot == std::string::npos)

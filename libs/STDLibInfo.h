@@ -32,6 +32,9 @@ inline std::unordered_map<std::string, StdlibVarInfo> stdlib_vars;
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_symbols;
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_methods;
 
+inline std::unordered_set<std::string> static_classes;
+inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_statics;
+
 inline std::unordered_set<std::string> loaded_libs;
 inline std::unordered_set<std::string> loaded_fab_modules;
 
