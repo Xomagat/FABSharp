@@ -66,6 +66,7 @@ add_executable(fab main.cpp
         Parser/AST/IndexExprAndStat.h
         Parser/AST/ClassStatement.h
         Parser/AST/BuiltinExpression.h
+        CodeGen/Runtimeatters.h
 )
 
 if (NOT WIN32)
@@ -108,14 +109,19 @@ add_library(fabstd STATIC
         lib/libs/system.cpp
         lib/libs/date.cpp
         lib/libs/console.cpp
+        lib/out.cpp
+        lib/alloc.cpp
 )
 
 if (MSVC)
     string(REGEX REPLACE "/RTC[1su]+" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
+    target_compile_definitions(fabstd PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+
     target_compile_options(fabstd PRIVATE /Zl /GS- /utf-8 /O2 /GR-)
 else()
-    target_compile_options(fabstd PRIVATE -O2 -fno-exceptions -fno-rtti)
+    target_compile_options(fabstd PRIVATE -O2 -fno-exceptions -fno-rtti -fno-math-errno
+            -fno-stack-protector -ffunction-sections -fdata-sections)
 endif()
 
 set_target_properties(fabstd PROPERTIES

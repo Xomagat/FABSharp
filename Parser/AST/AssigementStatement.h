@@ -129,7 +129,8 @@ inline void emit_null_check(CodegenContext& ctx, llvm::Value* obj, const std::st
     auto* bad = llvm::BasicBlock::Create(ctx.context, "null.bad", fn);
     auto* ok  = llvm::BasicBlock::Create(ctx.context, "null.ok", fn);
 
-    b.CreateCondBr(b.CreateIsNull(obj), bad, ok);
+    llvm::MDBuilder md(ctx.context);
+    b.CreateCondBr(b.CreateIsNull(obj), bad, ok, md.createBranchWeights(1, 2000));
 
     b.SetInsertPoint(bad);
     auto putsFn = ctx.module.getOrInsertFunction("puts",
@@ -137,14 +138,16 @@ inline void emit_null_check(CodegenContext& ctx, llvm::Value* obj, const std::st
     auto exitFn = ctx.module.getOrInsertFunction("exit",
         llvm::FunctionType::get(b.getVoidTy(), {b.getInt32Ty()}, false));
     b.CreateCall(putsFn, {b.CreateGlobalStringPtr(msg)});
-    b.CreateCall(exitFn, {b.getInt32(1)});
+    auto* c = b.CreateCall(exitFn, {b.getInt32(1)});
+    c->setDoesNotReturn();
+    c->addFnAttr(llvm::Attribute::Cold);
     b.CreateUnreachable();
 
     b.SetInsertPoint(ok);
 }
 
 inline llvm::Value* emit_field_ptr(CodegenContext& ctx, llvm::Value* obj, const std::string& cls,
-                                   const std::string& field, std::string& type_out)
+                                   const std::string& field, std::string& type_out, bool nonnull = false)
 {
     auto& ci = get_class(ctx, cls);
     int i = ci.field_index(field);
@@ -154,7 +157,7 @@ inline llvm::Value* emit_field_ptr(CodegenContext& ctx, llvm::Value* obj, const 
         throw std::runtime_error("Field '" + field + "' of class '" + cls + "' is private!");
 
     type_out = ci.fields[i].type;
-    emit_null_check(ctx, obj, "Null reference: field '" + field + "' of " + cls);
+    if (!nonnull) emit_null_check(ctx, obj, "Null reference: field '" + field + "' of " + cls);
     return ctx.builder.CreateStructGEP(ci.st, obj, i + 1, field);
 }
 
@@ -167,7 +170,7 @@ inline llvm::Value* emit_this_field_ptr(CodegenContext& ctx, const std::string& 
     if (get_class(ctx, cls).field_index(name) < 0) return nullptr;
 
     llvm::Value* obj = ctx.builder.CreateLoad(ctx.builder.getPtrTy(), self->second);
-    return emit_field_ptr(ctx, obj, cls, name, ftype);
+    return emit_field_ptr(ctx, obj, cls, name, ftype, true);
 }
 
 inline llvm::Value* emit_object_alloc(CodegenContext& ctx, const std::string& cls)
@@ -353,7 +356,6 @@ private:
         if (find_global(ctx, name))
             throw std::runtime_error("Global '" + name + "' is already defined!");
 
-        // нет insert block -> верхний уровень при пользовательском main: пишем в init-функцию
         llvm::BasicBlock* saved = b.GetInsertBlock();
         if (!saved) b.SetInsertPoint(ctx.init_tail);
 
@@ -371,13 +373,13 @@ private:
 
         llvm::Type* lt = type_to_llvm(real, b);
         auto* gv = new llvm::GlobalVariable(ctx.module, lt, false,
-            is_static ? llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage,
+            llvm::GlobalValue::InternalLinkage,
             llvm::Constant::getNullValue(lt), name);
 
         if (auto* c = llvm::dyn_cast<llvm::Constant>(val))
         {
             gv->setInitializer(c);
-            gv->setConstant(is_const);       // constant-флаг только если есть константный инициализатор
+            gv->setConstant(is_const);
         }
         else
             b.CreateStore(val, gv);

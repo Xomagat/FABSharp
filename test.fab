@@ -1,29 +1,10 @@
-use console;
+define a() -> string
+    return "Hello".to_upper();
 
 define main() -> int
 {
-    console.color(color_grey);
-    writeln "Hi!";
-    console.reset();
-    console.color(color_red);
-    writeln "Hi!";
-    console.reset();
-    console.color(color_green);
-    writeln "Hi!";
-    console.reset();
-    console.color(color_yellow);
-    writeln "Hi!";
-    console.reset();
-    console.color(color_blue);
-    writeln "Hi!";
-    console.reset();
-    console.color(color_purple);
-    writeln "Hi!";
-    console.reset();
-    console.color(color_cyan);
-    writeln "Hi!";
-    console.reset();
-    console.color(color_white);
-    writeln "Hi!";
-    console.reset();
+    int i = 0;
+
+    for (i = 0; i < 10; i += 1)
+        writeln a();
 }

@@ -7,6 +7,9 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "../alloc.h"
+#define malloc(n) bump_alloc(n)
+
 extern "C" void* fab_list_new_string();
 extern "C" void  fab_list_addend_string(void* l, const char* v);
 
@@ -33,8 +36,8 @@ extern "C" bool fab_empty(const char* x)
 
 extern "C" int fab_findc(const char* x, const char y)
 {
-    char const *p = strchr(x, y);
-    return p - x;
+    const char* p = strchr(x, y);
+    return p ? (int)(p - x) : -1;
 }
 
 extern "C" int fab_finds(const char* x, const char* y)
@@ -62,7 +65,7 @@ extern "C" char* fab_substr(const char *src, int start, int length)
     char* dest = (char*)malloc((length + 1) * sizeof(char));
     if (dest == NULL) return NULL;
 
-    strncpy(dest, src + start, length);
+    memcpy(dest, src + start, length);
     dest[length] = '\0';
 
     return dest;
@@ -125,33 +128,21 @@ extern "C" char* fab_replace(const char* x, const char* y, const char* z)
 {
     if (!x || !y || !z || *y == '\0') return nullptr;
 
-    size_t x_len = strlen(x);
-    size_t y_len = strlen(y);
-    size_t z_len = strlen(z);
+    size_t y_len = strlen(y), z_len = strlen(z), x_len = strlen(x), count = 0;
+    for (const char* t = x; (t = strstr(t, y)); t += y_len) count++;
 
-    size_t count = 0;
-    const char* tmp = x;
-    while ((tmp = strstr(tmp, y))) {
-        count++;
-        tmp += y_len;
-    }
-
-    size_t result_len = x_len + count * (z_len - y_len);
-    char* result = (char*)malloc(result_len + 1);
+    char* result = (char*)malloc(x_len - count * y_len + count * z_len + 1);
     if (!result) return nullptr;
 
-    char* p = result;
-    while (*x != '\0') {
-        if (strstr(x, y) == x) {
-            strcpy(p, z);
-            p += z_len;
-            x += y_len;
-        } else {
-            *p++ = *x++;
-        }
+    char* o = result;
+    const char* p;
+    while ((p = strstr(x, y)))
+    {
+        memcpy(o, x, (size_t)(p - x)); o += p - x;
+        memcpy(o, z, z_len);           o += z_len;
+        x = p + y_len;
     }
-    *p = '\0';
-
+    memcpy(o, x, strlen(x) + 1);
     return result;
 }
 

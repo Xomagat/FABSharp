@@ -157,7 +157,9 @@ public:
             if (!m.is_static) p.push_back(b.getPtrTy());
             for (auto& t : m.arg_types) p.push_back(type_to_llvm(t, b));
             auto* fty = llvm::FunctionType::get(type_to_llvm(m.ret, b), p, false);
-            return llvm::Function::Create(fty, llvm::Function::ExternalLinkage, sym, ctx.module);
+            auto* f = llvm::Function::Create(fty, llvm::Function::InternalLinkage, sym, ctx.module);
+            f->addFnAttr(llvm::Attribute::NoUnwind);
+            return f;
         };
 
         if (ctor) { ci.ctor = make(*ctor, name + ".new"); ci.ctor_args = ctor->arg_types; }

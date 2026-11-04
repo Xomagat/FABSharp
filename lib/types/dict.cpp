@@ -22,12 +22,17 @@ FAB_LIST_IMPORT(string, const char*)
 FAB_LIST_IMPORT(bool,   unsigned char)
 
 // Dict keeps insertion order:
-// keys[] and vals[] are plain arrays, index[] is an open-addressing hash table with entry numbers
+// keys[] and vals[] are plain arrays, index[] is an open-addressing hash table with entry numbers.
+// remove() does not shift the arrays: it marks the entry as dead (alive[e] = 0) and drops it from
+// index[]. Dead entries are squeezed out later (dict_compact), when the order is needed by number
+// (key_at / value_at) or when the arrays are full. So remove is O(1).
+// Invariants: index[] only points to live entries; the last entry (len - 1) is always alive.
 template <class K, class V> struct FabDict {
-    K*   keys;
-    V*   vals;
+    K*  keys;
+    V*  vals;
     int* index;
-    int  len, cap, icap;
+    unsigned char* alive;
+    int len, cap, icap, dead;      // len counts dead entries too; live count = len - dead
 };
 
 template<class T> void dict_free_key(T) {}
@@ -36,8 +41,9 @@ inline void dict_free_key(const char* s) { free((void*)s); }
 template<class K, class V> void dict_free(FabDict<K,V>* d)
 {
     if (!d) return;
-    for (int i = 0; i < d->len; ++i) dict_free_key(d->keys[i]);
-    free(d->keys); free(d->vals); free(d->index); free(d);
+    for (int i = 0; i < d->len; ++i)
+        if (d->alive[i]) dict_free_key(d->keys[i]);
+    free(d->keys); free(d->vals); free(d->index); free(d->alive); free(d);
 }
 
 // Hash
@@ -88,8 +94,8 @@ template<class T> T dict_own(T x) { return x; }
 template<class K, class V> FabDict<K,V>* dict_new()
 {
     auto* d = (FabDict<K,V>*)malloc(sizeof(FabDict<K,V>));
-    d->keys = nullptr; d->vals = nullptr; d->index = nullptr;
-    d->len = d->cap = d->icap = 0;
+    d->keys = nullptr; d->vals = nullptr; d->index = nullptr; d->alive = nullptr;
+    d->len = d->cap = d->icap = d->dead = 0;
     return d;
 }
 
@@ -101,13 +107,58 @@ template<class K, class V> void dict_index_put(FabDict<K,V>* d, int e)
     d->index[i] = e;
 }
 
+// Rebuilds index[] from the live entries
 template<class K, class V> void dict_reindex(FabDict<K,V>* d)
 {
     if (!d->icap) return;
 
     memset(d->index, 0xFF, d->icap * sizeof(int));
     for (int i = 0; i < d->len; ++i)
-        dict_index_put(d, i);
+        if (d->alive[i]) dict_index_put(d, i);
+}
+
+// Removes the slot of entry e from index[] (backward-shift deletion for linear probing).
+// Must be called while keys[] still holds the entries.
+template<class K, class V> void dict_index_erase(FabDict<K,V>* d, int e)
+{
+    unsigned mask = d->icap - 1;
+    unsigned i = hash_key(d->keys[e]) & mask;
+    while (d->index[i] != e) i = (i + 1) & mask;
+
+    unsigned j = i;
+    for (;;)
+    {
+        j = (j + 1) & mask;
+        int f = d->index[j];
+        if (f < 0) break;
+
+        unsigned home = hash_key(d->keys[f]) & mask;
+        bool stays = (i <= j) ? (i < home && home <= j)
+                              : (i < home || home <= j);
+        if (stays) continue;
+
+        d->index[i] = f;
+        i = j;
+    }
+    d->index[i] = -1;
+}
+
+// Squeezes dead entries out of keys[] / vals[] (order is kept)
+template<class K, class V> void dict_compact(FabDict<K,V>* d)
+{
+    if (!d->dead) return;
+
+    int w = 0;
+    for (int r = 0; r < d->len; ++r)
+    {
+        if (!d->alive[r]) continue;
+        if (w != r) { d->keys[w] = d->keys[r]; d->vals[w] = d->vals[r]; }
+        d->alive[w] = 1;
+        ++w;
+    }
+    d->len  = w;
+    d->dead = 0;
+    dict_reindex(d);
 }
 
 template<class K, class V> void dict_grow(FabDict<K,V>* d)
@@ -115,8 +166,9 @@ template<class K, class V> void dict_grow(FabDict<K,V>* d)
     d->cap  = d->cap ? d->cap * 2 : 4;
     d->icap = d->cap * 2;
 
-    d->keys = (K*)realloc(d->keys, d->cap * sizeof(K));
-    d->vals = (V*)realloc(d->vals, d->cap * sizeof(V));
+    d->keys  = (K*)realloc(d->keys, d->cap * sizeof(K));
+    d->vals  = (V*)realloc(d->vals, d->cap * sizeof(V));
+    d->alive = (unsigned char*)realloc(d->alive, d->cap);
 
     free(d->index);
     d->index = (int*)malloc(d->icap * sizeof(int));
@@ -141,10 +193,16 @@ template<class K, class V> void dict_set(FabDict<K,V>* d, K key, V val)
     int e = dict_find(d, key);
     if (e >= 0) { d->vals[e] = val; return; }
 
-    if (d->len == d->cap) dict_grow(d);
+    if (d->len == d->cap)
+    {
+        // many dead entries: reuse their room instead of growing
+        if (d->dead && d->dead * 4 >= d->cap) dict_compact(d);
+        else                                  dict_grow(d);
+    }
     e = d->len++;
     d->keys[e] = dict_own(key);
     d->vals[e] = val;
+    d->alive[e] = 1;
     dict_index_put(d, e);
 }
 
@@ -163,12 +221,14 @@ template<class K, class V> V dict_get_or(FabDict<K,V>* d, K key, V def)
 
 template<class K, class V> K dict_key_at(FabDict<K,V>* d, int i)
 {
+    dict_compact(d);                      // number i means "i-th live entry"
     if (i < 0 || i >= d->len) return dict_zero<K>();
     return d->keys[i];
 }
 
 template<class K, class V> V dict_value_at(FabDict<K,V>* d, int i)
 {
+    dict_compact(d);
     if (i < 0 || i >= d->len) return dict_zero<V>();
     return d->vals[i];
 }
@@ -176,21 +236,29 @@ template<class K, class V> V dict_value_at(FabDict<K,V>* d, int i)
 template<class K, class V> bool dict_has_value(FabDict<K,V>* d, V val)
 {
     for (int i = 0; i < d->len; ++i)
-        if (dict_eq_val(d->vals[i], val)) return true;
+        if (d->alive[i] && dict_eq_val(d->vals[i], val)) return true;
     return false;
 }
 
 // Remove (strings are not freed, like everywhere in the lib)
+template<class K, class V> void dict_remove_at(FabDict<K,V>* d, int e)
+{
+    dict_index_erase(d, e);
+    d->alive[e] = 0;
+
+    if (e == d->len - 1) d->len--;
+    else                 d->dead++;
+
+    // keep the invariant: the last entry is alive
+    while (d->len > 0 && !d->alive[d->len - 1]) { d->len--; d->dead--; }
+}
+
 template<class K, class V> bool dict_remove(FabDict<K,V>* d, K key)
 {
     int e = dict_find(d, key);
     if (e < 0) return false;
 
-    memmove(d->keys + e, d->keys + e + 1, (d->len - e - 1) * sizeof(K));
-    memmove(d->vals + e, d->vals + e + 1, (d->len - e - 1) * sizeof(V));
-    d->len--;
-
-    dict_reindex(d);
+    dict_remove_at(d, e);
     return true;
 }
 
@@ -200,13 +268,14 @@ template<class K, class V> V dict_pop(FabDict<K,V>* d, K key)
     if (e < 0) return dict_zero<V>();
 
     V v = d->vals[e];
-    dict_remove(d, key);
+    dict_remove_at(d, e);
     return v;
 }
 
 template<class K, class V> void dict_clear(FabDict<K,V>* d)
 {
     d->len = 0;
+    d->dead = 0;
     if (d->icap) memset(d->index, 0xFF, d->icap * sizeof(int));
 }
 
@@ -215,14 +284,14 @@ template<class K, class V> FabDict<K,V>* dict_copy(FabDict<K,V>* d)
 {
     auto* r = dict_new<K,V>();
     for (int i = 0; i < d->len; ++i)
-        dict_set(r, d->keys[i], d->vals[i]);
+        if (d->alive[i]) dict_set(r, d->keys[i], d->vals[i]);
     return r;
 }
 
 template<class K, class V> void dict_merge(FabDict<K,V>* d, FabDict<K,V>* o)
 {
     for (int i = 0; i < o->len; ++i)
-        dict_set(d, o->keys[i], o->vals[i]);
+        if (o->alive[i]) dict_set(d, o->keys[i], o->vals[i]);
 }
 
 // Print
@@ -238,9 +307,12 @@ inline void print_elem(const char* v)   { printf("%s", v); }
 template<class K, class V> void dict_print(FabDict<K,V>* d)
 {
     printf("{");
+    bool first = true;
     for (int i = 0; i < d->len; ++i)
     {
-        if (i) printf(", ");
+        if (!d->alive[i]) continue;
+        if (!first) printf(", ");
+        first = false;
         print_elem(d->keys[i]);
         printf(": ");
         print_elem(d->vals[i]);
@@ -251,12 +323,12 @@ template<class K, class V> void dict_print(FabDict<K,V>* d)
 #define FAB_DICT(KN, K, VN, V) \
   extern "C" void* fab_dict_new_##KN##_##VN()                       { return dict_new<K,V>(); } \
   extern "C" void  fab_dict_set_##KN##_##VN(void* d, K k, V v)      { dict_set<K,V>((FabDict<K,V>*)d, k, dict_norm(v)); } \
-  extern "C" int   fab_dict_length_##KN##_##VN(void* d)             { return ((FabDict<K,V>*)d)->len; } \
+  extern "C" int   fab_dict_length_##KN##_##VN(void* d)             { auto* x = (FabDict<K,V>*)d; return x->len - x->dead; } \
   extern "C" bool  fab_dict_contains_##KN##_##VN(void* d, K k)      { return dict_find<K,V>((FabDict<K,V>*)d, k) >= 0; } \
   extern "C" void  fab_dict_print_##KN##_##VN(void* d)              { dict_print<K,V>((FabDict<K,V>*)d); } \
   extern "C" V     fab_dict_get_##KN##_##VN(void* d, K k)           { return dict_get<K,V>((FabDict<K,V>*)d, k); } \
   extern "C" V     fab_dict_get_or_##KN##_##VN(void* d, K k, V def) { return dict_get_or<K,V>((FabDict<K,V>*)d, k, dict_norm(def)); } \
-  extern "C" bool  fab_dict_empty_##KN##_##VN(void* d)              { return ((FabDict<K,V>*)d)->len == 0; } \
+  extern "C" bool  fab_dict_empty_##KN##_##VN(void* d)              { auto* x = (FabDict<K,V>*)d; return x->len == x->dead; } \
   extern "C" int   fab_dict_capacity_##KN##_##VN(void* d)           { return ((FabDict<K,V>*)d)->cap; } \
   extern "C" bool  fab_dict_contains_value_##KN##_##VN(void* d, V v){ return dict_has_value<K,V>((FabDict<K,V>*)d, dict_norm(v)); } \
   extern "C" bool  fab_dict_remove_##KN##_##VN(void* d, K k)        { return dict_remove<K,V>((FabDict<K,V>*)d, k); } \
@@ -270,14 +342,14 @@ template<class K, class V> void dict_print(FabDict<K,V>* d)
   { \
       auto* x = (FabDict<K,V>*)d; \
       void* l = fab_list_new_##KN(); \
-      for (int i = 0; i < x->len; ++i) fab_list_addend_##KN(l, x->keys[i]); \
+      for (int i = 0; i < x->len; ++i) if (x->alive[i]) fab_list_addend_##KN(l, x->keys[i]); \
       return l; \
   } \
   extern "C" void* fab_dict_values_##KN##_##VN(void* d) \
   { \
       auto* x = (FabDict<K,V>*)d; \
       void* l = fab_list_new_##VN(); \
-      for (int i = 0; i < x->len; ++i) fab_list_addend_##VN(l, x->vals[i]); \
+      for (int i = 0; i < x->len; ++i) if (x->alive[i]) fab_list_addend_##VN(l, x->vals[i]); \
       return l; \
   } \
   extern "C" void fab_dict_free_##KN##_##VN(void* d) { dict_free<K,V>((FabDict<K,V>*)d); }

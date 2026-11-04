@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../alloc.h"
+
 // NOTE: IndexExpression reads `data` directly from the list pointer,
 // so `data` must stay the first field of the struct.
 template<class T> struct FabList { T* data; int len; int cap;
@@ -54,18 +56,6 @@ inline bool list_lt(const char* a, const char* b)
 {
     if (!a || !b) return a == nullptr && b != nullptr;
     return strcmp(a, b) < 0;
-}
-
-template<class T> int list_cmp(const void* a, const void* b)
-{
-    T x = *(const T*)a;
-    T y = *(const T*)b;
-    return list_lt(x, y) ? -1 : (list_lt(y, x) ? 1 : 0);
-}
-
-template<class T> int list_cmp_desc(const void* a, const void* b)
-{
-    return list_cmp<T>(b, a);
 }
 
 // Add
@@ -185,14 +175,71 @@ template<class T> void list_swap(FabList<T>* l, int i, int j)
     l->data[j] = t;
 }
 
+template<class T> void list_insertion(T* a, int n)
+{
+    for (int i = 1; i < n; ++i)
+    {
+        T v = a[i]; int j = i - 1;
+        while (j >= 0 && list_lt(v, a[j])) { a[j + 1] = a[j]; --j; }
+        a[j + 1] = v;
+    }
+}
+
+template<class T> void list_sift(T* a, int i, int n)
+{
+    for (;;)
+    {
+        int c = 2 * i + 1;
+        if (c >= n) return;
+        if (c + 1 < n && list_lt(a[c], a[c + 1])) ++c;
+        if (!list_lt(a[i], a[c])) return;
+        T t = a[i]; a[i] = a[c]; a[c] = t;
+        i = c;
+    }
+}
+
+template<class T> void list_heapsort(T* a, int n)
+{
+    for (int i = n / 2 - 1; i >= 0; --i) list_sift(a, i, n);
+    for (int e = n - 1; e > 0; --e) { T t = a[0]; a[0] = a[e]; a[e] = t; list_sift(a, 0, e); }
+}
+
+template<class T> void list_introsort(T* a, int n, int depth)
+{
+    while (n > 16)
+    {
+        if (depth-- == 0) { list_heapsort(a, n); return; }
+
+        T x = a[0], y = a[n / 2], z = a[n - 1];
+        T p = list_lt(x, y) ? (list_lt(y, z) ? y : (list_lt(x, z) ? z : x))
+                            : (list_lt(x, z) ? x : (list_lt(y, z) ? z : y));
+
+        int i = 0, j = n - 1;
+        while (i <= j)
+        {
+            while (list_lt(a[i], p)) ++i;
+            while (list_lt(p, a[j])) --j;
+            if (i <= j) { T t = a[i]; a[i] = a[j]; a[j] = t; ++i; --j; }
+        }
+
+        if (j + 1 < n - i) { list_introsort(a, j + 1, depth); a += i; n -= i; }
+        else               { list_introsort(a + i, n - i, depth); n = j + 1; }
+    }
+    list_insertion(a, n);
+}
+
 template<class T> void list_sort(FabList<T>* l)
 {
-    if (l->len > 1) qsort(l->data, l->len, sizeof(T), list_cmp<T>);
+    if (l->len < 2) return;
+    int d = 0;
+    for (int n = l->len; n > 1; n >>= 1) d += 2;
+    list_introsort(l->data, l->len, d);
 }
 
 template<class T> void list_sort_desc(FabList<T>* l)
 {
-    if (l->len > 1) qsort(l->data, l->len, sizeof(T), list_cmp_desc<T>);
+    list_sort(l);
+    list_reverse(l);
 }
 
 // Min, max, sum
@@ -229,7 +276,7 @@ inline const char* list_sum(FabList<const char*>* l)
     for (int i = 0; i < l->len; ++i)
         if (l->data[i]) total += strlen(l->data[i]);
 
-    char* r = (char*)malloc(total);
+    char* r = (char*)bump_alloc(total);
     if (r == nullptr) return nullptr;
 
     char* p = r;
@@ -311,7 +358,7 @@ template<class T> char* list_join(FabList<T>* l, const char* sep)
     for (int i = 0; i < l->len; ++i)
         total += (size_t)fmt_elem(nullptr, 0, l->data[i]) + (i ? sep_len : 0);
 
-    char* r = (char*)malloc(total);
+    char* r = (char*)bump_alloc(total);
     if (r == nullptr) return nullptr;
 
     char* p = r;

@@ -13,6 +13,58 @@
 
 #include "../../CodeGen/CodegenContext.h"
 
+inline void emit_print(CodegenContext& ctx, llvm::Value* val, bool newline)
+{
+    auto& b = ctx.builder;
+
+    std::string t = type_of(ctx, val);
+    if (is_class(t) || is_lib_type(t))
+        throw std::runtime_error("Cannot print an object of class '" + t + "': classes are not built-in types!");
+
+    auto nl = [&]()
+    {
+        auto fn = ctx.module.getOrInsertFunction("fab_out_nl",
+            llvm::FunctionType::get(b.getVoidTy(), {}, false));
+        b.CreateCall(fn);
+    };
+
+    auto rt = [&](const char* kind, llvm::Value* arg)
+    {
+        std::string name = std::string("fab_out_") + kind + (newline ? "ln" : "");
+        auto fn = ctx.module.getOrInsertFunction(name,
+            llvm::FunctionType::get(b.getVoidTy(), {arg->getType()}, false));
+        b.CreateCall(fn, {arg});
+    };
+
+    // list<T> and dict<K,V> have their own printers
+    if (emit_container_print(ctx, val, t))
+    {
+        if (newline) nl();
+        return;
+    }
+
+    llvm::Type* ty = val->getType();
+
+    if (ty->isIntegerTy(1))
+    {
+        rt("str", b.CreateSelect(val, b.CreateGlobalStringPtr("true"), b.CreateGlobalStringPtr("false")));
+    }
+    else if (ty->isX86_FP80Ty())
+    {
+        auto printfType = llvm::FunctionType::get(b.getInt32Ty(), {b.getPtrTy()}, true);
+        auto printfFunc = ctx.module.getOrInsertFunction("printf", printfType);
+        b.CreateCall(printfFunc, {b.CreateGlobalStringPtr(newline ? "%.21Lg\n" : "%.21Lg"), val});
+    }
+    else if (ty->isFloatTy())   rt("f32", val);
+    else if (ty->isDoubleTy())  rt("f64", val);
+    else if (ty->isIntegerTy(8)) rt("char", val);
+    else if (ty->isIntegerTy(16) || ty->isIntegerTy(32)) rt("i32", b.CreateSExt(val, b.getInt32Ty()));
+    else if (ty->isIntegerTy(64)) rt("i64", val);
+    else if (ty->isPointerTy())  rt("str", val);
+    else
+        throw std::runtime_error("Cannot print a value of type '" + t + "'!");
+}
+
 class WritelnStatement : public Statement
 {
 private:
@@ -23,75 +75,7 @@ public:
 
     void codegen(CodegenContext &context) const override
     {
-        auto printfType = llvm::FunctionType::get(
-            context.builder.getInt32Ty(), {context.builder.getInt8Ty()->getPointerTo()}, true);
-        auto printfFunc = context.module.getOrInsertFunction("printf", printfType);
-
-        llvm::Value* val = expr->codegen(context);
-
-        std::string t = type_of(context, val);
-        if (is_class(t) || is_lib_type(t))
-            throw std::runtime_error("Cannot print an object of class '" + t + "': classes are not built-in types!");
-        if (t.starts_with("list<"))
-        {
-            auto printFn = context.module.getOrInsertFunction(
-                "fab_list_print_" + list_elem(t),
-                llvm::FunctionType::get(context.builder.getVoidTy(),
-                                        {context.builder.getInt8Ty()->getPointerTo()}, false));
-            context.builder.CreateCall(printFn, {val});
-            context.builder.CreateCall(printfFunc, {context.builder.CreateGlobalStringPtr("\n")});
-            return;
-        }
-        if (emit_container_print(context, val, t))
-        {
-            context.builder.CreateCall(printfFunc, {context.builder.CreateGlobalStringPtr("\n")});
-            return;
-        }
-
-        if (val->getType()->isIntegerTy(1))
-            val = context.builder.CreateSelect(val, context.builder.CreateGlobalStringPtr("true"), context.builder.CreateGlobalStringPtr("false"));
-
-        if (val->getType()->isX86_FP80Ty())
-        {
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%.21Lg\n");
-            context.builder.CreateCall(printfFunc, {fmt, val});
-        }
-        else if (val->getType()->isFloatingPointTy())
-        {
-            llvm::Value* fmt = nullptr;
-            if (val->getType()->isFloatTy())
-            {
-                val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
-                fmt = context.builder.CreateGlobalStringPtr("%.9g\n");
-            }
-            else
-            {
-                val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
-                fmt = context.builder.CreateGlobalStringPtr("%.17g\n");
-            }
-            context.builder.CreateCall(printfFunc, {fmt, val});
-        }
-        else if (val->getType()->isIntegerTy(8))
-        {
-            val = context.builder.CreateZExt(val, context.builder.getInt32Ty());
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%c\n");
-            context.builder.CreateCall(printfFunc, {fmt, val});
-        }
-        else if (val->getType()->isIntegerTy())
-        {
-            unsigned bits = val->getType()->getIntegerBitWidth();
-            if (bits < 32)
-                val = context.builder.CreateSExt(val, context.builder.getInt32Ty());
-
-            const char* f = (bits == 64) ? "%lld\n" : "%d\n";
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr(f);
-            context.builder.CreateCall(printfFunc, {fmt, val});
-        }
-        else
-        {
-            context.builder.CreateCall(printfFunc, {val});
-            context.builder.CreateCall(printfFunc, {context.builder.CreateGlobalStringPtr("\n")});
-        }
+        emit_print(context, expr->codegen(context), true);
     }
 };
 
@@ -105,73 +89,7 @@ public:
 
     void codegen(CodegenContext& context) const override
     {
-        auto printfType = llvm::FunctionType::get(
-            context.builder.getInt32Ty(), {context.builder.getInt8Ty()->getPointerTo()}, true);
-        auto printfFunc = context.module.getOrInsertFunction("printf", printfType);
-
-        llvm::Value* val = expr->codegen(context);
-
-        std::string t = type_of(context, val);
-        if (is_class(t) || is_lib_type(t))
-            throw std::runtime_error("Cannot print an object of class '" + t + "': classes are not built-in types!");
-        if (t.starts_with("list<"))
-        {
-            auto printFn = context.module.getOrInsertFunction(
-                "fab_list_print_" + list_elem(t),
-                llvm::FunctionType::get(context.builder.getVoidTy(),
-                                        {context.builder.getInt8Ty()->getPointerTo()}, false));
-            context.builder.CreateCall(printFn, {val});
-            return;
-        }
-        if (emit_container_print(context, val, t))
-        {
-            context.builder.CreateCall(printfFunc, {});
-            return;
-        }
-
-
-        if (val->getType()->isIntegerTy(1))
-            val = context.builder.CreateSelect(val, context.builder.CreateGlobalStringPtr("true"), context.builder.CreateGlobalStringPtr("false"));
-
-        if (val->getType()->isX86_FP80Ty())
-        {
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%.21Lg");
-            context.builder.CreateCall(printfFunc, {fmt, val});
-        }
-        else if (val->getType()->isFloatingPointTy())
-        {
-            llvm::Value* fmt = nullptr;
-            if (val->getType()->isFloatTy())
-            {
-                val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
-                fmt = context.builder.CreateGlobalStringPtr("%.9g");
-            }
-            else
-            {
-                val = context.builder.CreateFPExt(val, context.builder.getDoubleTy());
-                fmt = context.builder.CreateGlobalStringPtr("%.17g");
-            }
-            context.builder.CreateCall(printfFunc, {fmt, val});
-        }
-        else if (val->getType()->isIntegerTy(8))
-        {
-            unsigned bits = val->getType()->getIntegerBitWidth();
-            if (bits < 32)
-                val = context.builder.CreateSExt(val, context.builder.getInt32Ty());
-
-            const char* f = (bits == 64) ? "%lld" : "%d";
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr(f);
-            context.builder.CreateCall(printfFunc, {fmt, val});
-        }
-        else if (val->getType()->isIntegerTy())
-        {
-            llvm::Value* fmt = context.builder.CreateGlobalStringPtr("%d");
-            context.builder.CreateCall(printfFunc, {fmt, val});
-        }
-        else
-        {
-            context.builder.CreateCall(printfFunc, {val});
-        }
+        emit_print(context, expr->codegen(context), false);
     }
 };
 
@@ -225,8 +143,9 @@ public:
         }
         else if (varType->isPointerTy()) // string (i8*)
         {
-            llvm::Value* arraySize = context.builder.getInt32(256);
-            llvm::Value* stringBuffer = entry_alloca(context.builder, context.builder.getInt8Ty(), name + "_buf");
+            auto mallocFn = context.module.getOrInsertFunction("malloc",
+                llvm::FunctionType::get(context.builder.getPtrTy(), {context.builder.getInt64Ty()}, false));
+            llvm::Value* stringBuffer = context.builder.CreateCall(mallocFn, {context.builder.getInt64(256)});
 
             context.builder.CreateStore(stringBuffer, alloc);
 

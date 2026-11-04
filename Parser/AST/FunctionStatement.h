@@ -103,8 +103,9 @@ public:
         llvm::FunctionType* fn_type = llvm::FunctionType::get(
             type_to_llvm(type, context.builder), param_types, false);
 
-        llvm::Function* function = llvm::Function::Create(
-            fn_type, llvm::Function::ExternalLinkage, name, context.module);
+        auto linkage = (name == "main") ? llvm::Function::ExternalLinkage : llvm::Function::InternalLinkage;
+        llvm::Function* function = llvm::Function::Create(fn_type, linkage, name, context.module);
+        function->addFnAttr(llvm::Attribute::NoUnwind);
 
         context.functions[mangle_name(name, arg_types)] = function;
         context.func_ret[mangle_name(name, arg_types)]  = type;
@@ -144,6 +145,13 @@ public:
             context.variables[arg_names[i]] = alloc;
             context.var_types[arg_names[i]] = arg_types[i];
             i++;
+        }
+
+        if (name == "main")
+        {
+            auto fn = context.module.getOrInsertFunction("fab_out_init",
+                llvm::FunctionType::get(context.builder.getVoidTy(), {}, false));
+            context.builder.CreateCall(fn);
         }
 
         if (name == "main" && context.init_fn)

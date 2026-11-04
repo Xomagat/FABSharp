@@ -10,6 +10,7 @@
 
 #include "Expression.h"
 #include "../../libs/STDLibInfo.h"
+#include "../../CodeGen/Runtimeatters.h"
 
 inline int numeric_rank(const std::string& t)
 {
@@ -128,10 +129,17 @@ public:
 
         auto* fnType = llvm::FunctionType::get(type_to_llvm(info.return_type, ctx.builder), params, false);
         auto callee  = ctx.module.getOrInsertFunction(info.symbol, fnType);
+        if (auto* f = llvm::dyn_cast<llvm::Function>(callee.getCallee())) rt_apply_attrs(f);
 
         std::vector<llvm::Value*> coerced;
         for (size_t i = 0; i < vals.size(); ++i)
             coerced.push_back(coerceToType(vals[i], params[i], ctx.builder));
+
+        if (llvm::Value* r = rt_try_intrinsic(ctx.builder, info.symbol, coerced))
+        {
+            ctx.value_types[r] = info.return_type;
+            return r;
+        }
 
         llvm::Value* r = ctx.builder.CreateCall(callee, coerced);
         ctx.value_types[r] = info.return_type;

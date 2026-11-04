@@ -5,6 +5,9 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+#include "../alloc.h"
+#define malloc(n) bump_alloc(n)
+
 // The compiler passes char as i8, the upper bits of the argument are not defined,
 // so ctype functions always get the value through unsigned char
 static inline int uc(char x) { return (unsigned char)x; }

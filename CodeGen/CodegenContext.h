@@ -10,6 +10,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MDBuilder.h"
 
 struct GlobalInfo { llvm::GlobalVariable* gv; std::string type; bool is_const; };
 

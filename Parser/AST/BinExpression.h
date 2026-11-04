@@ -40,15 +40,20 @@ public:
 
             auto strlen = context.module.getOrInsertFunction(
                 "strlen", llvm::FunctionType::get(i64, {ptr}, false));
-            auto malloc = context.module.getOrInsertFunction(
-                "malloc", llvm::FunctionType::get(ptr, {i64}, false));
+            auto allocFn = context.module.getOrInsertFunction(
+                "fab_alloc", llvm::FunctionType::get(ptr, {i64}, false));
+            if (auto* f = llvm::dyn_cast<llvm::Function>(allocFn.getCallee()))
+            {
+                f->setDoesNotThrow();
+                f->addRetAttr(llvm::Attribute::NoAlias);
+            }
             auto memcpy = context.module.getOrInsertFunction(
                 "memcpy", llvm::FunctionType::get(ptr, {ptr, ptr, i64}, false));
 
             auto la = b.CreateCall(strlen, {left});
             auto lb = b.CreateCall(strlen, {right});
             auto total = b.CreateAdd(b.CreateAdd(la, lb), b.getInt64(1));
-            auto buf = b.CreateCall(malloc, {total});
+            auto buf = b.CreateCall(allocFn, {total});
 
             b.CreateCall(memcpy, {buf, left, la});
             auto tail = b.CreateGEP(b.getInt8Ty(), buf, la);

@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <math.h>
 
+#include "../alloc.h"
+#define malloc(n) bump_alloc(n)
+
 // Helper: format a value into a freshly malloc'ed string
 static char* fab_fmt_alloc(const char* fmt, long long iv, double dv, bool is_float)
 {

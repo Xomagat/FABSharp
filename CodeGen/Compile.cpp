@@ -28,6 +28,9 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements,
         auto entry = llvm::BasicBlock::Create(context, "entry", mainFunc);
         builder.SetInsertPoint(entry);
 
+        builder.CreateCall(module.getOrInsertFunction("fab_out_init",
+            llvm::FunctionType::get(builder.getVoidTy(), {}, false)));
+
         for (auto& stmt : statements)
         {
             if (auto* c = dynamic_cast<ClassDefineStatement*>(stmt.get()))
@@ -65,9 +68,22 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements,
     if (!target)
         throw std::runtime_error("Target lookup failed: " + error);
 
+    std::string cpu = opts.cpu, features;
+    if (cpu == "native")
+    {
+        cpu = llvm::sys::getHostCPUName().str();
+        for (auto& f : llvm::sys::getHostCPUFeatures())
+            features += (f.second ? "+" : "-") + f.first().str() + ",";
+        if (!features.empty()) features.pop_back();
+    }
+#ifdef _WIN32
+    auto reloc = llvm::Reloc::PIC_;
+#else
+    auto reloc = llvm::Reloc::Static;
+#endif
     auto targetMachine = target->createTargetMachine(
-        targetTriple, opts.cpu, "", llvm::TargetOptions(),
-        std::optional<llvm::Reloc::Model>(llvm::Reloc::PIC_));
+        targetTriple, cpu, features, llvm::TargetOptions(),
+        std::optional<llvm::Reloc::Model>(reloc));
 
     module.setDataLayout(targetMachine->createDataLayout());
     module.setTargetTriple(llvm::Triple(targetTriple));

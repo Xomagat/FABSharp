@@ -50,7 +50,8 @@ public:
             for (size_t i = 0; i < m->second.args.size(); ++i)
                 cargs.push_back(coerceToType(vals[i + 1], type_to_llvm(m->second.args[i], ctx.builder), ctx.builder));
 
-            emit_null_check(ctx, self, "Null reference: method '" + name + "'");
+            if (receiver->to_str() != "this")
+                emit_null_check(ctx, self, "Null reference: method '" + name + "'");
 
             auto& b = ctx.builder;
             llvm::Value* vptr = b.CreateLoad(b.getPtrTy(), self);

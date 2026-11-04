@@ -9,6 +9,8 @@
 #include <time.h>
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
 #include <direct.h>
 #else
@@ -160,7 +162,11 @@ extern "C" void fab_sleep(int sec) { fab_sleep_ms(sec * 1000); }
 extern "C" long long fab_ticks_ms()
 {
 #ifdef _WIN32
-    return (long long)GetTickCount64();
+    static LARGE_INTEGER freq = {};
+    if (!freq.QuadPart) QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER c;
+    QueryPerformanceCounter(&c);
+    return c.QuadPart / freq.QuadPart * 1000 + c.QuadPart % freq.QuadPart * 1000 / freq.QuadPart;
 #else
     timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
