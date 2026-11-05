@@ -97,7 +97,8 @@ public:
 
     void codegen(CodegenContext& context) const override
     {
-        initialization->codegen(context);
+        if (initialization)
+            initialization->codegen(context);
 
         llvm::Function* function = context.builder.GetInsertBlock()->getParent();
 
@@ -109,13 +110,18 @@ public:
         context.builder.CreateBr(condBB);
 
         context.builder.SetInsertPoint(condBB);
-        llvm::Value* condVal = condition->codegen(context);
-        if (!condVal->getType()->isIntegerTy(1))
-            condVal = context.builder.CreateICmpNE(condVal, llvm::ConstantInt::get(condVal->getType(), 0), "forcondval");
-        context.builder.CreateCondBr(condVal, bodyBB, endBB);
+        if (condition)
+        {
+            llvm::Value* condVal = condition->codegen(context);
+            if (!condVal->getType()->isIntegerTy(1))
+                condVal = context.builder.CreateICmpNE(condVal, llvm::ConstantInt::get(condVal->getType(), 0), "forcondval");
+            context.builder.CreateCondBr(condVal, bodyBB, endBB);
+        }
+        else
+            context.builder.CreateBr(bodyBB);
 
         context.builder.SetInsertPoint(bodyBB);
-        context.loop_stack.push_back({incrBB, endBB});   // continue -> incrBB, не condBB!
+        context.loop_stack.push_back({incrBB, endBB});
         for_statement->codegen(context);
         context.loop_stack.pop_back();
 
@@ -123,7 +129,8 @@ public:
             context.builder.CreateBr(incrBB);
 
         context.builder.SetInsertPoint(incrBB);
-        increment->codegen(context);
+        if (increment)
+            increment->codegen(context);
         context.builder.CreateBr(condBB);
 
         context.builder.SetInsertPoint(endBB);

@@ -415,48 +415,50 @@ std::unique_ptr<Statement> Parser::for_statement()
 {
     consume(token_type::LPARENT);
 
-    std::unique_ptr<Statement> init = assigment_statement();
-    std::unique_ptr<Expression> expr = expression();
+    std::unique_ptr<Statement> init;
+    if (!match(token_type::SEMI))
+        init = assigment_statement();
 
+    std::unique_ptr<Expression> cond;
+    if (get(0).get_type() != token_type::SEMI)
+        cond = expression();
     consume(token_type::SEMI);
 
     std::unique_ptr<Statement> increment;
+    if (get(0).get_type() != token_type::RPARENT)
+    {
+        auto t0 = get(0).get_type();
+        auto t1 = get(1).get_type();
 
-    auto t0 = get(0).get_type();
-    auto t1 = get(1).get_type();
-    if (t0 == token_type::INC || t0 == token_type::DEC ||
-        (t0 == token_type::WORDS && (t1 == token_type::INC || t1 == token_type::DEC)))
-    {
-        // ++i / i++
-        increment = std::make_unique<FunctionStatement>(expression());
-    }
-    else if (t0 == token_type::WORDS &&
-         (t1 == token_type::LSQUARE || t1 == token_type::DOT || t1 == token_type::LPARENT))
-    {
-        // arr[i]++, obj.x++, arr[i] = ..., obj.x = ..., f()
-        auto e = expression();
-        if (match(token_type::EQ))
+        if (t0 == token_type::INC || t0 == token_type::DEC ||
+            (t0 == token_type::WORDS && (t1 == token_type::INC || t1 == token_type::DEC)))
         {
-            auto v = expression();
-            if (dynamic_cast<FieldExpression*>(e.get()))
-                increment = std::make_unique<FieldAssignStatement>(std::move(e), std::move(v));
+            increment = std::make_unique<FunctionStatement>(expression());
+        }
+        else if (t0 == token_type::WORDS &&
+                 (t1 == token_type::LSQUARE || t1 == token_type::DOT || t1 == token_type::LPARENT))
+        {
+            auto e = expression();
+            if (match(token_type::EQ))
+            {
+                auto v = expression();
+                if (dynamic_cast<FieldExpression*>(e.get()))
+                    increment = std::make_unique<FieldAssignStatement>(std::move(e), std::move(v));
+                else
+                    increment = std::make_unique<IndexAssignStatement>(std::move(e), std::move(v));
+            }
             else
-                increment = std::make_unique<IndexAssignStatement>(std::move(e), std::move(v));
+                increment = std::make_unique<FunctionStatement>(std::move(e));
         }
         else
-            increment = std::make_unique<FunctionStatement>(std::move(e));
+            increment = assigment_statement(true);
     }
-    else
-    {
-        // i += 1 and so on
-        increment = assigment_statement(true);
-    }
-
     consume(token_type::RPARENT);
 
-    std::unique_ptr<Statement> for_statement = statement_or_block();
+    std::unique_ptr<Statement> body = statement_or_block();
 
-    return std::make_unique<ForStatement>(std::move(init), std::move(expr), std::move(increment), std::move(for_statement));
+    return std::make_unique<ForStatement>(std::move(init), std::move(cond),
+                                          std::move(increment), std::move(body));
 }
 
 std::unique_ptr<Statement> Parser::class_definition()
