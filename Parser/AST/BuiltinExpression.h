@@ -9,9 +9,11 @@
 
 #include "llvm/IR/InlineAsm.h"
 
-#include "AssigementStatement.h"
 #include "Expression.h"
+#include "FunctionalExpression.h"
+
 #include "Statement.h"
+#include "AssigementStatement.h"
 
 inline llvm::Value* emit_size_of(CodegenContext& ctx, llvm::Type* t)
 {
@@ -85,4 +87,30 @@ public:
                                          llvm::InlineAsm::AD_ATT);
         ctx.builder.CreateCall(fty, ia, vals);
     }
+};
+
+class ToStrExpression : public Expression
+{
+    std::unique_ptr<Expression> expr;
+
+public:
+    explicit ToStrExpression(std::unique_ptr<Expression> e) : expr(std::move(e)) {}
+
+    llvm::Value* codegen(CodegenContext& ctx) const override
+    {
+        llvm::Value* v = expr->codegen(ctx);
+        std::string t = type_of(ctx, v);
+
+        if (t == "string") return v;
+
+        const StdlibFunctionInfo* info = find_lib_method(t, "to_str", {});
+        if (!info)
+            throw std::runtime_error("Cannot put a value of type '" + t + "' into an f-string!");
+
+        llvm::Value* r = FunctionalExpression::emit_stdlib_call(ctx, *info, {v});
+        ctx.value_types[r] = "string";
+        return r;
+    }
+
+    std::string to_str() const override { return "to_str(" + expr->to_str() + ")"; }
 };

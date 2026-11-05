@@ -88,6 +88,8 @@ private:
     std::unique_ptr<Expression> logic_or();
     std::unique_ptr<Expression> logic_and();
 
+    std::unique_ptr<Expression> fstring(const std::string& raw);
+
     bool match(token_type type);
 
     Token consume(token_type type);

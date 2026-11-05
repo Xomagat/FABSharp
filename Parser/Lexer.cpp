@@ -92,6 +92,11 @@ std::vector<Token> Lexer::tokenize()
             next();
             tokenize_hex_number();
         }
+        else if (current == '$' && peek(1) == '"')
+        {
+            next();                 // skip $
+            tokenize_fstring();
+        }
         else if (OPERATION_CHARS.find(current) != std::string::npos)
         {
             tokenize_operation();
@@ -165,6 +170,66 @@ void Lexer::tokenize_word()
     {
         add_token(token_type::WORDS, buffer);
     }
+}
+
+void Lexer::tokenize_fstring()
+{
+    next(); // skip "
+    std::string buffer;
+    char current = peek(0);
+    int depth = 0;
+    bool in_str = false;
+
+    while (current != '\0')
+    {
+        if (depth == 0)
+        {
+            if (current == '"') break;
+
+            if (current == '{' && peek(1) == '{') { buffer += "{{"; next(); current = next(); continue; }
+            if (current == '}' && peek(1) == '}') { buffer += "}}"; next(); current = next(); continue; }
+
+            if (current == '{')
+            {
+                depth = 1;
+                buffer.push_back(current);
+                current = next();
+                continue;
+            }
+
+            if (current == '\\')
+            {
+                current = next();
+                switch (current)
+                {
+                case '"': current = next(); buffer.push_back('"');  continue;
+                case 'n': current = next(); buffer.push_back('\n'); continue;
+                case 'r': current = next(); buffer.push_back('\r'); continue;
+                case 't': current = next(); buffer.push_back('\t'); continue;
+                }
+                buffer.push_back('\\');
+                continue;
+            }
+
+            buffer.push_back(current);
+            current = next();
+        }
+        else
+        {
+            if (current == '"') in_str = !in_str;
+            else if (!in_str && current == '{') depth++;
+            else if (!in_str && current == '}') depth--;
+
+            buffer.push_back(current);
+            current = next();
+        }
+    }
+
+    if (current == '\0' || depth != 0)
+        throw std::runtime_error("Unterminated f-string!");
+
+    next(); // skip "
+    add_token(token_type::FSTRING, buffer);
 }
 
 void Lexer::tokenize_string()

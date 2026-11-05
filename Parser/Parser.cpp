@@ -125,7 +125,11 @@ std::unique_ptr<Statement> Parser::statement()
         }
         case token_type::WRITELN: {
             consume(token_type::WRITELN);
-            std::unique_ptr<Expression> expr = expression();
+            std::unique_ptr<Expression> expr;
+            if (get(0).get_type() != token_type::SEMI)
+                expr = expression();
+            else
+                expr = std::make_unique<ValueExpression>("");
             if (!match(token_type::SEMI))
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<WritelnStatement>(std::move(expr));
@@ -943,6 +947,8 @@ std::unique_ptr<Expression> Parser::primary()
         return function();
     if (match(token_type::CHARS))
         return std::make_unique<ValueExpression>(current.get_text()[0]);
+    if (match(token_type::FSTRING))
+        return fstring(current.get_text());
     if (match(token_type::TEXT))
         return std::make_unique<ValueExpression>(current.get_text());
     if (match(token_type::WORDS))
@@ -955,6 +961,66 @@ std::unique_ptr<Expression> Parser::primary()
     }
 
     throw std::runtime_error("Unknown expression! " + current.get_text());
+}
+
+std::unique_ptr<Expression> Parser::fstring(const std::string& raw)
+{
+    std::vector<std::unique_ptr<Expression>> parts;
+    std::string lit;
+
+    auto flush = [&]
+    {
+        if (lit.empty()) return;
+        parts.push_back(std::make_unique<ValueExpression>(lit));
+        lit.clear();
+    };
+
+    for (size_t i = 0; i < raw.size(); ++i)
+    {
+        char c = raw[i];
+
+        if (c == '{' && i + 1 < raw.size() && raw[i + 1] == '{') { lit.push_back('{'); ++i; }
+        else if (c == '}' && i + 1 < raw.size() && raw[i + 1] == '}') { lit.push_back('}'); ++i; }
+        else if (c == '}')
+            throw std::runtime_error("Single '}' in f-string: write '}}'!");
+        else if (c == '{')
+        {
+            int depth = 1;
+            bool in_str = false;
+            size_t j = i + 1;
+            for (; j < raw.size() && depth > 0; ++j)
+            {
+                if (raw[j] == '"') in_str = !in_str;
+                else if (!in_str && raw[j] == '{') depth++;
+                else if (!in_str && raw[j] == '}') depth--;
+            }
+            std::string code = raw.substr(i + 1, j - i - 2);
+            if (code.find_first_not_of(" \t") == std::string::npos)
+                throw std::runtime_error("Empty expression in f-string!");
+
+            flush();
+
+            auto toks = Lexer(code).tokenize();
+            Parser sub(toks, base_dir, exe_dir);
+            sub.file_id = file_id;
+            auto e = sub.expression();
+            if (sub.pos < sub.size)
+                throw std::runtime_error("Unexpected token in f-string expression: " + code);
+
+            parts.push_back(std::make_unique<ToStrExpression>(std::move(e)));
+            i = j - 1;      // '}'
+        }
+        else lit.push_back(c);
+    }
+    flush();
+
+    if (parts.empty())
+        return std::make_unique<ValueExpression>(std::string());
+
+    std::unique_ptr<Expression> result = std::move(parts[0]);
+    for (size_t k = 1; k < parts.size(); ++k)
+        result = std::make_unique<BinExpression>('+', std::move(result), std::move(parts[k]));
+    return result;
 }
 
 Token Parser::get(int relative_position)

@@ -16,6 +16,7 @@ enum token_type
     WORDS,          // For const and vars
     TEXT,           // Base string
     CHARS,          // Base chars
+    FSTRING,        // Format string
 
     // keywords
     USE,            // Import files or libs
@@ -92,6 +93,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {WORDS,      "var_id"},
     {TEXT,       "text"},
     {CHARS,      "symbol"},
+    {FSTRING,    "f-string"},
 
     {WRITE,      "write"},
     {WRITELN,    "writeln"},
