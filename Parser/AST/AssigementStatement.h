@@ -493,3 +493,22 @@ public:
             context.const_vars.insert(name);
     }
 };
+
+class DeclListStatement : public Statement
+{
+    std::vector<std::unique_ptr<AssigementStatement>> decls;
+
+public:
+    explicit DeclListStatement(std::vector<std::unique_ptr<AssigementStatement>> d)
+        : decls(std::move(d)) {}
+
+    void make_global(bool st)
+    {
+        for (auto& d : decls) d->make_global(st);
+    }
+
+    void codegen(CodegenContext& ctx) const override
+    {
+        for (auto& d : decls) d->codegen(ctx);
+    }
+};

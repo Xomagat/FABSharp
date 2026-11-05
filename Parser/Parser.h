@@ -65,6 +65,7 @@ private:
 
     std::unique_ptr<Statement> statement();
     std::string parse_type();
+    std::unique_ptr<Statement> declarators(const std::string &type, bool is_const, bool class_decl, bool no_semi);
     std::unique_ptr<Statement> assigment_statement(bool no_semi = false);
     std::unique_ptr<Statement> if_else();
     std::unique_ptr<Statement> while_statement();

@@ -1,9 +1,6 @@
 define main() -> int
 {
-    int i = 14;
-    writeln $"I been created {i} week ago!";    // f-string message
-    writeln;                                    // just "\n"
-    writeln "Hello, World!";                    // first message
-    writeln;                                    // just "\n"
-    writeln "Hello, World!";                    // second message
+    int i = 14, o = i * #ffff;
+    writeln i;
+    writeln $"{i} * {#ffff} = {o}";
 }

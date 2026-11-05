@@ -50,8 +50,12 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
         auto stmt = statement();
 
         auto* decl = dynamic_cast<AssigementStatement*>(stmt.get());
+        auto* list = dynamic_cast<DeclListStatement*>(stmt.get());
+
         if (decl && decl->is_declaration())
             decl->make_global(is_static);
+        else if (list)
+            list->make_global(is_static);
         else if (is_static)
             throw std::runtime_error("'static' at top level must be followed by a variable declaration!");
 
@@ -300,6 +304,38 @@ std::string Parser::parse_type()
     return t;
 }
 
+std::unique_ptr<Statement> Parser::declarators(const std::string& type, bool is_const,
+                                               bool class_decl, bool no_semi)
+{
+    std::vector<std::unique_ptr<AssigementStatement>> decls;
+
+    do
+    {
+        std::string name = consume(token_type::WORDS).get_text();
+        std::unique_ptr<Expression> expr;
+
+        if (is_const)
+        {
+            consume(token_type::EQ);
+            expr = expression();
+        }
+        else if (match(token_type::EQ))
+            expr = expression();
+        else if (!class_decl)
+            expr = std::make_unique<ValueExpression>(NullTag{});
+
+        decls.push_back(std::make_unique<AssigementStatement>(type, name, std::move(expr), is_const));
+    }
+    while (match(token_type::COMMA));
+
+    if (!match(token_type::SEMI) && !no_semi)
+        throw std::runtime_error("You miss the ;");
+
+    if (decls.size() == 1)
+        return std::move(decls[0]);
+    return std::make_unique<DeclListStatement>(std::move(decls));
+}
+
 std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
 {
     // type name = 33; or type name;
@@ -315,21 +351,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
 
     if (current.get_type() == token_type::TYPES || class_decl || lib_decl)
     {
-        std::string type = parse_type();
-        std::string name = consume(token_type::WORDS).get_text();
-        std::unique_ptr<Expression> expr;
-
-        if (match(token_type::EQ))
-            expr = expression();
-        else if (class_decl)
-            expr = nullptr;
-        else
-            expr = std::make_unique<ValueExpression>(NullTag{});
-
-        if (!match(token_type::SEMI) && !no_semi)
-            throw std::runtime_error("You miss the ;");
-
-        return std::make_unique<AssigementStatement>(type, name, std::move(expr));
+        return declarators(parse_type(), false, class_decl, no_semi);
     }
     else if (current.get_type() == token_type::WORDS)
     {
@@ -367,15 +389,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
     else if (current.get_type() == token_type::CONST && get(1).get_type() == token_type::TYPES)
     {
         consume(token_type::CONST);
-        std::string type = parse_type();
-        std::string name = consume(token_type::WORDS).get_text();
-        consume(token_type::EQ);
-        std::unique_ptr<Expression> expr = expression();
-
-        if (!match(token_type::SEMI) && !no_semi)
-            throw std::runtime_error("You miss the ;");
-
-        return std::make_unique<AssigementStatement>(type, name, std::move(expr), true);
+        return declarators(parse_type(), true, false, no_semi);
     }
 
     throw std::runtime_error("Variable does have name or type!");
