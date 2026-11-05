@@ -1,10 +1,16 @@
-define a() -> string
-    return "Hello".to_upper();
-
 define main() -> int
 {
-    int i = 0;
+    int k = 1;
 
-    for (i = 0; i < 10; i += 1)
-        writeln a();
+    writeln k++;
+    writeln k;
+    writeln ++k;
+
+    for (int i = 0; i < 10; i++)
+        writeln i.to_str() + ". Hello, World!";
+
+    writeln '-'.repeat(10);
+
+    for (int j = 10; j > 0; j--)
+        writeln j.to_str() + ". Hello, World!";
 }

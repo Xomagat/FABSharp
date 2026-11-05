@@ -67,6 +67,7 @@ add_executable(fab main.cpp
         Parser/AST/ClassStatement.h
         Parser/AST/BuiltinExpression.h
         CodeGen/Runtimeatters.h
+        Parser/AST/IncDecExpression.h
 )
 
 if (NOT WIN32)

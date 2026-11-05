@@ -36,6 +36,7 @@
 #include "AST/AssigementStatement.h"
 #include "AST/IOStatement.h"
 #include "AST/UseStatement.h"
+#include "AST/IncDecExpression.h"
 
 #include "../libs/STDLibInfo.h"
 
