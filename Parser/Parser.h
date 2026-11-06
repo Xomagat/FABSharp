@@ -61,6 +61,19 @@ private:
 
     std::vector<std::unique_ptr<Statement>> pending_imports;
 
+    std::vector<std::string> ns_stack;
+    std::vector<std::string> usings;
+
+    std::string cur_ns() const;
+    std::string qualify(const std::string& n) const;
+    std::string resolve(const std::unordered_set<std::string>& known, const std::string& n) const;
+    std::string resolve_class(const std::string& n) const { return resolve(class_names, n); }
+    int  chain_len(int at);
+    std::string chain_text(int at, int len);
+    bool at_decl();
+    void parse_top(std::vector<std::unique_ptr<Statement>>& out);
+    void parse_namespace(std::vector<std::unique_ptr<Statement>>& out);
+
     Token get(int relative_position);
 
     std::unique_ptr<Statement> statement();
@@ -75,7 +88,7 @@ private:
     std::unique_ptr<Statement> statement_or_block();
     std::unique_ptr<Statement> block();
 
-    std::unique_ptr<FunctionDefineStatement> define_function();
+    std::unique_ptr<FunctionDefineStatement> define_function(bool qualified = true);
 
     std::unique_ptr<Expression> function();
     std::unique_ptr<Expression> expression();

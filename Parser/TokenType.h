@@ -40,6 +40,7 @@ enum token_type
     PRIVATE,        // Private methods
     PUBLIC,         // Public methods
     DELETE_KW,      // Delete command
+    NAMESPACE,      // Namespace
 
     NULLVAL,        // Value null
     TRUEVAL,        // Value true
@@ -75,6 +76,7 @@ enum token_type
     TILDE,          // ~
     INC,            // ++
     DEC,            // --
+    SCOPE,          // ::
 
     LPARENT,        // (
     RPARENT,        // )
@@ -114,6 +116,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {PRIVATE,    "private"},
     {PUBLIC,     "public"},
     {DELETE_KW,  "delete"},
+    {NAMESPACE,  "namespace"},
 
     {NULLVAL,    "null"},
     {TRUEVAL,    "true"},
@@ -149,6 +152,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {TILDE,      "~"},
     {INC,        "++"},
     {DEC,        "--"},
+    {SCOPE,      "::"},
 
     {LPARENT,    "("},
     {RPARENT,    ")"},

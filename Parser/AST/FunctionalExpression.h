@@ -146,45 +146,54 @@ public:
         return r;
     }
 
-    static llvm::Value* call(CodegenContext& context, const std::string& name,
-                             std::vector<llvm::Value*> args_values)
+    static llvm::Value* call(CodegenContext& context, const std::string& full_name,
+                         std::vector<llvm::Value*> args_values)
     {
+        std::string name = full_name;
+        bool std_only = name.starts_with("std::");
+        if (std_only) name = name.substr(5);
+
         std::vector<std::string> arg_type_names;
         for (auto* v : args_values)
             arg_type_names.push_back(type_of(context, v));
 
-        auto key = mangle_name(name, arg_type_names);
+        std::vector<std::string> cands = std_only ? std::vector<std::string>{name}
+                                                  : ns_candidates(context, name);
 
-        auto it = context.functions.find(key);
-        if (it != context.functions.end())
+        for (auto& q : cands)
         {
-            auto it = context.functions.find(key);
-            if (it != context.functions.end())
+            auto key = mangle_name(q, arg_type_names);
+
+            if (!std_only)
             {
-                auto vals = args_values;
-
-                auto d = context.func_defaults.find(key);
-                if (d != context.func_defaults.end())
+                auto it = context.functions.find(key);
+                if (it != context.functions.end())
                 {
-                    auto& fd = d->second;
-                    for (size_t i = vals.size(); i < fd.arg_types.size(); ++i)
-                        vals.push_back(fd.defaults[i]->codegen_expected(context, fd.arg_types[i]));
+                    auto vals = args_values;
+
+                    auto d = context.func_defaults.find(key);
+                    if (d != context.func_defaults.end())
+                    {
+                        auto& fd = d->second;
+                        for (size_t i = vals.size(); i < fd.arg_types.size(); ++i)
+                            vals.push_back(fd.defaults[i]->codegen_expected(context, fd.arg_types[i]));
+                    }
+
+                    auto* fty = it->second->getFunctionType();
+                    for (size_t i = 0; i < vals.size(); ++i)
+                        vals[i] = coerceToType(vals[i], fty->getParamType(i), context.builder);
+
+                    auto* r = context.builder.CreateCall(it->second, vals);
+                    auto& rt = context.func_ret[key];
+                    if (rt != "void") context.value_types[r] = rt;
+                    return r;
                 }
-
-                auto* fty = it->second->getFunctionType();
-                for (size_t i = 0; i < vals.size(); ++i)
-                    vals[i] = coerceToType(vals[i], fty->getParamType(i), context.builder);
-
-                auto* r = context.builder.CreateCall(it->second, vals);
-                auto& rt = context.func_ret[key];
-                if (rt != "void") context.value_types[r] = rt;
-                return r;
             }
-        }
 
-        auto libIt = stdlib_symbols.find(key);
-        if (libIt != stdlib_symbols.end())
-            return emit_stdlib_call(context, libIt->second, args_values);
+            auto libIt = stdlib_symbols.find(key);
+            if (libIt != stdlib_symbols.end())
+                return emit_stdlib_call(context, libIt->second, args_values);
+        }
 
         std::vector<std::string> widened = arg_type_names;
         bool changed = false;
@@ -199,7 +208,7 @@ public:
                 return emit_stdlib_call(context, wIt->second, args_values);
         }
 
-        std::string sig = name + "(";
+        std::string sig = full_name + "(";
         for (size_t i = 0; i < arg_type_names.size(); ++i)
             sig += (i ? ", " : "") + arg_type_names[i];
         sig += ")";

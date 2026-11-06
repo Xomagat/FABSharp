@@ -26,6 +26,7 @@ struct StdlibVarInfo
 };
 
 inline std::unordered_set<std::string> class_names;
+inline std::unordered_set<std::string> namespace_names;
 
 inline std::unordered_map<std::string, StdlibVarInfo> stdlib_vars;
 

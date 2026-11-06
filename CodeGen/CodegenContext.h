@@ -12,6 +12,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 
+class Expression;
+
 struct GlobalInfo { llvm::GlobalVariable* gv; std::string type; bool is_const; };
 
 struct LoopTargets
@@ -20,7 +22,8 @@ struct LoopTargets
     llvm::BasicBlock* breakTarget;
 };
 
-struct FieldInfo  { std::string name, type; bool is_public; std::string owner; };
+struct FieldInfo  { std::string name, type; bool is_public; std::string owner;
+    std::shared_ptr<Expression> init; };
 struct MethodInfo { llvm::Function* fn; std::string ret; std::vector<std::string> args;
     bool is_public; int slot = -1; bool is_static; };
 
@@ -72,6 +75,8 @@ struct CodegenContext
     std::unordered_map<std::string, std::string> func_ret;
     std::string current_class;
     std::string current_ret;
+    std::string current_ns;
+    std::unordered_map<std::string, std::vector<std::string>> usings;
 
     std::unordered_map<std::string, GlobalInfo> globals;
     std::string       current_file;

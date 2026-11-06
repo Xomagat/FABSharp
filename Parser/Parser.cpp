@@ -43,26 +43,46 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
         loaded_libs.insert("@types");
     }
 
-    while (!match(token_type::eof))
+    int depth = 0;
+    std::vector<std::string> names;
+    std::vector<std::pair<int, size_t>> opened;
+
+    for (int i = 0; i + 1 < size; ++i)
     {
-        bool is_static = match(token_type::STATIC);
+        auto t = tokens[i].get_type();
 
-        auto stmt = statement();
-
-        auto* decl = dynamic_cast<AssigementStatement*>(stmt.get());
-        auto* list = dynamic_cast<DeclListStatement*>(stmt.get());
-
-        if (decl && decl->is_declaration())
-            decl->make_global(is_static);
-        else if (list)
-            list->make_global(is_static);
-        else if (is_static)
-            throw std::runtime_error("'static' at top level must be followed by a variable declaration!");
-
-        for (auto& imported : pending_imports) result.push_back(std::move(imported));
-        pending_imports.clear();
-        result.push_back(std::move(stmt));
+        if (t == token_type::NAMESPACE && tokens[i + 1].get_type() == token_type::WORDS
+            && (i == 0 || tokens[i - 1].get_type() != token_type::USE))
+        {
+            size_t cnt = 0; int j = i + 1;
+            while (j < size && tokens[j].get_type() == token_type::WORDS)
+            {
+                names.push_back(tokens[j].get_text()); ++cnt;
+                if (j + 1 < size && tokens[j + 1].get_type() == token_type::SCOPE) j += 2;
+                else { ++j; break; }
+            }
+            opened.push_back({depth + 1, cnt});
+            i = j - 1;
+        }
+        else if (t == token_type::LBRACKET) ++depth;
+        else if (t == token_type::RBRACKET)
+        {
+            if (!opened.empty() && opened.back().first == depth)
+            {
+                names.resize(names.size() - opened.back().second);
+                opened.pop_back();
+            }
+            --depth;
+        }
+        else if (t == token_type::CLASS && tokens[i + 1].get_type() == token_type::WORDS)
+        {
+            std::string q;
+            for (auto& n : names) q += n + "::";
+            class_names.insert(q + tokens[i + 1].get_text());
+        }
     }
+
+    while (!match(token_type::eof)) parse_top(result);
 
     return result;
 }
@@ -73,6 +93,17 @@ std::unique_ptr<Statement> Parser::statement()
     {
         case token_type::USE: {
             consume(token_type::USE);
+
+            if (match(token_type::NAMESPACE))
+            {
+                std::string n = chain_text(0, chain_len(0)); pos += chain_len(0);
+                std::string full = resolve(namespace_names, n);
+                if (full.empty()) throw std::runtime_error("Unknown namespace '" + n + "'!");
+                usings.push_back(full);
+                if (!match(token_type::SEMI)) throw std::runtime_error("You miss the ;");
+                return std::make_unique<UsingNamespaceStatement>(full);
+            }
+
             if (get(0).get_type() == token_type::WORDS)
             {
                 std::string name = consume(token_type::WORDS).get_text();
@@ -206,13 +237,15 @@ std::unique_ptr<Statement> Parser::statement()
         }
 
         case token_type::WORDS: {
-            if (get(1).get_type() == token_type::INC || get(1).get_type() == token_type::DEC)
+            int len = chain_len(0);
+            if (get(len).get_type() == token_type::INC || get(len).get_type() == token_type::DEC)
             {
                 auto e = expression();
                 if (!match(token_type::SEMI))
                     throw std::runtime_error("You miss the ;");
                 return std::make_unique<FunctionStatement>(std::move(e));
             }
+            if (at_decl()) return assigment_statement();
 
             if ((class_names.contains(get(0).get_text()) || is_lib_type(get(0).get_text()))
                     && get(1).get_type() == token_type::WORDS)
@@ -245,7 +278,7 @@ std::unique_ptr<Statement> Parser::statement()
                 return s;
             }
 
-            auto t1 = get(1).get_type();
+            auto t1 = get(len).get_type();
             if (t1 == token_type::LPARENT || t1 == token_type::DOT || t1 == token_type::LSQUARE)
             {
                 auto e = expression();
@@ -275,9 +308,14 @@ std::unique_ptr<Statement> Parser::statement()
 
 std::string Parser::parse_type()
 {
-    if (get(0).get_type() == token_type::WORDS &&
-    (class_names.contains(get(0).get_text()) || is_lib_type(get(0).get_text())))
-        return consume(token_type::WORDS).get_text();
+    if (get(0).get_type() == token_type::WORDS)
+    {
+        int len = chain_len(0);
+        std::string text = chain_text(0, len);
+        std::string cls = resolve_class(text);
+        if (!cls.empty())                    { pos += len; return cls; }
+        if (len == 1 && is_lib_type(text))   { pos++;      return text; }
+    }
 
     std::string t = consume(token_type::TYPES).get_text();
     if (t == "long" && get(0).get_type() == token_type::TYPES && get(0).get_text() == "double")
@@ -341,26 +379,35 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
     // type name = 33; or type name;
     Token current = get(0);
 
-    bool class_decl = current.get_type() == token_type::WORDS
-               && class_names.contains(current.get_text())
-               && get(1).get_type() == token_type::WORDS;
+    bool decl = at_decl();
 
-    bool lib_decl = current.get_type() == token_type::WORDS
-             && is_lib_type(current.get_text())
-             && get(1).get_type() == token_type::WORDS;
-
-    if (current.get_type() == token_type::TYPES || class_decl || lib_decl)
+    if (current.get_type() == token_type::TYPES || decl)
     {
-        return declarators(parse_type(), false, class_decl, no_semi);
+        std::string type = parse_type();
+        std::string name = consume(token_type::WORDS).get_text();
+        std::unique_ptr<Expression> expr;
+
+        if (match(token_type::EQ))
+            expr = expression();
+        else if (decl && !is_lib_type(type))
+            expr = nullptr;
+        else
+            expr = std::make_unique<ValueExpression>(NullTag{});
+
+        if (!match(token_type::SEMI) && !no_semi)
+            throw std::runtime_error("You miss the ;");
+
+        return std::make_unique<AssigementStatement>(type, name, std::move(expr));
     }
     else if (current.get_type() == token_type::WORDS)
     {
-        std::string name = current.get_text();
+        int len = chain_len(0);
+        std::string name = chain_text(0, len);
+        token_type nxt = get(len).get_type();
 
-        if (get(1).get_type() == token_type::EQ)
+        if (nxt == token_type::EQ)
         {
-            consume(token_type::WORDS);
-            consume(token_type::EQ);
+            pos += len + 1;
             std::unique_ptr<Expression> expr = expression();
             if (!match(token_type::SEMI) && !no_semi)
                 throw std::runtime_error("You miss the ;");
@@ -373,11 +420,10 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
             {token_type::MODEQ, '%'},
         };
 
-        auto it = compoundOps.find(get(1).get_type());
+        auto it = compoundOps.find(nxt);
         if (it != compoundOps.end())
         {
-            consume(token_type::WORDS);
-            pos++;
+            pos += len + 1;
             std::unique_ptr<Expression> right = expression();
             auto binExpr = std::make_unique<BinExpression>(it->second,
                 std::make_unique<VariableExpression>(name), std::move(right));
@@ -389,7 +435,15 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
     else if (current.get_type() == token_type::CONST && get(1).get_type() == token_type::TYPES)
     {
         consume(token_type::CONST);
-        return declarators(parse_type(), true, false, no_semi);
+        std::string type = parse_type();
+        std::string name = consume(token_type::WORDS).get_text();
+        consume(token_type::EQ);
+        std::unique_ptr<Expression> expr = expression();
+
+        if (!match(token_type::SEMI) && !no_semi)
+            throw std::runtime_error("You miss the ;");
+
+        return std::make_unique<AssigementStatement>(type, name, std::move(expr), true);
     }
 
     throw std::runtime_error("Variable does have name or type!");
@@ -445,8 +499,9 @@ std::unique_ptr<Statement> Parser::for_statement()
     std::unique_ptr<Statement> increment;
     if (get(0).get_type() != token_type::RPARENT)
     {
-        auto t0 = get(0).get_type();
-        auto t1 = get(1).get_type();
+        auto t0  = get(0).get_type();
+        int  len = chain_len(0);
+        auto t1  = get(len ? len : 1).get_type();
 
         if (t0 == token_type::INC || t0 == token_type::DEC ||
             (t0 == token_type::WORDS && (t1 == token_type::INC || t1 == token_type::DEC)))
@@ -482,15 +537,23 @@ std::unique_ptr<Statement> Parser::for_statement()
 std::unique_ptr<Statement> Parser::class_definition()
 {
     std::string name = consume(token_type::WORDS).get_text();
+    std::string full = qualify(name);
     std::string parent;
+
     if (match(token_type::COLON))
     {
-        parent = consume(token_type::WORDS).get_text();
-        if (!class_names.contains(parent))
-            throw std::runtime_error("Unknown parent class '" + parent + "'!");
+        int len = chain_len(0);
+        if (!len) throw std::runtime_error("Parent class name expected!");
+
+        std::string text = chain_text(0, len);
+        parent = resolve_class(text);
+        if (parent.empty())
+            throw std::runtime_error("Unknown parent class '" + text + "'!");
+        pos += len;
     }
+
     consume(token_type::LBRACKET);
-    auto cls = std::make_unique<ClassDefineStatement>(name, parent);
+    auto cls = std::make_unique<ClassDefineStatement>(full, parent);
     bool is_public = false;
 
     while (!match(token_type::RBRACKET))
@@ -501,7 +564,7 @@ std::unique_ptr<Statement> Parser::class_definition()
         bool st = match(token_type::STATIC);
         if (match(token_type::DEFINE))
         {
-            auto fn = define_function();
+            auto fn = define_function(false);
             MethodDecl d{fn->get_type(), fn->get_name(), fn->get_arg_types(),
                          fn->get_arg_names(), fn->get_body(), is_public};
             d.is_static = st;
@@ -536,9 +599,14 @@ std::unique_ptr<Statement> Parser::class_definition()
             std::vector<std::shared_ptr<Expression>> base_args;
             if (match(token_type::COLON))
             {
-                std::string base = consume(token_type::WORDS).get_text();
-                if (base != parent)
-                    throw std::runtime_error("'" + base + "' is not the parent of '" + name + "'!");
+                int blen = chain_len(0);
+                if (!blen) throw std::runtime_error("Base class name expected!");
+
+                std::string btext = chain_text(0, blen);
+                if (parent.empty() || resolve_class(btext) != parent)
+                    throw std::runtime_error("'" + btext + "' is not the parent of '" + name + "'!");
+                pos += blen;
+
                 consume(token_type::LPARENT);
                 while (!match(token_type::RPARENT))
                 {
@@ -556,8 +624,11 @@ std::unique_ptr<Statement> Parser::class_definition()
 
         std::string type = parse_type();
         std::string fname = consume(token_type::WORDS).get_text();
+        std::shared_ptr<Expression> init;
+        if (match(token_type::EQ))
+            init = expression();
         consume(token_type::SEMI);
-        cls->add_field({fname, type, is_public});
+        cls->add_field({fname, type, is_public, "", init});
     }
     return cls;
 }
@@ -582,10 +653,11 @@ std::unique_ptr<Statement> Parser::block()
     return std::make_unique<BlockStatement>(std::move(statements));
 }
 
-std::unique_ptr<FunctionDefineStatement> Parser::define_function()
+std::unique_ptr<FunctionDefineStatement> Parser::define_function(bool qualified)
 {
     std::string type = "void";
     std::string name = consume(token_type::WORDS).get_text();
+    if (qualified) name = qualify(name);
     consume(token_type::LPARENT);
 
     std::vector<std::string> arg_type;
@@ -848,51 +920,69 @@ std::unique_ptr<Expression> Parser::primary()
 {
     Token current = get(0);
 
-    if (current.get_type() == token_type::WORDS
-&& (class_names.contains(current.get_text()) || static_classes.contains(current.get_text()))
-&& get(1).get_type() == token_type::DOT
-&& is_member_name(get(2).get_type())
-&& get(3).get_type() == token_type::LPARENT)
+    if (current.get_type() == token_type::WORDS)
     {
-        std::string cls = consume(token_type::WORDS).get_text();
-        consume(token_type::DOT);
-        std::string name = get(0).get_text(); pos++;
-        consume(token_type::LPARENT);
-        auto c = std::make_unique<StaticCallExpression>(cls, name);
-        while (!match(token_type::RPARENT))
+        int len = chain_len(0);
+        std::string text = chain_text(0, len);
+        std::string cls = resolve_class(text);
+
+        if ((!cls.empty() || static_classes.contains(text))
+            && get(len).get_type() == token_type::DOT
+            && is_member_name(get(len + 1).get_type())
+            && get(len + 2).get_type() == token_type::LPARENT)
         {
-            c->add_arg(expression());
-            match(token_type::COMMA);
+            pos += len + 1;
+            std::string name = get(0).get_text(); pos++;
+            consume(token_type::LPARENT);
+            auto c = std::make_unique<StaticCallExpression>(cls.empty() ? text : cls, name);
+            while (!match(token_type::RPARENT))
+            {
+                c->add_arg(expression());
+                match(token_type::COMMA);
+            }
+            return c;
         }
-        return c;
+
+        if (get(len).get_type() == token_type::LPARENT)
+        {
+            if (len == 1 && text == "size_of")
+            {
+                consume(token_type::WORDS); consume(token_type::LPARENT);
+
+                bool is_type = get(0).get_type() == token_type::TYPES
+                            || (get(0).get_type() == token_type::WORDS
+                                && !resolve_class(chain_text(0, chain_len(0))).empty());
+
+                std::unique_ptr<Expression> r = is_type
+                    ? std::make_unique<SizeOfExpression>(parse_type())
+                    : std::make_unique<SizeOfExpression>(expression());
+
+                consume(token_type::RPARENT);
+                return r;
+            }
+            if (len == 1 && text == "type")
+            {
+                consume(token_type::WORDS); consume(token_type::LPARENT);
+                auto e = expression();
+                consume(token_type::RPARENT);
+                return std::make_unique<TypeOfExpression>(std::move(e));
+            }
+
+            pos += len;
+            consume(token_type::LPARENT);
+            auto f = std::make_unique<FunctionalExpression>(text);
+            while (!match(token_type::RPARENT))
+            {
+                f->add_arg(expression());
+                match(token_type::COMMA);
+            }
+            return f;
+        }
+
+        pos += len;
+        return std::make_unique<VariableExpression>(text);
     }
-    if (current.get_type() == token_type::WORDS && get(1).get_type() == token_type::LPARENT)
-    {
-        std::string fname = current.get_text();
 
-        if (fname == "size_of")
-        {
-            consume(token_type::WORDS); consume(token_type::LPARENT);
-
-            bool is_type = get(0).get_type() == token_type::TYPES
-                        || (get(0).get_type() == token_type::WORDS && class_names.contains(get(0).get_text()));
-
-            std::unique_ptr<Expression> r = is_type
-                ? std::make_unique<SizeOfExpression>(parse_type())
-                : std::make_unique<SizeOfExpression>(expression());
-
-            consume(token_type::RPARENT);
-            return r;
-        }
-        if (fname == "type")
-        {
-            consume(token_type::WORDS); consume(token_type::LPARENT);
-            auto e = expression();
-            consume(token_type::RPARENT);
-            return std::make_unique<TypeOfExpression>(std::move(e));
-        }
-        return function();
-    }
     if (match(token_type::NUMBER))
     {
         std::string t = current.get_text();
@@ -939,9 +1029,14 @@ std::unique_ptr<Expression> Parser::primary()
     }
     if (match(token_type::NEW))
     {
-        std::string cls = consume(token_type::WORDS).get_text();
+        int len = chain_len(0);
+        if (!len) throw std::runtime_error("Class name expected after 'new'!");
+        std::string text = chain_text(0, len);
+        std::string cls = resolve_class(text);
+        pos += len;
+
         consume(token_type::LPARENT);
-        auto n = std::make_unique<NewExpression>(cls);
+        auto n = std::make_unique<NewExpression>(cls.empty() ? text : cls);
         while (!match(token_type::RPARENT))
         {
             n->add_arg(expression());
@@ -957,16 +1052,10 @@ std::unique_ptr<Expression> Parser::primary()
         return std::make_unique<ValueExpression>(BoolTag{false});
     if (match(token_type::HEX_NUMBER))
         return std::make_unique<ValueExpression>(std::stoll(current.get_text(), nullptr, 16));
-    if (current.get_type() == token_type::WORDS && get(1).get_type() == token_type::LPARENT)
-        return function();
     if (match(token_type::CHARS))
         return std::make_unique<ValueExpression>(current.get_text()[0]);
-    if (match(token_type::FSTRING))
-        return fstring(current.get_text());
     if (match(token_type::TEXT))
         return std::make_unique<ValueExpression>(current.get_text());
-    if (match(token_type::WORDS))
-        return std::make_unique<VariableExpression>(current.get_text());
     if (match(token_type::LPARENT))
     {
         std::unique_ptr<Expression> result = expression();
@@ -1288,4 +1377,98 @@ std::vector<std::unique_ptr<Statement>> Parser::load_fab_module(const std::files
     module_parser.file_id = canonical;
 
     return module_parser.parse();
+}
+
+std::string Parser::cur_ns() const
+{
+    std::string r;
+    for (auto& s : ns_stack) r += (r.empty() ? "" : "::") + s;
+    return r;
+}
+
+std::string Parser::qualify(const std::string& n) const
+{
+    auto ns = cur_ns();
+    return ns.empty() ? n : ns + "::" + n;
+}
+
+std::string Parser::resolve(const std::unordered_set<std::string>& known, const std::string& n) const
+{
+    for (size_t k = ns_stack.size(); k > 0; --k)
+    {
+        std::string q;
+        for (size_t i = 0; i < k; ++i) q += ns_stack[i] + "::";
+        q += n;
+        if (known.contains(q)) return q;
+    }
+    for (auto& u : usings)
+        if (known.contains(u + "::" + n)) return u + "::" + n;
+    return known.contains(n) ? n : "";
+}
+
+int Parser::chain_len(int at)
+{
+    if (get(at).get_type() != token_type::WORDS) return 0;
+    int n = 1;
+    while (get(at + n).get_type() == token_type::SCOPE && get(at + n + 1).get_type() == token_type::WORDS)
+        n += 2;
+    return n;
+}
+
+std::string Parser::chain_text(int at, int len)
+{
+    std::string r;
+    for (int i = 0; i < len; i += 2) r += (i ? "::" : "") + get(at + i).get_text();
+    return r;
+}
+
+bool Parser::at_decl()
+{
+    int len = chain_len(0);
+    if (!len) return false;
+    std::string t = chain_text(0, len);
+    return (!resolve_class(t).empty() || (len == 1 && is_lib_type(t)))
+        && get(len).get_type() == token_type::WORDS;
+}
+
+void Parser::parse_top(std::vector<std::unique_ptr<Statement>>& out)
+{
+    if (match(token_type::NAMESPACE)) { parse_namespace(out); return; }
+
+    bool is_static = match(token_type::STATIC);
+    auto stmt = statement();
+
+    auto* decl = dynamic_cast<AssigementStatement*>(stmt.get());
+    if (decl && decl->is_declaration()) decl->make_global(is_static);
+    else if (is_static)
+        throw std::runtime_error("'static' at top level must be followed by a variable declaration!");
+
+    if (!pending_imports.empty())
+    {
+        out.push_back(std::make_unique<NamespaceScopeStatement>(""));
+        for (auto& s : pending_imports) out.push_back(std::move(s));
+        pending_imports.clear();
+        out.push_back(std::make_unique<NamespaceScopeStatement>(cur_ns()));
+    }
+    out.push_back(std::move(stmt));
+}
+
+void Parser::parse_namespace(std::vector<std::unique_ptr<Statement>>& out)
+{
+    std::vector<std::string> parts{consume(token_type::WORDS).get_text()};
+    while (match(token_type::SCOPE)) parts.push_back(consume(token_type::WORDS).get_text());
+    consume(token_type::LBRACKET);
+
+    for (auto& p : parts)
+    {
+        if (p == "std") throw std::runtime_error("Namespace name 'std' is reserved!");
+        ns_stack.push_back(p);
+        namespace_names.insert(cur_ns());
+    }
+    out.push_back(std::make_unique<NamespaceScopeStatement>(cur_ns()));
+
+    while (!match(token_type::RBRACKET)) parse_top(out);
+
+    for (size_t i = 0; i < parts.size(); ++i) ns_stack.pop_back();
+    out.push_back(std::make_unique<NamespaceScopeStatement>(cur_ns()));
 }

@@ -173,31 +173,6 @@ inline llvm::Value* emit_this_field_ptr(CodegenContext& ctx, const std::string& 
     return emit_field_ptr(ctx, obj, cls, name, ftype, true);
 }
 
-inline llvm::Value* emit_object_alloc(CodegenContext& ctx, const std::string& cls)
-{
-    auto& b = ctx.builder;
-    auto& cl = get_class(ctx, cls);
-
-    auto* nullp = llvm::ConstantPointerNull::get(b.getPtrTy());
-    auto* size = b.CreatePtrToInt(b.CreateGEP(cl.st, nullp, {b.getInt32(1)}), b.getInt64Ty());
-
-    auto callocFn = ctx.module.getOrInsertFunction("calloc",
-        llvm::FunctionType::get(b.getPtrTy(), {b.getInt64Ty(), b.getInt64Ty()}, false));
-    llvm::Value* obj = b.CreateCall(callocFn, {b.getInt64(1), size});
-    ctx.value_types[obj] = cls;
-    b.CreateStore(cl.vtable, b.CreateStructGEP(cl.st, obj, 0));
-
-    for (size_t i = 0; i < cl.fields.size(); ++i)
-    {
-        auto& f = cl.fields[i];
-        llvm::Value* init = nullptr;
-        if (is_container(f.type))    init = emit_container_new(ctx, f.type);
-        else if (f.type == "string") init = b.CreateGlobalStringPtr("");
-        if (init) b.CreateStore(init, b.CreateStructGEP(cl.st, obj, (unsigned)i + 1));
-    }
-    return obj;
-}
-
 inline void emit_free_container(CodegenContext& ctx, llvm::Value* v, const std::string& t)
 {
     auto& b = ctx.builder;
@@ -243,6 +218,36 @@ inline std::string llvm_to_type(llvm::Type* t)
     if (t->isPointerTy())              return "string";
 
     throw std::runtime_error("Cannot demangle llvm type for overload resolution!");
+}
+
+inline llvm::Value* emit_object_alloc(CodegenContext& ctx, const std::string& cls)
+{
+    auto& b = ctx.builder;
+    auto& cl = get_class(ctx, cls);
+
+    auto* nullp = llvm::ConstantPointerNull::get(b.getPtrTy());
+    auto* size = b.CreatePtrToInt(b.CreateGEP(cl.st, nullp, {b.getInt32(1)}), b.getInt64Ty());
+
+    auto callocFn = ctx.module.getOrInsertFunction("calloc",
+        llvm::FunctionType::get(b.getPtrTy(), {b.getInt64Ty(), b.getInt64Ty()}, false));
+    llvm::Value* obj = b.CreateCall(callocFn, {b.getInt64(1), size});
+    ctx.value_types[obj] = cls;
+    b.CreateStore(cl.vtable, b.CreateStructGEP(cl.st, obj, 0));
+
+    for (size_t i = 0; i < cl.fields.size(); ++i)
+    {
+        auto& f = cl.fields[i];
+        llvm::Value* init = nullptr;
+
+        if (f.init && !f.init->is_null_literal())
+            init = coerceToType(f.init->codegen_expected(ctx, f.type),
+                                type_to_llvm(f.type, b), b);
+        else if (is_container(f.type)) init = emit_container_new(ctx, f.type);
+        else if (f.type == "string")   init = b.CreateGlobalStringPtr("");
+
+        if (init) b.CreateStore(init, b.CreateStructGEP(cl.st, obj, (unsigned)i + 1));
+    }
+    return obj;
 }
 
 inline llvm::Value* emit_stdlib_const(CodegenContext& ctx, const StdlibVarInfo& v)
@@ -312,12 +317,30 @@ inline void emit_free_lib(CodegenContext& ctx, llvm::Value* v, const std::string
     b.CreateCall(fn, {v});
 }
 
+inline std::vector<std::string> ns_candidates(CodegenContext& ctx, const std::string& name)
+{
+    std::vector<std::string> out;
+    std::string ns = ctx.current_ns;
+    while (!ns.empty())
+    {
+        out.push_back(ns + "::" + name);
+        auto p = ns.rfind("::");
+        ns = (p == std::string::npos) ? "" : ns.substr(0, p);
+    }
+    for (auto& u : ctx.usings[ctx.current_file]) out.push_back(u + "::" + name);
+    out.push_back(name);
+    return out;
+}
 inline GlobalInfo* find_global(CodegenContext& ctx, const std::string& name)
 {
-    auto it = ctx.globals.find(ctx.current_file + "::" + name);   // сначала static этого файла
-    if (it != ctx.globals.end()) return &it->second;
-    it = ctx.globals.find(name);
-    return it != ctx.globals.end() ? &it->second : nullptr;
+    for (auto& q : ns_candidates(ctx, name))
+    {
+        auto it = ctx.globals.find(ctx.current_file + "::" + q);
+        if (it != ctx.globals.end()) return &it->second;
+        it = ctx.globals.find(q);
+        if (it != ctx.globals.end()) return &it->second;
+    }
+    return nullptr;
 }
 
 class AssigementStatement : public Statement
@@ -351,6 +374,10 @@ private:
 
     void codegen_global(CodegenContext& ctx) const
     {
+        std::string qn  = ctx.current_ns.empty() ? name : ctx.current_ns + "::" + name;
+        std::string key = is_static ? ctx.current_file + "::" + qn : qn;
+        if (ctx.globals.contains(key)) throw std::runtime_error("Global '" + qn + "' is already defined!");
+
         auto& b = ctx.builder;
         if (type == "void") throw std::runtime_error("Cannot declare a variable of type 'void'!");
         if (find_global(ctx, name))
@@ -372,9 +399,8 @@ private:
             val = init_value(ctx, type, type_to_llvm(type, b));
 
         llvm::Type* lt = type_to_llvm(real, b);
-        auto* gv = new llvm::GlobalVariable(ctx.module, lt, false,
-            llvm::GlobalValue::InternalLinkage,
-            llvm::Constant::getNullValue(lt), name);
+        auto* gv = new llvm::GlobalVariable(ctx.module, lt, false, llvm::GlobalValue::InternalLinkage, llvm::Constant::getNullValue(lt), qn);
+
 
         if (auto* c = llvm::dyn_cast<llvm::Constant>(val))
         {
@@ -384,7 +410,7 @@ private:
         else
             b.CreateStore(val, gv);
 
-        ctx.globals[is_static ? ctx.current_file + "::" + name : name] = {gv, real, is_const};
+        ctx.globals[key] = {gv, real, is_const};
 
         if (!saved) { ctx.init_tail = b.GetInsertBlock(); b.ClearInsertionPoint(); }
     }
