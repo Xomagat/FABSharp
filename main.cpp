@@ -110,8 +110,26 @@ int parse_args(int argc, char** argv, CliOptions& o)
     return -1;
 }
 
+bool diag_color()
+{
+    static int on = -1;
+    if (on >= 0) return on;
+#ifdef _WIN32
+    HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
+    DWORD m = 0;
+    on = GetConsoleMode(h, &m) && SetConsoleMode(h, m | 0x0004);
+#else
+    on = isatty(2);
+#endif
+    return on;
+}
+
 int main(int argc, char** argv)
 {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     CliOptions o;
     int rc = parse_args(argc, argv, o);
     if (rc >= 0) return rc;
@@ -133,8 +151,10 @@ int main(int argc, char** argv)
         fs::path stem    = in_path;  stem.replace_extension("");
 
         if (o.verbose) std::cout << "[fab] lexing + parsing " << in_path << "\n";
-        auto tokens = Lexer(input).tokenize();
+        int fid = add_source(in_path.string(), input);
+        auto tokens = Lexer(input, fid).tokenize();
         auto statements = Parser(tokens, in_path.parent_path(), get_executable_dir()).parse();
+        if (!g_diags.empty()) { print_all_diags(); return 1; }
 
         if (o.check_only)
         {
@@ -160,6 +180,7 @@ int main(int argc, char** argv)
 
         if (o.verbose) std::cout << "[fab] generating code (-O" << o.co.opt_level << ")\n";
         compile(statements, objFile, o.co);
+        if (!g_diags.empty()) { print_all_diags(); return 1; }
 
         if (only_text)
         {
@@ -235,6 +256,12 @@ int main(int argc, char** argv)
             std::cout << "\n[fab] program exited with code " << r << std::endl;
             return 0;
         }
+    }
+    catch (const FabError& e)
+    {
+        g_diags.push_back(e);
+        print_all_diags();
+        return 1;
     }
     catch (std::exception& e)
     {

@@ -9,7 +9,7 @@
 // vars
 
 // funcs
-Lexer::Lexer(std::string code)
+Lexer::Lexer(std::string code, int file)
 {
     OPERATION_CHARS = "+-*/%(){}[]=;:.,<>!&|~";
     OPERATORS = {
@@ -59,6 +59,7 @@ Lexer::Lexer(std::string code)
     };
 
     this->code = code;
+    this->file = file;
 
     length = code.length();
     pos = 0;
@@ -71,6 +72,8 @@ std::vector<Token> Lexer::tokenize()
     while (pos < length)
     {
         char current = peek(0);
+        size_t before = tokens.size();
+        int s = pos, sl = line, sc = pos - line_start + 1;
 
         if (isdigit(current))
         {
@@ -106,6 +109,9 @@ std::vector<Token> Lexer::tokenize()
         {
             next(); // whitespaces
         }
+
+        for (size_t i = before; i < tokens.size(); ++i)
+            tokens[i].loc = {file, sl, sc, pos - s};
     }
 
     return tokens;
@@ -228,7 +234,7 @@ void Lexer::tokenize_fstring()
     }
 
     if (current == '\0' || depth != 0)
-        throw std::runtime_error("Unterminated f-string!");
+        error("Unterminated f-string!");
 
     next(); // skip "
     add_token(token_type::FSTRING, buffer);
@@ -304,6 +310,8 @@ void Lexer::tokenize_number()
     bool is_float = false;
     char current = peek(0);
 
+    int s = pos, sc = pos - line_start + 1;
+
     while (true)
     {
         if (current == '_')
@@ -316,7 +324,15 @@ void Lexer::tokenize_number()
         {
             if (!isdigit(peek(1))) break;
             if (is_float)
-                throw std::runtime_error("Incorrect notation of a real number!");
+            {
+                int ec = pos - line_start + 1;
+                while (isdigit(peek(0)) || peek(0) == '.' || peek(0) == '_') next();
+
+                g_diags.push_back(FabError("Incorrect notation of a real number!",
+                                           {file, line, sc, pos - s}));
+                add_token(token_type::NUMBER, "0");
+                return;
+            }
             is_float = true;
         }
         else if (!isdigit(current))
@@ -335,11 +351,11 @@ void Lexer::tokenize_number()
         while (isdigit(current)) { buffer.push_back(current); current = next(); }
     }
 
-    char s = current;
-    if ((s == 'f' || s == 'F' || s == 'd' || s == 'D' || s == 'L' || s == 'l' || s == 's' || s == 'S')
+    char sf = current;
+    if ((sf == 'f' || sf == 'F' || sf == 'd' || sf == 'D' || sf == 'L' || sf == 'l' || sf == 's' || sf == 'S')
         && !isalnum((unsigned char)peek(1)) && peek(1) != '_')
     {
-        buffer.push_back(s == 'l' ? 'L' : (char)tolower(s) == 'l' ? 'L' : (char)tolower(s));
+        buffer.push_back(sf == 'l' ? 'L' : (char)tolower(sf) == 'l' ? 'L' : (char)tolower(sf));
         next();
     }
 
@@ -385,7 +401,7 @@ void Lexer::tokenize_operation()
         return;
     }
 
-    throw std::runtime_error("Unknown operator: " + one);
+    error("Unknown operator: " + one);
 }
 
 void Lexer::add_token(token_type type)
@@ -409,6 +425,7 @@ char Lexer::peek(int relative_position)
 
 char Lexer::next()
 {
+    if (pos < length && code[pos] == '\n') { line++; line_start = pos + 1; }
     pos++;
     return peek(0);
 }
@@ -429,10 +446,15 @@ void Lexer::tokenize_mcomment()
 
     while (true)
     {
-        if (current == '\0') throw std::runtime_error("Missing close tag: '*/'!");
+        if (current == '\0') error("Missing close tag: '*/'!");
         if (current == '*' && peek(1) == '/') break;
         current = next();
     }
 
     next(); next();
+}
+
+void Lexer::error(const std::string& msg)
+{
+    throw FabError(msg, {file, line, pos - line_start + 1, 1});
 }

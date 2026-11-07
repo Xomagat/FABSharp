@@ -7,6 +7,13 @@
 // vars
 
 // funcs
+static void span_to_prev(SrcLoc& l, const std::vector<Token>& t, int pos)
+{
+    if (pos <= 0) return;
+    auto& e = t[pos - 1].loc;
+    if (e.line == l.line && e.col + e.len > l.col) l.len = e.col + e.len - l.col;
+}
+
 static bool is_member_name(token_type t)
 {
     return t == token_type::WORDS || t == token_type::WRITE
@@ -18,6 +25,8 @@ Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir, std::f
     eof = Token(token_type::eof, "");
 
     this->tokens = tokens;
+
+    if (!tokens.empty()) { eof.loc = tokens.back().loc; eof.loc.col += eof.loc.len; eof.loc.len = 1; }
 
     size = tokens.size();
 
@@ -88,6 +97,14 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
 }
 
 std::unique_ptr<Statement> Parser::statement()
+{
+    SrcLoc l = here();
+    auto s = statement_impl();
+    if (s) { span_to_prev(l, tokens, pos); if (!s->loc.valid()) s->loc = l; }
+    return s;
+}
+
+std::unique_ptr<Statement> Parser::statement_impl()
 {
     switch (get(0).get_type())
     {
@@ -647,7 +664,12 @@ std::unique_ptr<Statement> Parser::block()
 
     while (!match(token_type::RBRACKET))
     {
-        statements.push_back(statement());
+        if (get(0).get_type() == token_type::eof) fail("Missing '}'");
+        int start = pos;
+        try { statements.push_back(statement()); }
+        catch (const FabError& e)       { g_diags.push_back(e); synchronize(); }
+        catch (const std::runtime_error& e) { g_diags.push_back(FabError(e.what(), here())); synchronize(); }
+        if (pos == start) pos++;
     }
 
     return std::make_unique<BlockStatement>(std::move(statements));
@@ -918,6 +940,15 @@ std::unique_ptr<Expression> Parser::postfix()
 
 std::unique_ptr<Expression> Parser::primary()
 {
+    SrcLoc l = here();
+    auto e = primary_impl();
+    span_to_prev(l, tokens, pos);
+    e->loc = l;
+    return e;
+}
+
+std::unique_ptr<Expression> Parser::primary_impl()
+{
     Token current = get(0);
 
     if (current.get_type() == token_type::WORDS)
@@ -1054,6 +1085,8 @@ std::unique_ptr<Expression> Parser::primary()
         return std::make_unique<ValueExpression>(std::stoll(current.get_text(), nullptr, 16));
     if (match(token_type::CHARS))
         return std::make_unique<ValueExpression>(current.get_text()[0]);
+    if (match(token_type::FSTRING))
+        return fstring(current.get_text());
     if (match(token_type::TEXT))
         return std::make_unique<ValueExpression>(current.get_text());
     if (match(token_type::LPARENT))
@@ -1372,7 +1405,9 @@ std::vector<std::unique_ptr<Statement>> Parser::load_fab_module(const std::files
     std::stringstream buffer;
     buffer << file.rdbuf();
 
-    auto tokens = Lexer(buffer.str()).tokenize();
+    std::string text = buffer.str();
+    int fid = add_source(canonical, text);
+    auto tokens = Lexer(text, fid).tokenize();
     Parser module_parser(tokens, path.parent_path(), exe_dir);
     module_parser.file_id = canonical;
 
@@ -1433,6 +1468,15 @@ bool Parser::at_decl()
 
 void Parser::parse_top(std::vector<std::unique_ptr<Statement>>& out)
 {
+    int start = pos;
+    try { parse_top_impl(out); }
+    catch (const FabError& e)           { g_diags.push_back(e); synchronize(); }
+    catch (const std::runtime_error& e) { g_diags.push_back(FabError(e.what(), here())); synchronize(); }
+    if (pos == start) pos++;
+}
+
+void Parser::parse_top_impl(std::vector<std::unique_ptr<Statement>>& out)
+{
     if (match(token_type::NAMESPACE)) { parse_namespace(out); return; }
 
     bool is_static = match(token_type::STATIC);
@@ -1450,6 +1494,7 @@ void Parser::parse_top(std::vector<std::unique_ptr<Statement>>& out)
         pending_imports.clear();
         out.push_back(std::make_unique<NamespaceScopeStatement>(cur_ns()));
     }
+    if (!stmt) return;
     out.push_back(std::move(stmt));
 }
 
@@ -1471,4 +1516,30 @@ void Parser::parse_namespace(std::vector<std::unique_ptr<Statement>>& out)
 
     for (size_t i = 0; i < parts.size(); ++i) ns_stack.pop_back();
     out.push_back(std::make_unique<NamespaceScopeStatement>(cur_ns()));
+}
+
+void Parser::fail(const std::string& msg)
+{
+    throw FabError(msg, here());
+}
+
+void Parser::fail_prev(const std::string& msg)
+{
+    SrcLoc l = pos > 0 ? tokens[pos - 1].loc : here();
+    l.col += l.len; l.len = 1;
+    throw FabError(msg, l);
+}
+
+void Parser::synchronize()
+{
+    int depth = 0;
+    while (get(0).get_type() != token_type::eof)
+    {
+        auto t = get(0).get_type();
+        if (t == token_type::RBRACKET && depth == 0) return;
+        pos++;
+        if (t == token_type::LBRACKET) depth++;
+        else if (t == token_type::RBRACKET) depth--;
+        else if (t == token_type::SEMI && depth == 0) return;
+    }
 }

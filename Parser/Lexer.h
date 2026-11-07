@@ -24,6 +24,9 @@ private:
     int pos;                    // position now
     int length;                 // code length
 
+    int file, line = 1, line_start = 0;
+    [[noreturn]] void error(const std::string& msg);
+
     // helpers func
     void add_token(token_type type);
     void add_token(token_type type, std::string text);
@@ -41,8 +44,8 @@ private:
     void tokenize_comment();
     void tokenize_mcomment();
 
-  public:
-    Lexer(std::string code);
+public:
+    Lexer(std::string code, int file = -1);
 
     std::vector<Token> tokenize();
 };

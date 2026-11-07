@@ -1,35 +1,9 @@
-namespace a
+define main() -> int
 {
-    const double PI2 = 6.28;
-    int numb = 1;
+    writeln $"...";
 
-    define show_number() { writeln numb; }
+    int y = 2.1.23;
 
-    class util
-    {
-    public:
-        int n = 0;
-        define twice() -> int { n *= 2; return n; }
-    }
+    wroteln i;
 
-    namespace b
-    {
-        define show() { writeln "Message"; }
-    }
-}
-
-use namespace a::b;
-
-define main()
-{
-    writeln a::PI2;
-    writeln a::numb;
-    a::numb = 25;
-    a::show_number();
-
-    a::util u;
-    u.n = 4;
-    writeln u.twice();
-
-    show();
-}
+    f();

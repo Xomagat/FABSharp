@@ -112,6 +112,14 @@ private:
 
     std::vector<std::unique_ptr<Statement>> load_fab_module(const std::filesystem::path &path);
 
+    SrcLoc here() { return get(0).loc; }
+    [[noreturn]] void fail(const std::string& msg);
+    [[noreturn]] void fail_prev(const std::string& msg);
+    void synchronize();
+    std::unique_ptr<Statement>  statement_impl();
+    std::unique_ptr<Expression> primary_impl();
+    void  parse_top_impl(std::vector<std::unique_ptr<Statement>>& out);
+
 public:
     Parser(std::vector<Token> tokens, std::filesystem::path base_dir,
            std::filesystem::path exe_dir);

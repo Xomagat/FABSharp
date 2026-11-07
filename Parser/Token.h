@@ -8,6 +8,7 @@
 #include <string>
 
 #include "TokenType.h"
+#include "Diagnostics.h"
 
 class Token
 {
@@ -16,6 +17,8 @@ private:
     token_type type;     // type
 
 public:
+    SrcLoc loc;
+
     // constructors
     Token();
     Token(token_type type, std::string text);

@@ -72,7 +72,10 @@ public:
         auto save_var_types = context.var_types;
 
         for (auto& s : statements)
-            s->codegen(context);
+        {
+            try { s->gen(context); }
+            catch (const FabError& e) { g_diags.push_back(e); }
+        }
 
         context.variables = saveVar;
         context.var_types = save_var_types;

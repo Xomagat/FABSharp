@@ -33,10 +33,16 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements,
 
         for (auto& stmt : statements)
         {
-            if (auto* c = dynamic_cast<ClassDefineStatement*>(stmt.get()))
-                c->declare(ctx);
-            stmt->codegen(ctx);
+            try
+            {
+                if (auto* c = dynamic_cast<ClassDefineStatement*>(stmt.get())) c->declare(ctx);
+                stmt->gen(ctx);
+            }
+            catch (const FabError& e)           { g_diags.push_back(e); }
+            catch (const std::runtime_error& e) { g_diags.push_back(FabError(e.what(), stmt->loc)); }
         }
+
+        if (!g_diags.empty()) return;
 
         builder.CreateRet(builder.getInt32(0));
     }
@@ -44,10 +50,16 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements,
     {
         for (auto& stmt : statements)
         {
-            if (auto* c = dynamic_cast<ClassDefineStatement*>(stmt.get()))
-                c->declare(ctx);
-            stmt->codegen(ctx);
+            try
+            {
+                if (auto* c = dynamic_cast<ClassDefineStatement*>(stmt.get())) c->declare(ctx);
+                stmt->gen(ctx);
+            }
+            catch (const FabError& e)           { g_diags.push_back(e); }
+            catch (const std::runtime_error& e) { g_diags.push_back(FabError(e.what(), stmt->loc)); }
         }
+
+        if (!g_diags.empty()) return;
     }
 
     builder.SetInsertPoint(ctx.init_tail);
