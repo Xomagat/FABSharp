@@ -82,6 +82,41 @@ std::vector<Token> Lexer::tokenize()
         else if (current == '"')
         {
             tokenize_string();
+
+            while (true)
+            {
+                int temp_pos = pos;
+                int temp_line = line;
+                int temp_line_start = line_start;
+
+                while (temp_pos < length && isspace(code[temp_pos]))
+                {
+                    if (code[temp_pos] == '\n') {
+                        temp_line++;
+                        temp_line_start = temp_pos + 1;
+                    }
+                    temp_pos++;
+                }
+
+                if (temp_pos < length && code[temp_pos] == '"')
+                {
+                    pos = temp_pos;
+                    line = temp_line;
+                    line_start = temp_line_start;
+
+                    std::string old_text = tokens.back().get_text();
+                    tokens.pop_back();
+
+                    tokenize_string();
+
+                    std::string new_text = tokens.back().get_text();
+                    tokens.back().set_text(old_text + new_text);
+                }
+                else
+                {
+                    break;
+                }
+            }
         }
         else if (current == '\'')
         {
