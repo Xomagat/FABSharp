@@ -82,8 +82,8 @@ public:
         if (lv.ty->isIntegerTy() && !lv.ty->isIntegerTy(1))
         {
             llvm::Value* one = llvm::ConstantInt::get(lv.ty, 1);
-            newValue = is_inc ? b.CreateNSWAdd(oldValue, one, "inc")
-                              : b.CreateNSWSub(oldValue, one, "dec");
+            newValue = is_inc ? b.CreateAdd(oldValue, one, "inc")
+                              : b.CreateSub(oldValue, one, "dec");
         }
         else if (lv.ty->isFloatingPointTy())
         {

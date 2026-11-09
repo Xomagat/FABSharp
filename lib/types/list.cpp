@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "../alloc.h"
 
@@ -16,23 +17,31 @@ template<class T> struct FabList { T* data; int len; int cap;
 
 template<class T> FabList<T>* list_new()
 {
-    auto* l = (FabList<T>*)malloc(sizeof(FabList<T>));
+    auto* l = (FabList<T>*)fab_xmalloc(sizeof(FabList<T>));
     l->data = nullptr; l->len = 0; l->cap = 0;
     return l;
+}
+
+template<class T> void list_grow(FabList<T>* l, long long need)
+{
+    if (need > INT_MAX) fab_oom();
+    long long c = l->cap ? (long long)l->cap * 2 : 4;
+    if (c < need)    c = need;
+    if (c > INT_MAX) c = INT_MAX;
+    l->data = (T*)fab_xrealloc(l->data, (size_t)c * sizeof(T));
+    l->cap  = (int)c;
 }
 
 template<class T> void ensure_list(FabList<T>* l)
 {
     if (l->len < l->cap) return;
-    l->cap = l->cap ? l->cap * 2 : 4;
-    l->data = (T*)realloc(l->data, l->cap * sizeof(T));
+    list_grow(l, (long long)l->len + 1);
 }
 
 template<class T> void list_reserve(FabList<T>* l, int n)
 {
     if (n <= l->cap) return;
-    l->cap = n;
-    l->data = (T*)realloc(l->data, l->cap * sizeof(T));
+    list_grow(l, n);
 }
 
 // Helpers
@@ -87,6 +96,7 @@ template<class T> void list_extend(FabList<T>* l, FabList<T>* o)
     int n = o->len;
     if (n <= 0) return;
 
+    if ((long long)l->len + n > INT_MAX) fab_oom();
     list_reserve(l, l->len + n);
     memcpy(l->data + l->len, o->data, n * sizeof(T));
     l->len += n;
@@ -261,11 +271,14 @@ template<class T> T list_max(FabList<T>* l)
     return m;
 }
 
+template<class T> T sum_add(T a, T b) { return a + b; }
+inline int       sum_add(int a, int b)             { return (int)((unsigned)a + (unsigned)b); }
+inline long long sum_add(long long a, long long b) { return (long long)((unsigned long long)a + (unsigned long long)b); }
+
 template<class T> T list_sum(FabList<T>* l)
 {
     T s = T();
-    for (int i = 0; i < l->len; ++i)
-        s += l->data[i];
+    for (int i = 0; i < l->len; ++i) s = sum_add(s, l->data[i]);
     return s;
 }
 
@@ -277,7 +290,6 @@ inline const char* list_sum(FabList<const char*>* l)
         if (l->data[i]) total += strlen(l->data[i]);
 
     char* r = (char*)bump_alloc(total);
-    if (r == nullptr) return nullptr;
 
     char* p = r;
     for (int i = 0; i < l->len; ++i)
@@ -359,7 +371,6 @@ template<class T> char* list_join(FabList<T>* l, const char* sep)
         total += (size_t)fmt_elem(nullptr, 0, l->data[i]) + (i ? sep_len : 0);
 
     char* r = (char*)bump_alloc(total);
-    if (r == nullptr) return nullptr;
 
     char* p = r;
     for (int i = 0; i < l->len; ++i)

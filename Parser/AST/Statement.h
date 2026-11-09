@@ -19,5 +19,5 @@ public:
     }
 
     void gen(CodegenContext& c) const
-        { guard(loc, [&]{ codegen(c); }); }
+    { LocScope s(loc); guard(loc, [&]{ codegen(c); }); }
 };

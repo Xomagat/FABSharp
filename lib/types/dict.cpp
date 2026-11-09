@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+
+#include "../alloc.h"
 
 // Lists (list.cpp): keys() and values() build lists
 #define FAB_LIST_IMPORT(NAME, T) \
@@ -81,10 +84,13 @@ template<class T> T dict_zero() { return T(); }
 template<> inline const char* dict_zero<const char*>() { return ""; }
 
 // Strings keys are copied, the dict owns them
+inline const char* dict_nk(const char* s) { return s ? s : ""; }
+template<class T> T dict_nk(T x) { return x; }
+
 inline const char* dict_own(const char* s)
 {
     size_t n = strlen(s) + 1;
-    char* p = (char*)malloc(n);
+    char* p = (char*)fab_xmalloc(n);
     memcpy(p, s, n);
     return p;
 }
@@ -178,6 +184,7 @@ template<class K, class V> void dict_grow(FabDict<K,V>* d)
 
 template<class K, class V> int dict_find(FabDict<K,V>* d, K key)
 {
+    key = dict_nk(key);
     if (!d->icap) return -1;
     unsigned mask = d->icap - 1;
     for (unsigned i = hash_key(key) & mask; ; i = (i + 1) & mask)
@@ -190,6 +197,7 @@ template<class K, class V> int dict_find(FabDict<K,V>* d, K key)
 
 template<class K, class V> void dict_set(FabDict<K,V>* d, K key, V val)
 {
+    key = dict_nk(key);
     int e = dict_find(d, key);
     if (e >= 0) { d->vals[e] = val; return; }
 
@@ -219,11 +227,20 @@ template<class K, class V> V dict_get_or(FabDict<K,V>* d, K key, V def)
     return e >= 0 ? d->vals[e] : def;
 }
 
+inline const char* dict_copy_key(const char* s)
+{
+    size_t n = strlen(s) + 1;
+    char* p = (char*)bump_alloc(n);
+    memcpy(p, s, n);
+    return p;
+}
+template<class T> T dict_copy_key(T x) { return x; }
+
 template<class K, class V> K dict_key_at(FabDict<K,V>* d, int i)
 {
     dict_compact(d);                      // number i means "i-th live entry"
     if (i < 0 || i >= d->len) return dict_zero<K>();
-    return d->keys[i];
+    return dict_copy_key(d->keys[i]);
 }
 
 template<class K, class V> V dict_value_at(FabDict<K,V>* d, int i)
@@ -244,6 +261,7 @@ template<class K, class V> bool dict_has_value(FabDict<K,V>* d, V val)
 template<class K, class V> void dict_remove_at(FabDict<K,V>* d, int e)
 {
     dict_index_erase(d, e);
+    dict_free_key(d->keys[e]);
     d->alive[e] = 0;
 
     if (e == d->len - 1) d->len--;
@@ -274,6 +292,8 @@ template<class K, class V> V dict_pop(FabDict<K,V>* d, K key)
 
 template<class K, class V> void dict_clear(FabDict<K,V>* d)
 {
+    for (int i = 0; i < d->len; ++i)
+        if (d->alive[i]) dict_free_key(d->keys[i]);
     d->len = 0;
     d->dead = 0;
     if (d->icap) memset(d->index, 0xFF, d->icap * sizeof(int));
@@ -342,7 +362,7 @@ template<class K, class V> void dict_print(FabDict<K,V>* d)
   { \
       auto* x = (FabDict<K,V>*)d; \
       void* l = fab_list_new_##KN(); \
-      for (int i = 0; i < x->len; ++i) if (x->alive[i]) fab_list_addend_##KN(l, x->keys[i]); \
+      for (int i = 0; i < x->len; ++i) if (x->alive[i]) fab_list_addend_##KN(l, dict_copy_key(x->keys[i])); \
       return l; \
   } \
   extern "C" void* fab_dict_values_##KN##_##VN(void* d) \

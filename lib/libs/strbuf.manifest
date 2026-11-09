@@ -1,0 +1,12 @@
+# String builder v0.1
+# Created on 07.11.2026
+# Last update 07.11.2026
+
+class strbuf free fab_sb_free
+
+sb_new           fab_sb_new           strbuf :
+strbuf.append    fab_sb_append        void   : strbuf, string
+strbuf.append_char fab_sb_append_char void   : strbuf, char
+strbuf.length    fab_sb_length        int    : strbuf
+strbuf.clear     fab_sb_clear         void   : strbuf
+strbuf.to_str    fab_sb_to_str        string : strbuf

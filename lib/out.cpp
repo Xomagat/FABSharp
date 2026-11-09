@@ -17,6 +17,7 @@
 #define FAB_ISATTY(fd) _isatty(fd)
 #define FAB_WRITE(p, n) fwrite((p), 1, (n), stdout)
 #define FAB_PUTC(c)     putc((c), stdout)
+
 static bool stdout_is_console()
 {
     DWORD m;
@@ -98,3 +99,10 @@ extern "C" void fab_out_f64(double v)   { ensure_init(); out_fp(v, "%.17g", fals
 extern "C" void fab_out_f64ln(double v) { ensure_init(); out_fp(v, "%.17g", true); }
 extern "C" void fab_out_f32(float v)    { ensure_init(); out_fp((double)v, "%.9g", false); }
 extern "C" void fab_out_f32ln(float v)  { ensure_init(); out_fp((double)v, "%.9g", true); }
+
+extern "C" void fab_input_done(int rc)
+{
+    if (rc == 1) return;
+    int c;
+    while ((c = getchar()) != EOF && c != '\n') {}
+}

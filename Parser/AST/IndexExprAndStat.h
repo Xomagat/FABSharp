@@ -19,6 +19,44 @@ public:
     IndexExpression(std::unique_ptr<Expression> target, std::unique_ptr<Expression> index)
         : target(std::move(target)), index(std::move(index)) {}
 
+    void assign(CodegenContext& ctx, const Expression& value) const
+    {
+        auto& b = ctx.builder;
+        llvm::Value* base = target->codegen(ctx);
+        std::string t = type_of(ctx, base);
+
+        if (t.starts_with("dict<"))
+        {
+            auto [k, v] = dict_kv(t);
+            emit_null_check(ctx, base, "Null reference: dict index");
+            llvm::Value* kv = index->codegen_expected(ctx, k);
+            llvm::Value* vv = value.is_null_literal()
+                ? llvm::Constant::getNullValue(type_to_llvm(v, b))
+                : value.codegen_expected(ctx, v);
+            StdlibFunctionInfo info{"fab_dict_set_" + k + "_" + v, "void", {t, k, v}};
+            FunctionalExpression::emit_stdlib_call(ctx, info, {base, kv, vv});
+            return;
+        }
+
+        if (!t.starts_with("list<"))
+            throw std::runtime_error("Cannot assign by index to type '" + t + "'!");
+
+        std::string elem = list_elem(t);
+        llvm::Type* et = type_to_llvm(elem, b);
+        llvm::Value* idx = coerceToType(index->codegen(ctx), b.getInt64Ty(), b);
+
+        emit_null_check(ctx, base, "Null reference: list index");
+        emit_list_bounds(ctx, base, idx);
+
+        llvm::Value* v = value.is_null_literal()
+            ? llvm::Constant::getNullValue(et)
+            : value.codegen_expected(ctx, elem);
+        v = coerceToType(v, et, b);
+
+        llvm::Value* data = b.CreateLoad(b.getPtrTy(), base, "list.data");
+        b.CreateStore(v, b.CreateGEP(et, data, idx, "list.elem"));
+    }
+
     llvm::Value* codegen_ptr(CodegenContext& ctx, std::string& elem_out) const
     {
         auto& b = ctx.builder;
@@ -43,6 +81,15 @@ public:
         llvm::Value* base = target->codegen(ctx);
         std::string t = type_of(ctx, base);
 
+        if (t.starts_with("dict<"))
+        {
+            auto [k, v] = dict_kv(t);
+            emit_null_check(ctx, base, "Null reference: dict index");
+            StdlibFunctionInfo info{"fab_dict_get_" + k + "_" + v, v, {t, k}};
+            return FunctionalExpression::emit_stdlib_call(ctx, info,
+                       {base, index->codegen_expected(ctx, k)});
+        }
+
         llvm::Value* idx = coerceToType(index->codegen(ctx), b.getInt64Ty(), b);
 
         if (t == "string")
@@ -51,21 +98,14 @@ public:
             return b.CreateLoad(b.getInt8Ty(), p);
         }
 
-        if (t.starts_with("dict<"))
-        {
-            auto [k, v] = dict_kv(t);
-            StdlibFunctionInfo info{"fab_dict_get_" + k + "_" + v, v, {t, k}};
-            llvm::Value* r = FunctionalExpression::emit_stdlib_call(ctx, info, {base, index->codegen(ctx)});
-            ctx.value_types[r] = v;
-            return r;
-        }
-
         if (!t.starts_with("list<"))
             throw std::runtime_error("Type '" + t + "' does not support indexing!");
 
+        emit_null_check(ctx, base, "Null reference: list index");
+        emit_list_bounds(ctx, base, idx);
+
         std::string elem = list_elem(t);
         llvm::Type* et = type_to_llvm(elem, b);
-
         llvm::Value* data = b.CreateLoad(b.getPtrTy(), base, "list.data");
         llvm::Value* p = b.CreateGEP(et, data, idx, "list.elem");
         llvm::Value* v = b.CreateLoad(et, p);
@@ -90,12 +130,6 @@ public:
         auto* ie = dynamic_cast<const IndexExpression*>(target.get());
         if (!ie)
             throw std::runtime_error("Left side of assignment must be a variable or a list element!");
-
-        std::string elem;
-        llvm::Value* ptr = ie->codegen_ptr(ctx, elem);
-
-        llvm::Value* v = value->codegen_expected(ctx, elem);
-        v = coerceToType(v, type_to_llvm(elem, ctx.builder), ctx.builder);
-        ctx.builder.CreateStore(v, ptr);
+        ie->assign(ctx, *value);
     }
 };

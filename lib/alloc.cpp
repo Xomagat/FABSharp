@@ -4,6 +4,8 @@
 
 #define _NO_CRT_STDIO_INLINE
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "alloc.h"
 
@@ -14,24 +16,44 @@
 #define FAB_BUMP_LARGE (64u << 10)
 
 // Constant-initialized: no startup code needed
-extern "C"
+extern "C" [[noreturn]] void fab_oom()
 {
-char*  fab_bump_cur  = nullptr;
-size_t fab_bump_left = 0;
+    fputs("fatal: out of memory\n", stderr);
+    exit(1);
 }
 
 extern "C" void* fab_alloc_slow(size_t n)
 {
-    if (n > FAB_BUMP_LARGE) return malloc(n);
+    if (n > FAB_BUMP_LARGE)
+    {
+        void* p = malloc(n);
+        if (!p) fab_oom();
+        return p;
+    }
 
     char* chunk = (char*)malloc(FAB_BUMP_CHUNK);
-    if (!chunk) return nullptr;
+    if (!chunk) fab_oom();
 
-    // the tail of the previous chunk (less than 64 KB) is simply abandoned
     fab_bump_cur  = chunk + n;
     fab_bump_left = FAB_BUMP_CHUNK - n;
     return chunk;
 }
 
-// For code emitted by the compiler (string concatenation)
 extern "C" void* fab_alloc(size_t n) { return bump_alloc(n); }
+
+// Concatenates two strings. null is treated as an empty string.
+// If one part is empty, the other is returned without creating a copy.
+// IMPORTANT: Do not mark this with 'noalias', as the result may be the same as one of the arguments.
+extern "C" char* fab_concat2(const char* a, const char* b)
+{
+    if (!a) a = "";
+    if (!b) b = "";
+    size_t la = strlen(a), lb = strlen(b);
+    if (lb == 0) return (char*)a;
+    if (la == 0) return (char*)b;
+
+    char* r = (char*)bump_alloc(la + lb + 1);
+    memcpy(r, a, la);
+    memcpy(r + la, b, lb + 1);
+    return r;
+}

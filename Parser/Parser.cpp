@@ -401,20 +401,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
     if (current.get_type() == token_type::TYPES || decl)
     {
         std::string type = parse_type();
-        std::string name = consume(token_type::WORDS).get_text();
-        std::unique_ptr<Expression> expr;
-
-        if (match(token_type::EQ))
-            expr = expression();
-        else if (decl && !is_lib_type(type))
-            expr = nullptr;
-        else
-            expr = std::make_unique<ValueExpression>(NullTag{});
-
-        if (!match(token_type::SEMI) && !no_semi)
-            throw std::runtime_error("You miss the ;");
-
-        return std::make_unique<AssigementStatement>(type, name, std::move(expr));
+        return declarators(type, false, decl && !is_lib_type(type), no_semi);
     }
     else if (current.get_type() == token_type::WORDS)
     {
@@ -1153,10 +1140,10 @@ std::unique_ptr<Expression> Parser::fstring(const std::string& raw)
     if (parts.empty())
         return std::make_unique<ValueExpression>(std::string());
 
-    std::unique_ptr<Expression> result = std::move(parts[0]);
-    for (size_t k = 1; k < parts.size(); ++k)
-        result = std::make_unique<BinExpression>('+', std::move(result), std::move(parts[k]));
-    return result;
+    if (parts.size() == 1) return std::move(parts[0]);
+    auto cc = std::make_unique<ConcatExpression>();
+    for (auto& p : parts) cc->add(std::move(p));
+    return cc;
 }
 
 Token Parser::get(int relative_position)
@@ -1483,7 +1470,9 @@ void Parser::parse_top_impl(std::vector<std::unique_ptr<Statement>>& out)
     auto stmt = statement();
 
     auto* decl = dynamic_cast<AssigementStatement*>(stmt.get());
+    auto* list = dynamic_cast<DeclListStatement*>(stmt.get());
     if (decl && decl->is_declaration()) decl->make_global(is_static);
+    else if (list) list->make_global(is_static);
     else if (is_static)
         throw std::runtime_error("'static' at top level must be followed by a variable declaration!");
 

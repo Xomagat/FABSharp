@@ -95,6 +95,8 @@ public:
             for (auto& t : info.arg_types) fix(t);
             fix(info.return_type);
 
+            emit_null_check(ctx, self, "Null reference: method '" + name + "'");
+
             return FunctionalExpression::emit_stdlib_call(ctx, info, vals);
         }
 

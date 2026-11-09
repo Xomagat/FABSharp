@@ -254,10 +254,13 @@ void Lexer::tokenize_string()
 
             switch (current)
             {
-            case '"': current = next(); buffer.push_back('"'); continue;
-            case 'n': current = next(); buffer.push_back('\n'); continue;
-            case 'r': current = next(); buffer.push_back('\r'); continue;
-            case 't': current = next(); buffer.push_back('\t'); continue;
+            case '"': current = next(); buffer.push_back('"');   continue;
+            case '\'': current = next(); buffer.push_back('\''); continue;
+            case 'n': current = next(); buffer.push_back('\n');  continue;
+            case 'r': current = next(); buffer.push_back('\r');  continue;
+            case 't': current = next(); buffer.push_back('\t');  continue;
+            case '0': current = next(); buffer.push_back('\0');  continue;
+            case 'a': current = next(); buffer.push_back('\a');  continue;
             }
 
             buffer.push_back('\\');
@@ -286,10 +289,13 @@ void Lexer::tokenize_char()
 
             switch (current)
             {
+            case '"': current = next(); buffer.push_back('"');   continue;
             case '\'': current = next(); buffer.push_back('\''); continue;
-            case 'n':  current = next(); buffer.push_back('\n'); continue;
-            case 'r':  current = next(); buffer.push_back('\r'); continue;
-            case 't':  current = next(); buffer.push_back('\t'); continue;
+            case 'n': current = next(); buffer.push_back('\n');  continue;
+            case 'r': current = next(); buffer.push_back('\r');  continue;
+            case 't': current = next(); buffer.push_back('\t');  continue;
+            case '0': current = next(); buffer.push_back('\0');  continue;
+            case 'a': current = next(); buffer.push_back('\a');  continue;
             }
 
             buffer.push_back('\\');

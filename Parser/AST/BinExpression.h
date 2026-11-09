@@ -24,55 +24,42 @@ public:
 
     llvm::Value *codegen(CodegenContext &context) const override
     {
+        auto& b = context.builder;
+
         llvm::Value* left = expr1->codegen(context);
         llvm::Value* right = expr2->codegen(context);
 
-        llvm::Type* fp_type = fp_result_type(left, right, context.builder);
+        llvm::Type* fp_type = fp_result_type(left, right, b);
 
         if (left->getType()->isPointerTy() || right->getType()->isPointerTy())
         {
             if (op != '+')
                 throw std::runtime_error("Only '+' is supported for strings!");
 
-            auto& b = context.builder;
-            llvm::Type* ptr = b.getInt8Ty()->getPointerTo();
-            llvm::Type* i64 = b.getInt64Ty();
+            if (type_of(context, left) != "string" || type_of(context, right) != "string")
+                throw std::runtime_error("'+' needs a string on both sides: use $\"...{x}...\" or x.to_str()");
 
-            auto strlen = context.module.getOrInsertFunction(
-                "strlen", llvm::FunctionType::get(i64, {ptr}, false));
-            auto allocFn = context.module.getOrInsertFunction(
-                "fab_alloc", llvm::FunctionType::get(ptr, {i64}, false));
-            if (auto* f = llvm::dyn_cast<llvm::Function>(allocFn.getCallee()))
-            {
-                f->setDoesNotThrow();
-                f->addRetAttr(llvm::Attribute::NoAlias);
-            }
-            auto memcpy = context.module.getOrInsertFunction(
-                "memcpy", llvm::FunctionType::get(ptr, {ptr, ptr, i64}, false));
+            auto fn = context.module.getOrInsertFunction("fab_concat2",
+                llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy(), b.getPtrTy()}, false));
+            if (auto* f = llvm::dyn_cast<llvm::Function>(fn.getCallee())) f->setDoesNotThrow();
 
-            auto la = b.CreateCall(strlen, {left});
-            auto lb = b.CreateCall(strlen, {right});
-            auto total = b.CreateAdd(b.CreateAdd(la, lb), b.getInt64(1));
-            auto buf = b.CreateCall(allocFn, {total});
-
-            b.CreateCall(memcpy, {buf, left, la});
-            auto tail = b.CreateGEP(b.getInt8Ty(), buf, la);
-            b.CreateCall(memcpy, {tail, right, b.CreateAdd(lb, b.getInt64(1))});
-            return buf;
+            llvm::Value* r = b.CreateCall(fn, {left, right});
+            context.value_types[r] = "string";
+            return r;
         }
 
         if (left->getType()->isFloatingPointTy() || right->getType()->isFloatingPointTy())
         {
-            left  = coerceToType(left,  fp_type, context.builder);
-            right = coerceToType(right, fp_type, context.builder);
+            left  = coerceToType(left,  fp_type, b);
+            right = coerceToType(right, fp_type, b);
 
             switch (op)
             {
-            case '+': return context.builder.CreateFAdd(left, right);
-            case '-': return context.builder.CreateFSub(left, right);
-            case '*': return context.builder.CreateFMul(left, right);
-            case '/': return context.builder.CreateFDiv(left, right);
-            case '%': return context.builder.CreateFRem(left, right);
+            case '+': return b.CreateFAdd(left, right);
+            case '-': return b.CreateFSub(left, right);
+            case '*': return b.CreateFMul(left, right);
+            case '/': return b.CreateFDiv(left, right);
+            case '%': return b.CreateFRem(left, right);
             default: throw std::runtime_error("Codegen for this operator not implemented yet!");
             }
         }
@@ -80,19 +67,30 @@ public:
         if (!left->getType()->isIntegerTy() || !right->getType()->isIntegerTy())
             throw std::runtime_error("Codegen only supports integer/float arithmetic for now!");
 
-        unsigned lw = left->getType()->getIntegerBitWidth();
-        unsigned rw = right->getType()->getIntegerBitWidth();
-        llvm::Type* wide = (lw >= rw) ? left->getType() : right->getType();
-        left  = coerceToType(left,  wide, context.builder);
-        right = coerceToType(right, wide, context.builder);
+        unsigned w = std::max({left->getType()->getIntegerBitWidth(),
+                               right->getType()->getIntegerBitWidth(), 32u});
+        llvm::Type* wide = llvm::Type::getIntNTy(context.context, w);
+        left  = coerceToType(left,  wide, b);
+        right = coerceToType(right, wide, b);
 
         switch (op)
         {
-        case '+': return context.builder.CreateNSWAdd(left, right);
-        case '-': return context.builder.CreateNSWSub(left, right);
-        case '*': return context.builder.CreateNSWMul(left, right);
-        case '/': return context.builder.CreateSDiv(left, right);
-        case '%': return context.builder.CreateSRem(left, right);
+        case '+': return b.CreateAdd(left, right);
+        case '-': return b.CreateSub(left, right);
+        case '*': return b.CreateMul(left, right);
+        case '/':
+        case '%':
+        {
+            emit_fail_if(context, b.CreateICmpEQ(right, llvm::ConstantInt::get(wide, 0)),
+                         "Division by zero");
+
+            llvm::Value* isM1 = b.CreateICmpEQ(right, llvm::ConstantInt::getSigned(wide, -1));
+            llvm::Value* safe = b.CreateSelect(isM1, llvm::ConstantInt::get(wide, 1), right);
+
+            if (op == '/')
+                return b.CreateSelect(isM1, b.CreateNeg(left), b.CreateSDiv(left, safe));
+            return b.CreateSelect(isM1, llvm::ConstantInt::get(wide, 0), b.CreateSRem(left, safe));
+        }
         default: throw std::runtime_error("Codegen for this operator not implemented yet!");
         }
     }

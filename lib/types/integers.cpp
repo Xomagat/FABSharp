@@ -10,9 +10,46 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 
 #include "../alloc.h"
 #define malloc(n) bump_alloc(n)
+
+static char* dup_buf(const char* s, size_t n)
+{
+    char* p = (char*)malloc(n + 1);
+    memcpy(p, s, n);
+    p[n] = '\0';
+    return p;
+}
+
+static char* fab_i64_str(long long x)
+{
+    char buf[24];
+    char* end = buf + sizeof buf;
+    unsigned long long u = x < 0 ? 0ULL - (unsigned long long)x : (unsigned long long)x;
+    do { *--end = (char)('0' + u % 10); u /= 10; } while (u);
+    if (x < 0) *--end = '-';
+    return dup_buf(end, (size_t)(buf + sizeof buf - end));
+}
+
+static char* fab_fp_str(const char* fmt, double v)
+{
+    char buf[48];
+    int n = snprintf(buf, sizeof buf, fmt, v);
+    if (n < 0) n = 0;
+    if (n >= (int)sizeof buf) n = (int)sizeof buf - 1;
+    return dup_buf(buf, (size_t)n);
+}
+
+static char* fab_ld_str(long double v)
+{
+    char buf[64];
+    int n = snprintf(buf, sizeof buf, "%.21Lg", v);
+    if (n < 0) n = 0;
+    if (n >= (int)sizeof buf) n = (int)sizeof buf - 1;
+    return dup_buf(buf, (size_t)n);
+}
 
 // Helper: format a value into a freshly malloc'ed string
 static char* fab_fmt_alloc(const char* fmt, long long iv, double dv, bool is_float)
@@ -45,13 +82,13 @@ static char* fab_fmt_alloc_ld(const char* fmt, long double x)
 // Integer types: short, int, long
 // NAME - suffix, T - C type, FMT - printf format for long long
 #define FAB_INTEGER(NAME, T) \
-    extern "C" char* fab_to_str_##NAME(T x)         { return fab_fmt_alloc("%lld", (long long)x, 0.0, false); } \
+    extern "C" char* fab_to_str_##NAME(T x)         { return fab_i64_str((long long)x); } \
     extern "C" bool  fab_is_positive_##NAME(T x)    { return x > 0; } \
     extern "C" bool  fab_is_negative_##NAME(T x)    { return x < 0; } \
     extern "C" bool  fab_is_zero_##NAME(T x)        { return x == 0; } \
     extern "C" bool  fab_is_even_##NAME(T x)        { return (x % 2) == 0; } \
     extern "C" bool  fab_is_odd_##NAME(T x)         { return (x % 2) != 0; } \
-    extern "C" T     fab_abs_##NAME(T x)            { return x < 0 ? (T)-x : x; } \
+    extern "C" T     fab_abs_##NAME(T x)            { return x < 0 ? (T)(0ULL - (unsigned long long)x) : x; } \
     extern "C" int   fab_sign_##NAME(T x)           { return (x > 0) - (x < 0); } \
     extern "C" bool  fab_to_bool_##NAME(T x)        { return x != 0; } \
     extern "C" char  fab_to_char_##NAME(T x)        { return (char)x; } \
@@ -81,9 +118,18 @@ static long long fab_sat(double x, long long lo, long long hi)
     return (long long)x;
 }
 
+static double round_away(double x)
+{
+    if (x != x || x - x != 0.0) return x;
+    double a = x < 0 ? -x : x;
+    double r = floor(a);
+    if (a - r >= 0.5) r += 1.0;
+    return x < 0 ? -r : r;
+}
+
 // FMT - printf format: "%.9g" for float, "%.17g" for double
 #define FAB_FLOATING(NAME, T, FMT) \
-    extern "C" char* fab_to_str_##NAME(T x)         { return fab_fmt_alloc(FMT, 0, (double)x, true); } \
+    extern "C" char* fab_to_str_##NAME(T x)         { return fab_fp_str(FMT, (double)x); } \
     extern "C" bool  fab_is_positive_##NAME(T x)    { return x > 0; } \
     extern "C" bool  fab_is_negative_##NAME(T x)    { return x < 0; } \
     extern "C" bool  fab_is_zero_##NAME(T x)        { return x == 0; } \
@@ -95,7 +141,7 @@ static long long fab_sat(double x, long long lo, long long hi)
     extern "C" T     fab_floor_##NAME(T x)          { return (T)floor((double)x); } \
     extern "C" T     fab_ceil_##NAME(T x)           { return (T)ceil((double)x); } \
     extern "C" T     fab_trunc_##NAME(T x)          { return (T)(x < 0 ? ceil((double)x) : floor((double)x)); } \
-    extern "C" T     fab_round_##NAME(T x)          { return (T)(x < 0 ? -floor(-(double)x + 0.5) : floor((double)x + 0.5)); } \
+    extern "C" T     fab_round_##NAME(T x)          { return (T)round_away((double)x); } \
     extern "C" bool  fab_to_bool_##NAME(T x)        { return x != 0; } \
     extern "C" char  fab_to_char_##NAME(T x)        { return (char)fab_sat((double)x, -128LL, 127LL); } \
     extern "C" short fab_to_short_##NAME(T x)       { return (short)fab_sat((double)x, -32768LL, 32767LL); } \
@@ -122,7 +168,7 @@ static long long fab_sat_ld(long double x, long long lo, long long hi)
     return (long long)x;
 }
 
-extern "C" char* fab_to_str_ldouble(long double x)         { return fab_fmt_alloc_ld("%.21Lg", x); }
+extern "C" char* fab_to_str_ldouble(long double x)         { return fab_ld_str(x); }
 extern "C" bool  fab_is_positive_ldouble(long double x)    { return x > 0; }
 extern "C" bool  fab_is_negative_ldouble(long double x)    { return x < 0; }
 extern "C" bool  fab_is_zero_ldouble(long double x)        { return x == 0; }

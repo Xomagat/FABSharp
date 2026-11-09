@@ -114,3 +114,29 @@ public:
 
     std::string to_str() const override { return "to_str(" + expr->to_str() + ")"; }
 };
+
+class ConcatExpression : public Expression
+{
+    std::vector<std::unique_ptr<Expression>> parts;
+
+public:
+    void add(std::unique_ptr<Expression> e) { parts.push_back(std::move(e)); }
+
+    llvm::Value* codegen(CodegenContext& ctx) const override
+    {
+        auto& b = ctx.builder;
+        auto* arrTy = llvm::ArrayType::get(b.getPtrTy(), parts.size());
+        auto* arr   = entry_alloca(b, arrTy, "concat.parts");
+
+        for (size_t i = 0; i < parts.size(); ++i)
+            b.CreateStore(parts[i]->codegen(ctx), b.CreateConstGEP2_32(arrTy, arr, 0, (unsigned)i));
+
+        auto fn = ctx.module.getOrInsertFunction("fab_concat_n",
+            llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy(), b.getInt32Ty()}, false));
+        llvm::Value* r = b.CreateCall(fn, {arr, b.getInt32((unsigned)parts.size())});
+        ctx.value_types[r] = "string";
+        return r;
+    }
+
+    std::string to_str() const override { return "concat(...)"; }
+};

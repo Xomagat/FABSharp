@@ -141,15 +141,17 @@ public:
         {
             fmt = context.builder.CreateGlobalStringPtr("%lf");
         }
-        else if (varType->isPointerTy()) // string (i8*)
+        else if (varType->isPointerTy()) // string
         {
-            auto mallocFn = context.module.getOrInsertFunction("malloc",
-                llvm::FunctionType::get(context.builder.getPtrTy(), {context.builder.getInt64Ty()}, false));
-            llvm::Value* stringBuffer = context.builder.CreateCall(mallocFn, {context.builder.getInt64(256)});
+            auto& b = context.builder;
+            auto allocFn = context.module.getOrInsertFunction("fab_alloc",
+                llvm::FunctionType::get(b.getPtrTy(), {b.getInt64Ty()}, false));
+            llvm::Value* stringBuffer = b.CreateCall(allocFn, {b.getInt64(256)});
 
-            context.builder.CreateStore(stringBuffer, alloc);
+            b.CreateStore(b.getInt8(0), stringBuffer);
+            b.CreateStore(stringBuffer, alloc);
 
-            fmt = context.builder.CreateGlobalStringPtr("%255s");
+            fmt = b.CreateGlobalStringPtr("%255s");
             arg = stringBuffer;
         }
         else if (varType->isIntegerTy(1)) // bool
@@ -157,7 +159,11 @@ public:
             llvm::AllocaInst* tmpAlloc = entry_alloca(context.builder, context.builder.getInt32Ty(), "tmp_bool");
             fmt = context.builder.CreateGlobalStringPtr("%d");
 
-            context.builder.CreateCall(scanfFunc, {fmt, tmpAlloc});
+            auto& b = context.builder;
+            llvm::Value* rc = b.CreateCall(scanfFunc, {fmt, arg});
+            auto done = context.module.getOrInsertFunction("fab_input_done",
+                llvm::FunctionType::get(b.getVoidTy(), {b.getInt32Ty()}, false));
+            b.CreateCall(done, {rc});
 
             llvm::Value* tmpVal = context.builder.CreateLoad(context.builder.getInt32Ty(), tmpAlloc);
             llvm::Value* boolVal = context.builder.CreateICmpNE(tmpVal, context.builder.getInt32(0));
@@ -169,6 +175,10 @@ public:
             throw std::runtime_error("Unsupported type for input_in codegen!");
         }
 
-        context.builder.CreateCall(scanfFunc, {fmt, arg});
+        auto& b = context.builder;
+        llvm::Value* rc = b.CreateCall(scanfFunc, {fmt, arg});
+        auto done = context.module.getOrInsertFunction("fab_input_done",
+            llvm::FunctionType::get(b.getVoidTy(), {b.getInt32Ty()}, false));
+        b.CreateCall(done, {rc});
     }
 };

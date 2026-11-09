@@ -7,6 +7,7 @@
 #include <string>
 
 #include "AssigementStatement.h"
+#include "FunctionalExpression.h"
 
 #include "Expression.h"
 
@@ -31,6 +32,27 @@ public:
 
         llvm::Value* left = expr1->codegen(ctx);
         llvm::Value* right = expr2->codegen(ctx);
+
+        auto is_str = [&](llvm::Value* v) {
+            return v->getType()->isPointerTy() && type_of(ctx, v) == "string";
+        };
+        if (is_str(left) && is_str(right))
+        {
+            auto& b = ctx.builder;
+            auto fn = ctx.module.getOrInsertFunction("fab_compare",
+                llvm::FunctionType::get(b.getInt32Ty(), {b.getPtrTy(), b.getPtrTy()}, false));
+            if (auto* f = llvm::dyn_cast<llvm::Function>(fn.getCallee())) rt_apply_attrs(f);
+
+            llvm::Value* c = b.CreateCall(fn, {left, right});
+            llvm::Value* z = b.getInt32(0);
+
+            if (op == "==") return b.CreateICmpEQ(c, z);
+            if (op == "!=") return b.CreateICmpNE(c, z);
+            if (op == "<")  return b.CreateICmpSLT(c, z);
+            if (op == ">")  return b.CreateICmpSGT(c, z);
+            if (op == "<=") return b.CreateICmpSLE(c, z);
+            if (op == ">=") return b.CreateICmpSGE(c, z);
+        }
 
         bool isFloat = left->getType()->isFloatingPointTy() || right->getType()->isFloatingPointTy();
         llvm::Type* fp_type = fp_result_type(left, right, ctx.builder);

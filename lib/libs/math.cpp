@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <limits.h>
 
 extern "C" int _fltused = 0;
 
@@ -20,12 +21,11 @@ extern "C" int _fltused = 0;
 // Abs
 extern "C" int fab_absi(const int x)
 {
-    return x < 0 ? -x : x;
+    return x < 0 ? (int)(0u - (unsigned)x) : x;
 }
-
 extern "C" long long fab_absl(const long long x)
 {
-    return x < 0 ? -x : x;
+    return x < 0 ? (long long)(0ULL - (unsigned long long)x) : x;
 }
 
 extern "C" double fab_absd(const double x)
@@ -45,7 +45,7 @@ extern "C" float  fab_fmodf(const float a, const float b)   { return fmodf(a, b)
 // Result has the sign of b (unlike %)
 extern "C" int fab_modi(const int a, const int b)
 {
-    if (b == 0) return 0;
+    if (b == 0 || b == -1) return 0;
     int r = a % b;
     return (r != 0 && ((r < 0) != (b < 0))) ? r + b : r;
 }
@@ -53,28 +53,28 @@ extern "C" int fab_modi(const int a, const int b)
 // Pow (integers: fast pow, O(log y))
 extern "C" int fab_powi(int x, int y)
 {
-    if (y < 0) return 0;
-    int result = 1;
-    while (y)
+    if (y < 0)
     {
-        if (y & 1) result *= x;
-        x *= x;
-        y >>= 1;
+        if (x == 1)  return 1;
+        if (x == -1) return (y & 1) ? -1 : 1;
+        return 0;
     }
-    return result;
+    unsigned r = 1, b = (unsigned)x;
+    while (y) { if (y & 1) r *= b; b *= b; y >>= 1; }
+    return (int)r;
 }
 
 extern "C" long long fab_powl(long long x, long long y)
 {
-    if (y < 0) return 0;
-    long long result = 1;
-    while (y)
+    if (y < 0)
     {
-        if (y & 1) result *= x;
-        x *= x;
-        y >>= 1;
+        if (x == 1)  return 1;
+        if (x == -1) return (y & 1) ? -1 : 1;
+        return 0;
     }
-    return result;
+    unsigned long long r = 1, b = (unsigned long long)x;
+    while (y) { if (y & 1) r *= b; b *= b; y >>= 1; }
+    return (long long)r;
 }
 
 extern "C" double fab_powd(const double x, const double y) { return pow(x, y); }
@@ -153,30 +153,29 @@ FAB_MINMAX(f, float)
 FAB_MINMAX(d, double)
 
 // Integer math
-extern "C" int fab_gcdi(int a, int b)
+static unsigned long long uabs(long long x) { return x < 0 ? 0ULL - (unsigned long long)x : (unsigned long long)x; }
+static unsigned long long ugcd(unsigned long long a, unsigned long long b)
 {
-    while (b) { int t = a % b; a = b; b = t; }
-    return a < 0 ? -a : a;
+    while (b) { unsigned long long t = a % b; a = b; b = t; }
+    return a;
 }
 
-extern "C" long long fab_gcdl(long long a, long long b)
-{
-    while (b) { long long t = a % b; a = b; b = t; }
-    return a < 0 ? -a : a;
-}
-
-extern "C" int fab_lcmi(const int a, const int b)
-{
-    if (a == 0 || b == 0) return 0;
-    int r = (a / fab_gcdi(a, b)) * b;
-    return r < 0 ? -r : r;
-}
+extern "C" long long fab_gcdl(long long a, long long b) { return (long long)ugcd(uabs(a), uabs(b)); }
+extern "C" int       fab_gcdi(int a, int b)             { return (int)ugcd(uabs(a), uabs(b)); }
 
 extern "C" long long fab_lcml(const long long a, const long long b)
 {
     if (a == 0 || b == 0) return 0;
-    long long r = (a / fab_gcdl(a, b)) * b;
-    return r < 0 ? -r : r;
+    unsigned long long ua = uabs(a), ub = uabs(b);
+    unsigned long long q = ua / ugcd(ua, ub);
+    if (q > (unsigned long long)LLONG_MAX / ub) return -1;
+    return (long long)(q * ub);
+}
+
+extern "C" int fab_lcmi(const int a, const int b)
+{
+    long long r = fab_lcml(a, b);
+    return (r < 0 || r > INT_MAX) ? -1 : (int)r;
 }
 
 // n > 20 does not fit in long long, n < 0 is undefined -> -1
@@ -193,7 +192,7 @@ extern "C" bool fab_is_primel(const long long n)
     if (n < 2) return false;
     if (n < 4) return true;
     if (n % 2 == 0 || n % 3 == 0) return false;
-    for (long long i = 5; i * i <= n; i += 6)
+    for (long long i = 5; i <= n / i; i += 6)
         if (n % i == 0 || n % (i + 2) == 0) return false;
     return true;
 }

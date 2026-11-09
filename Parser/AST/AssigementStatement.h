@@ -26,16 +26,29 @@ inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm:
     llvm::Type* srcType = val->getType();
     if (srcType == targetType) return val;
 
+    if (srcType->isIntegerTy(1) && targetType->isIntegerTy())
+        return builder.CreateZExt(val, targetType);
+    if (srcType->isIntegerTy(1) && targetType->isFloatingPointTy())
+        return builder.CreateUIToFP(val, targetType);
+
+    if (targetType->isIntegerTy(1) && srcType->isIntegerTy())
+        return builder.CreateICmpNE(val, llvm::ConstantInt::get(srcType, 0));
+    if (targetType->isIntegerTy(1) && srcType->isFloatingPointTy())
+        return builder.CreateFCmpUNE(val, llvm::ConstantFP::get(srcType, 0.0));
+
+    if (srcType->isIntegerTy() && targetType->isIntegerTy())
+        return builder.CreateIntCast(val, targetType, true);
+
     if (srcType->isIntegerTy() && targetType->isFloatingPointTy())
         return builder.CreateSIToFP(val, targetType);
+
     if (srcType->isFloatingPointTy() && targetType->isIntegerTy())
-        return builder.CreateFPToSI(val, targetType);
+        return builder.CreateIntrinsic(llvm::Intrinsic::fptosi_sat, {targetType, srcType}, {val});
+
     if (srcType->isFloatingPointTy() && targetType->isFloatingPointTy())
         return srcType->getPrimitiveSizeInBits() < targetType->getPrimitiveSizeInBits()
             ? builder.CreateFPExt(val, targetType)
             : builder.CreateFPTrunc(val, targetType);
-    if (srcType->isIntegerTy() && targetType->isIntegerTy())
-        return builder.CreateIntCast(val, targetType, true);
 
     throw std::runtime_error("Cannot coerce between these types in codegen!");
 }
@@ -54,8 +67,17 @@ inline std::string list_elem(const std::string& t)
     return t.substr(5, t.size() - 6);
 }
 
+inline void check_elem(const std::string& what, const std::string& t, bool key)
+{
+    static const std::unordered_set<std::string> vals = {"int","long","short","char","float","double","string","bool"};
+    static const std::unordered_set<std::string> keys = {"int","long","short","char","string"};
+    if (!(key ? keys : vals).contains(t))
+        throw std::runtime_error(what + ": type '" + t + "' is not supported");
+}
+
 inline llvm::Value* emit_list_new(CodegenContext& ctx, const std::string& list_type)
 {
+    check_elem("list element", list_elem(list_type), false);
     auto& b = ctx.builder;
     llvm::Type* ptr = b.getInt8Ty()->getPointerTo();
     auto fn = ctx.module.getOrInsertFunction(
@@ -85,6 +107,7 @@ inline llvm::Value* emit_container_new(CodegenContext& ctx, const std::string& t
     if (t.starts_with("list<")) return emit_list_new(ctx, t);
 
     auto [k, v] = dict_kv(t);
+    check_elem("dict key", k, true); check_elem("dict value", v, false);
     auto& b = ctx.builder;
     auto fn = ctx.module.getOrInsertFunction(
         "fab_dict_new_" + k + "_" + v,
@@ -122,15 +145,21 @@ inline ClassInfo& get_class(CodegenContext& ctx, const std::string& n)
     return it->second;
 }
 
-inline void emit_null_check(CodegenContext& ctx, llvm::Value* obj, const std::string& msg)
+inline void emit_fail_if(CodegenContext& ctx, llvm::Value* cond, const std::string& msg)
 {
+    if (auto* c = llvm::dyn_cast<llvm::ConstantInt>(cond))
+    {
+        if (c->isZero()) return;
+        warn(msg + " (this will always fail at runtime)");
+    }
+
     auto& b = ctx.builder;
     llvm::Function* fn = b.GetInsertBlock()->getParent();
-    auto* bad = llvm::BasicBlock::Create(ctx.context, "null.bad", fn);
-    auto* ok  = llvm::BasicBlock::Create(ctx.context, "null.ok", fn);
+    auto* bad = llvm::BasicBlock::Create(ctx.context, "chk.bad", fn);
+    auto* ok  = llvm::BasicBlock::Create(ctx.context, "chk.ok", fn);
 
     llvm::MDBuilder md(ctx.context);
-    b.CreateCondBr(b.CreateIsNull(obj), bad, ok, md.createBranchWeights(1, 2000));
+    b.CreateCondBr(cond, bad, ok, md.createBranchWeights(1, 2000));
 
     b.SetInsertPoint(bad);
     auto putsFn = ctx.module.getOrInsertFunction("puts",
@@ -144,6 +173,22 @@ inline void emit_null_check(CodegenContext& ctx, llvm::Value* obj, const std::st
     b.CreateUnreachable();
 
     b.SetInsertPoint(ok);
+}
+
+inline void emit_list_bounds(CodegenContext& ctx, llvm::Value* list, llvm::Value* idx64)
+{
+    if (auto* ci = llvm::dyn_cast<llvm::ConstantInt>(idx64))
+        if (ci->isNegative()) warn("Index out of range: negative index");
+
+    auto& b = ctx.builder;
+    llvm::Value* lenp = b.CreateGEP(b.getInt8Ty(), list, b.getInt64(8));
+    llvm::Value* len  = b.CreateZExt(b.CreateLoad(b.getInt32Ty(), lenp), b.getInt64Ty());
+    emit_fail_if(ctx, b.CreateICmpUGE(idx64, len), "Index out of range");
+}
+
+inline void emit_null_check(CodegenContext& ctx, llvm::Value* obj, const std::string& msg)
+{
+    emit_fail_if(ctx, ctx.builder.CreateIsNull(obj), msg);
 }
 
 inline llvm::Value* emit_field_ptr(CodegenContext& ctx, llvm::Value* obj, const std::string& cls,
@@ -453,8 +498,12 @@ public:
                 std::string ft;
                 if (auto* p = emit_this_field_ptr(context, name, ft))
                 {
-                    auto* v = context.builder.CreateLoad(type_to_llvm(ft, context.builder), p, name);
-                    context.value_types[v] = ft;
+                    llvm::Type* lt = type_to_llvm(ft, context.builder);
+                    llvm::Value* val = expression->is_null_literal()
+                        ? (is_container(ft) ? emit_container_new(context, ft)
+                                            : llvm::Constant::getNullValue(lt))
+                        : expression->codegen_expected(context, ft);
+                    context.builder.CreateStore(coerceToType(val, lt, context.builder), p);
                     return;
                 }
                 if (auto* g = find_global(context, name))
@@ -481,7 +530,11 @@ public:
                 return;
             }
 
-            llvm::Value* val = expression->is_null_literal() ? llvm::Constant::getNullValue(type_to_llvm(type, context.builder)) : expression->codegen_expected(context, context.var_types[name]);
+            const std::string& vt = context.var_types[name];
+            llvm::Value* val = expression->is_null_literal()
+                ? (is_container(vt) ? emit_container_new(context, vt)
+                                    : llvm::Constant::getNullValue(it->second->getAllocatedType()))
+                : expression->codegen_expected(context, vt);
             val = coerceToType(val, it->second->getAllocatedType(), context.builder);
             context.builder.CreateStore(val, it->second);
             return;

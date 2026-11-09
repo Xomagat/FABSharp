@@ -113,6 +113,7 @@ add_library(fabstd STATIC
         lib/libs/console.cpp
         lib/out.cpp
         lib/alloc.cpp
+        lib/libs/strbuf.cpp
 )
 
 if (MSVC)

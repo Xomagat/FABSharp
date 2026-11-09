@@ -29,6 +29,18 @@ struct SourceFile { std::string path, text; std::vector<size_t> starts; };
 inline std::vector<SourceFile> g_sources;
 inline std::vector<FabError>   g_diags;
 
+inline std::vector<FabError> g_warns;
+inline SrcLoc g_cur_loc;
+
+inline void warn(const std::string& msg) { g_warns.push_back(FabError(msg, g_cur_loc)); }
+
+struct LocScope
+{
+    SrcLoc saved;
+    explicit LocScope(const SrcLoc& l) : saved(g_cur_loc) { if (l.valid()) g_cur_loc = l; }
+    ~LocScope() { g_cur_loc = saved; }
+};
+
 inline int add_source(const std::string& path, const std::string& text)
 {
     SourceFile f{path, text, {0}};
@@ -86,7 +98,7 @@ inline Shown render_line(const std::string& src, int col, int len)
     return r;
 }
 
-inline void print_diag(const FabError& e)
+inline void print_diag(const FabError& e, bool warning = false)
 {
     std::ostream& os = std::cout;
     bool c = diag_color();
@@ -101,7 +113,7 @@ inline void print_diag(const FabError& e)
 
     const SrcLoc& l = e.loc;
 
-    os << "\n " << RED << "error" << RST << "  " << MSG << e.what() << RST << "\n";
+    os << "\n " << RED << (warning ? "warning" : "error") << RST << "  " << MSG << e.what() << RST << "\n";
 
     if (!l.valid() || l.file >= (int)g_sources.size()) return;
 
@@ -174,4 +186,13 @@ inline void print_all_diags()
         std::cout << "\n" << GRY << "… and " << (uniq.size() - 20) << " more" << RST << "\n";
 
     std::cout << "\n" << RED << "✖ " << uniq.size() << (uniq.size() == 1 ? " error" : " errors") << RST << "\n";
+}
+
+inline void print_warnings()
+{
+    for (auto& w : g_warns) print_diag(w, true);
+    if (!g_warns.empty())
+        std::cout << "\n" << (diag_color() ? "\033[1;33m" : "") << "! " << g_warns.size()
+                  << (g_warns.size() == 1 ? " warning" : " warnings")
+                  << (diag_color() ? "\033[0m" : "") << "\n";
 }

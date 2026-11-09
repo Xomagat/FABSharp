@@ -1,9 +1,84 @@
+use strbuf;
+use system;
+use math;
+
+class C
+{
+public:
+    int n;
+    define inc() { n = n + 1; }
+}
+
 define main() -> int
 {
-    writeln $"...";
+    auto ss = ticks_ms();
+    strbuf b = sb_new();
 
-    int y = 2.1.23;
+    for (int i = 0; i < 100000; i++) b.append("x");
 
-    wroteln i;
+    string r = b.to_str();
+    delete b;
 
-    f();
+    writeln r.count("x");           // 100000
+    writeln ticks_ms() - ss;        // количество мс с strbuf (от 1 до 4 мс)
+
+    string s = "hello";
+    string e;
+
+    writeln s.substr(10, 2).length();       // 0 (раньше NULL -> падение)
+    writeln s.substr(1, 2147483647);        // ello (раньше переполнение int)
+    writeln s.rfind("");                    // 5 (раньше чтение за концом строки)
+    writeln s.replace("", "x");             // hello (раньше nullptr)
+    writeln e.length();                     // 0 (раньше strlen(NULL))
+    writeln "".last() == '\0';              // true (раньше x[-1])
+
+    string t = s.substr(0, 1);
+    writeln t == "h";                       // true (раньше сравнивались адреса)
+    writeln "b" > "a";                      // true
+    writeln s + e;                          // hello
+
+    list<int> a = [1, 2, 3];
+    dict<string, int> d = {"a": 1};
+    d["b"] = 2;
+    writeln d["b"];                 // 2 (раньше: Cannot coerce)
+    writeln d["zzz"];               // 0, ключа нет
+
+    C c;
+    c.inc(); c.inc();
+    writeln c.n;                    // 2 (раньше 0)
+
+    int x = true;
+    bool b = 2;
+    writeln x;                      // 1 (раньше -1)
+    writeln b;                      // true (раньше false)
+
+    short s1 = 30000, s2 = 30000;
+    int sum = s1 + s2;
+    writeln sum;                    // 60000 (раньше -5536)
+
+    int m = INT_MIN;
+    writeln m / -1;                 // -2147483648, без падения
+    writeln m % -1;                 // 0
+    writeln abs(m);                 // -2147483648 (заворот, документировано)
+
+    double nan_v = nan();
+    int fromnan = nan_v;
+    writeln fromnan;                // 0 (раньше UB)
+
+    writeln pow(-1, -3);            // -1 (раньше 0)
+    writeln lcm(2000000000, 3);     // -1: не помещается в int
+    writeln is_prime(9223372036854775783L); // без переполнения цикла
+    writeln (0.49999999999999994).round();  // 0
+
+    int z = 0;
+    writeln 10 / z;                 // "Division by zero", выход с кодом 1
+    writeln 10 / 0;                 // warning (compile) / error (runtime)
+
+    list<int> b = [5];
+    b = null;                       // раньше: Unknown type for codegen
+    writeln b.length();             // 0
+
+    delete a;
+    writeln a.length();             // "Null reference: method 'length'", выход 1, без segfault
+    return 0;
+}

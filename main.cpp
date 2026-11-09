@@ -180,6 +180,7 @@ int main(int argc, char** argv)
 
         if (o.verbose) std::cout << "[fab] generating code (-O" << o.co.opt_level << ")\n";
         compile(statements, objFile, o.co);
+        print_warnings();
         if (!g_diags.empty()) { print_all_diags(); return 1; }
 
         if (only_text)
