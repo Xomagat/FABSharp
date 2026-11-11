@@ -12,28 +12,9 @@
 #include "../../libs/STDLibInfo.h"
 #include "../../CodeGen/Runtimeatters.h"
 
-inline int numeric_rank(const std::string& t)
-{
-    if (t == "short")  return 1;
-    if (t == "int")    return 2;
-    if (t == "long")   return 3;
-    if (t == "float")  return 4;
-    if (t == "double") return 5;
-    if (t == "ldouble") return 6;
-    return 0;
-}
+#include "NamedCall.h"
 
-inline int conversion_cost(const std::string& from, const std::string& to)
-{
-    if (from == to) return 0;
-    if (lib_is_a(from, to)) return 1;
-
-    int a = numeric_rank(from), b = numeric_rank(to);
-    if (!a || !b) return -1;
-    if (a >= 4 && b <= 3) return -1;
-
-    return std::abs(a - b);
-}
+#include <set>
 
 inline const StdlibFunctionInfo* find_with_conversion(const std::string& name,
                                                       const std::vector<std::string>& actual)
@@ -99,7 +80,13 @@ private:
     std::string name;
     std::vector<std::unique_ptr<Expression>> args;
 
+    std::vector<std::string> names;
+
 public:
+    void add_arg(std::string n, std::unique_ptr<Expression> a)
+    { names.resize(args.size()); names.push_back(std::move(n)); args.push_back(std::move(a)); }
+    bool has_named() const { return any_named(names); }
+
     explicit FunctionalExpression(std::string name) : name(name) {}
 
     explicit FunctionalExpression(std::string name, std::vector<std::unique_ptr<Expression>> args) : name(name), args(std::move(args)) {}
@@ -219,8 +206,78 @@ public:
         throw std::runtime_error("Unknown function or overload for codegen: " + sig);
     }
 
+    llvm::Value* codegen_named(CodegenContext& ctx) const
+    {
+        std::string base = name;
+        bool std_only = base.starts_with("std::");
+        if (std_only) base = base.substr(5);
+
+        for (auto& q : std_only ? std::vector<std::string>{base} : ns_candidates(ctx, base))
+        {
+            if (!std_only)
+                if (auto ov = ctx.overloads.find(q); ov != ctx.overloads.end())
+                {
+                    std::vector<NamedCand> user;
+                    for (auto& sig : ov->second)
+                    {
+                        NamedCand c;
+                        c.types = sig.types;  c.names = sig.names;
+                        for (size_t p = 0; p < sig.types.size(); ++p)
+                            c.has_default.push_back(p < sig.defaults.size() && sig.defaults[p]);
+
+                        auto key = mangle_name(q, sig.types);
+                        llvm::Function* fn = ctx.functions.at(key);
+                        const FuncSig* sp = &sig;
+                        c.make_default = [sp](CodegenContext& cx, size_t p) {
+                            return sp->defaults[p]->codegen_expected(cx, sp->types[p]);
+                        };
+                        c.emit = [fn, key](CodegenContext& cx, std::vector<llvm::Value*>& v) -> llvm::Value* {
+                            llvm::Value* r = cx.builder.CreateCall(fn, v);
+                            auto& rt = cx.func_ret[key];
+                            if (rt != "void") cx.value_types[r] = rt;
+                            return r;
+                        };
+                        user.push_back(std::move(c));
+                    }
+                    if (auto* r = emit_named_call(ctx, args, names, user, name, true)) return r;
+                }
+
+            std::vector<NamedCand> lib;
+            std::set<std::string> seen;
+            for (auto& [k, inf] : stdlib_symbols)
+                if (k.starts_with(q + "#") && seen.insert(inf.symbol).second)
+                    lib.push_back(lib_cand(inf, 0, nullptr));
+            if (auto* r = emit_named_call(ctx, args, names, lib, name, true)) return r;
+        }
+        throw std::runtime_error("Unknown function or overload for named arguments: " + name);
+    }
+
+    static NamedCand lib_cand(const StdlibFunctionInfo& info, size_t skip, llvm::Value* self)
+    {
+        NamedCand c;
+        for (size_t i = skip; i < info.arg_types.size(); ++i)
+        {
+            c.types.push_back(info.arg_types[i]);
+            c.names.push_back(i < info.names.size() ? info.names[i] : "");
+            c.has_default.push_back(i < info.defaults.size() && !info.defaults[i].empty());
+        }
+        c.make_default = [info, skip](CodegenContext& ctx, size_t p) {
+            size_t i = p + skip;
+            return emit_stdlib_const(ctx, {"", info.arg_types[i], info.defaults[i], true});
+        };
+        c.emit = [info, self](CodegenContext& ctx, std::vector<llvm::Value*>& v) {
+            std::vector<llvm::Value*> all;
+            if (self) all.push_back(self);
+            all.insert(all.end(), v.begin(), v.end());
+            return emit_stdlib_call(ctx, info, all);
+        };
+        return c;
+    }
+
     llvm::Value* codegen(CodegenContext& context) const override
     {
+        if (has_named()) return codegen_named(context);
+
         std::vector<llvm::Value*> vals;
         for (auto& a : args) vals.push_back(a->codegen(context));
         return call(context, name, std::move(vals));

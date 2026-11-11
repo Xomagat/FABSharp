@@ -15,6 +15,7 @@ struct MethodDecl
     bool is_public;
     std::vector<std::shared_ptr<Expression>> base_args;
     bool is_static;
+    std::vector<std::shared_ptr<Expression>> defaults;
 };
 
 class DtorBody : public Statement
@@ -143,8 +144,10 @@ public:
             ci.vslots  = p.vslots;
             ci.statics = p.statics;
             ci.ctor = p.ctor; ci.ctor_args = p.ctor_args;
+            ci.ctor_names = p.ctor_names; ci.ctor_defaults = p.ctor_defaults;
         }
         else ci.vslots.push_back(nullptr);
+
 
         for (auto f : fields) { f.owner = name; ci.fields.push_back(f); }
 
@@ -161,8 +164,6 @@ public:
             f->addFnAttr(llvm::Attribute::NoUnwind);
             return f;
         };
-
-        if (ctor) { ci.ctor = make(*ctor, name + ".new"); ci.ctor_args = ctor->arg_types; }
 
         ci.dtor = llvm::Function::Create(
             llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false),
@@ -189,7 +190,11 @@ public:
                 ci.vslots[slot] = fn;
             }
             else { slot = (int)ci.vslots.size(); ci.vslots.push_back(fn); }
-            ci.methods[key] = {fn, m.ret, m.arg_types, m.is_public, slot};
+            if (ctor) { ci.ctor = make(*ctor, name + ".new"); ci.ctor_args = ctor->arg_types;
+                ci.ctor_names = ctor->arg_names; ci.ctor_defaults = ctor->defaults; }
+
+            ci.statics[key] = {fn, m.ret, m.arg_types, m.is_public, -1, true,  m.arg_names, m.defaults};
+            ci.methods[key] = {fn, m.ret, m.arg_types, m.is_public, slot, false, m.arg_names, m.defaults};
         }
 
         auto* arrTy = llvm::ArrayType::get(b.getPtrTy(), ci.vslots.size());
@@ -225,10 +230,13 @@ class NewExpression : public Expression
 {
     std::string cls;
     std::vector<std::unique_ptr<Expression>> args;
+    std::vector<std::string> names;
 
 public:
     explicit NewExpression(std::string cls) : cls(std::move(cls)) {}
-    void add_arg(std::unique_ptr<Expression> a) { args.push_back(std::move(a)); }
+    void add_arg(std::string n, std::unique_ptr<Expression> a)
+    { names.resize(args.size()); names.push_back(std::move(n)); args.push_back(std::move(a)); }
+    bool has_named() const { return any_named(names); }
 
     llvm::Value* codegen(CodegenContext& ctx) const override
     {
@@ -242,6 +250,29 @@ public:
             if (!args.empty()) throw std::runtime_error("Class '" + cls + "' has no constructor!");
             return obj;
         }
+        if (has_named() || args.size() != ci.ctor_args.size())
+        {
+            NamedCand c;
+            c.types = ci.ctor_args;
+            c.names = ci.ctor_names;  c.names.resize(c.types.size());
+            for (size_t p = 0; p < c.types.size(); ++p)
+                c.has_default.push_back(p < ci.ctor_defaults.size() && ci.ctor_defaults[p]);
+
+            const ClassInfo* cp = &ci;
+            c.make_default = [cp](CodegenContext& cx, size_t p) {
+                return cp->ctor_defaults[p]->codegen_expected(cx, cp->ctor_args[p]);
+            };
+            c.emit = [cp, obj](CodegenContext& cx, std::vector<llvm::Value*>& v) -> llvm::Value* {
+                std::vector<llvm::Value*> all{obj};                 // первым идёт указатель на объект
+                all.insert(all.end(), v.begin(), v.end());
+                cx.builder.CreateCall(cp->ctor, all);
+                return obj;
+            };
+
+            emit_named_call(ctx, args, names, {c}, "new " + cls);
+            return obj;
+        }
+
         if (args.size() != ci.ctor_args.size())
             throw std::runtime_error("Wrong argument count for constructor of '" + cls + "'!");
 
@@ -361,12 +392,49 @@ class StaticCallExpression : public Expression
 {
     std::string cls, name;
     std::vector<std::unique_ptr<Expression>> args;
+    std::vector<std::string> names;
+
 public:
     StaticCallExpression(std::string c, std::string n) : cls(std::move(c)), name(std::move(n)) {}
-    void add_arg(std::unique_ptr<Expression> a) { args.push_back(std::move(a)); }
+    void add_arg(std::string n, std::unique_ptr<Expression> a)
+    { names.resize(args.size()); names.push_back(std::move(n)); args.push_back(std::move(a)); }
+    bool has_named() const { return any_named(names); }
 
     llvm::Value* codegen(CodegenContext& ctx) const override
     {
+        if (has_named())
+        {
+            std::vector<NamedCand> cands;
+
+            if (static_classes.contains(cls) && !ctx.classes.contains(cls))
+            {
+                std::set<std::string> seen;
+                for (auto& [k, inf] : stdlib_statics)
+                    if (k.starts_with(cls + "::" + name + "#") && seen.insert(inf.symbol).second)
+                        cands.push_back(FunctionalExpression::lib_cand(inf, 0, nullptr));
+            }
+            else
+            {
+                auto& ci = get_class(ctx, cls);
+                for (auto& [k, mi] : ci.statics)
+                {
+                    if (!k.starts_with(name + "#")) continue;
+
+                    NamedCand c = sig_cand(mi);
+                    const MethodInfo* mp = &mi;
+                    c.emit = [this, mp](CodegenContext& cx, std::vector<llvm::Value*>& v) -> llvm::Value*
+                    {
+                        if (!mp->is_public && cx.current_class != cls)
+                            throw std::runtime_error("Static method '" + name + "' is private!");
+                        llvm::Value* r = cx.builder.CreateCall(mp->fn, v);       // this не передаётся
+                        if (mp->ret != "void") cx.value_types[r] = mp->ret;
+                        return r;
+                    };
+                    cands.push_back(std::move(c));
+                }
+            }
+            return emit_named_call(ctx, args, names, cands, cls + "." + name);
+        }
         if (static_classes.contains(cls) && !ctx.classes.contains(cls))
         {
             std::vector<llvm::Value*> vals;

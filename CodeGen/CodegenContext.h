@@ -24,8 +24,17 @@ struct LoopTargets
 
 struct FieldInfo  { std::string name, type; bool is_public; std::string owner;
     std::shared_ptr<Expression> init; };
+
 struct MethodInfo { llvm::Function* fn; std::string ret; std::vector<std::string> args;
-    bool is_public; int slot = -1; bool is_static; };
+    bool is_public; int slot = -1; bool is_static = false;
+    std::vector<std::string> names;
+    std::vector<std::shared_ptr<Expression>> defaults; };
+
+struct FuncSig
+{
+    std::vector<std::string> types, names;
+    std::vector<std::shared_ptr<Expression>> defaults;
+};
 
 struct ClassInfo
 {
@@ -39,6 +48,9 @@ struct ClassInfo
     llvm::Function* dtor = nullptr;
     std::vector<llvm::Function*> vslots;
     llvm::GlobalVariable* vtable = nullptr;
+
+    std::vector<std::string> ctor_names;
+    std::vector<std::shared_ptr<Expression>> ctor_defaults;
 
     int field_index(const std::string& n) const
     {
@@ -67,6 +79,8 @@ struct CodegenContext
     std::vector<LoopTargets> loop_stack;
     std::unordered_set<std::string> const_vars;
     std::unordered_map<std::string, llvm::Function*> methods;
+
+    std::unordered_map<std::string, std::vector<FuncSig>> overloads;
 
     std::unordered_map<std::string, std::string> var_types;
     std::unordered_map<llvm::Value*, std::string> value_types;

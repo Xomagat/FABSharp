@@ -57,3 +57,22 @@ extern "C" char* fab_concat2(const char* a, const char* b)
     memcpy(r + la, b, lb + 1);
     return r;
 }
+
+extern "C" char* fab_concat_n(const char** parts, int n)
+{
+    size_t total = 1;
+    for (int i = 0; i < n; ++i)
+        if (parts[i]) total += strlen(parts[i]);
+
+    char* r = (char*)bump_alloc(total);
+    char* p = r;
+    for (int i = 0; i < n; ++i)
+    {
+        if (!parts[i]) continue;
+        size_t len = strlen(parts[i]);
+        memcpy(p, parts[i], len);
+        p += len;
+    }
+    *p = '\0';
+    return r;
+}

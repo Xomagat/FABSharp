@@ -10,6 +10,7 @@
 #include <memory>
 #include <fstream>
 #include <filesystem>
+#include <functional>
 
 #include "AST/BinExpression.h"
 #include "AST/ConditionalExpression.h"
@@ -37,6 +38,8 @@
 #include "AST/IOStatement.h"
 #include "AST/UseStatement.h"
 #include "AST/IncDecExpression.h"
+
+#include "AST/NamedCall.h"
 
 #include "../libs/STDLibInfo.h"
 
@@ -73,6 +76,8 @@ private:
     bool at_decl();
     void parse_top(std::vector<std::unique_ptr<Statement>>& out);
     void parse_namespace(std::vector<std::unique_ptr<Statement>>& out);
+
+    void parse_call_args(const std::function<void(std::string, std::unique_ptr<Expression>)>& add);
 
     Token get(int relative_position);
 

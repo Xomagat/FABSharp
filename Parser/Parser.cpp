@@ -572,6 +572,8 @@ std::unique_ptr<Statement> Parser::class_definition()
             MethodDecl d{fn->get_type(), fn->get_name(), fn->get_arg_types(),
                          fn->get_arg_names(), fn->get_body(), is_public};
             d.is_static = st;
+            d.is_static = st;
+            d.defaults = fn->get_defaults();
             cls->add_method(std::move(d));
             continue;
         }
@@ -593,10 +595,13 @@ std::unique_ptr<Statement> Parser::class_definition()
             consume(token_type::WORDS);
             consume(token_type::LPARENT);
             std::vector<std::string> at, an;
+            std::vector<std::shared_ptr<Expression>> ad;
             while (!match(token_type::RPARENT))
             {
                 at.push_back(parse_type());
                 an.push_back(consume(token_type::WORDS).get_text());
+                if (match(token_type::EQ)) ad.push_back(expression());
+                else                       ad.push_back(nullptr);
                 match(token_type::COMMA);
             }
 
@@ -621,6 +626,7 @@ std::unique_ptr<Statement> Parser::class_definition()
 
             std::shared_ptr<Statement> body = block();
             MethodDecl d{"void", "new", at, an, body, true};
+            d.defaults  = std::move(ad);
             d.base_args = std::move(base_args);
             cls->set_ctor(std::move(d));
             continue;
@@ -681,16 +687,9 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function(bool qualified)
         arg_name.push_back(consume(token_type::WORDS).get_text());
 
         if (match(token_type::EQ))
-        {
             arg_def.push_back(expression());
-            seen_def = true;
-        }
         else
-        {
-            if (seen_def)
-                throw std::runtime_error("Parameter without default value after parameter with default!");
             arg_def.push_back(nullptr);
-        }
         match(token_type::COMMA);
     }
 
@@ -898,11 +897,8 @@ std::unique_ptr<Expression> Parser::postfix()
             if (match(token_type::LPARENT))
             {
                 auto call = std::make_unique<MethodCallExpression>(name, std::move(expr));
-                while (!match(token_type::RPARENT))
-                {
-                    call->add_arg(expression());
-                    match(token_type::COMMA);
-                }
+                parse_call_args([&](std::string n, std::unique_ptr<Expression> e)
+                                { call->add_arg(std::move(n), std::move(e)); });
                 expr = std::move(call);
             }
             else
@@ -953,11 +949,8 @@ std::unique_ptr<Expression> Parser::primary_impl()
             std::string name = get(0).get_text(); pos++;
             consume(token_type::LPARENT);
             auto c = std::make_unique<StaticCallExpression>(cls.empty() ? text : cls, name);
-            while (!match(token_type::RPARENT))
-            {
-                c->add_arg(expression());
-                match(token_type::COMMA);
-            }
+            parse_call_args([&](std::string n, std::unique_ptr<Expression> e)
+                            { c->add_arg(std::move(n), std::move(e)); });
             return c;
         }
 
@@ -991,7 +984,18 @@ std::unique_ptr<Expression> Parser::primary_impl()
             auto f = std::make_unique<FunctionalExpression>(text);
             while (!match(token_type::RPARENT))
             {
-                f->add_arg(expression());
+                if (get(0).get_type() == token_type::WORDS && get(1).get_type() == token_type::EQ)
+                {
+                    std::string an = get(0).get_text();
+                    pos += 2;
+                    f->add_arg(an, expression());
+                }
+                else
+                {
+                    if (f->has_named())
+                        throw std::runtime_error("Positional argument after named argument!");
+                    f->add_arg(expression());
+                }
                 match(token_type::COMMA);
             }
             return f;
@@ -1055,11 +1059,8 @@ std::unique_ptr<Expression> Parser::primary_impl()
 
         consume(token_type::LPARENT);
         auto n = std::make_unique<NewExpression>(cls.empty() ? text : cls);
-        while (!match(token_type::RPARENT))
-        {
-            n->add_arg(expression());
-            match(token_type::COMMA);
-        }
+        parse_call_args([&](std::string nm, std::unique_ptr<Expression> e)
+                        { n->add_arg(std::move(nm), std::move(e)); });
         return n;
     }
     if (match(token_type::NULLVAL))
@@ -1196,6 +1197,13 @@ bool is_known_type(std::string& type)
     return false;
 }
 
+static size_t positional_min(const std::vector<std::string>& defs)
+{
+    size_t n = 0;
+    for (size_t i = 0; i < defs.size(); ++i) if (defs[i].empty()) n = i + 1;
+    return n;
+}
+
 void Parser::load_stdlib_manifest(const std::filesystem::path& path)
 {
     std::ifstream file(path);
@@ -1291,27 +1299,26 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         if (fab_name == "static") { is_static = true; iss >> fab_name; }
         iss >> symbol >> ret >> colon;
 
-        std::vector<std::string> args, defs;
+        std::vector<std::string> args, defs, nms;
         while (iss >> arg)
         {
             if (arg.back() == ',') arg.pop_back();
-            std::string def;
+            std::string def, nm;
             if (auto eq = arg.find('='); eq != std::string::npos)
             {
                 def = arg.substr(eq + 1);
                 arg.resize(eq);
                 if (def.empty()) throw std::runtime_error("Manifest: empty default in " + fab_name);
             }
-            else if (!defs.empty() && std::any_of(defs.begin(), defs.end(), [](auto& s){ return !s.empty(); }))
-                throw std::runtime_error("Manifest: required argument after default in " + fab_name);
-
-            args.push_back(arg);
-            defs.push_back(def);
+            if (auto c = arg.find(':'); c != std::string::npos)
+            {
+                nm = arg.substr(c + 1);
+                arg.resize(c);
+            }
+            args.push_back(arg); defs.push_back(def); nms.push_back(nm);
         }
 
-        size_t first_def = args.size();
-        for (size_t i = 0; i < defs.size(); ++i)
-            if (!defs[i].empty()) { first_def = i; break; }
+        size_t first_def = positional_min(defs);
 
         if (is_static)
         {
@@ -1329,7 +1336,7 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
             if (stdlib_statics.contains(key))
                 throw std::runtime_error("Manifest: duplicate static " + fab_name);
 
-            StdlibFunctionInfo info{symbol, ret, args, defs};
+            StdlibFunctionInfo info{symbol, ret, args, defs, nms};
             stdlib_statics[key] = info;
             for (size_t n = first_def; n < args.size(); ++n)
                 stdlib_statics.emplace(
@@ -1340,7 +1347,7 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         auto dot = fab_name.find('.');
         if (dot == std::string::npos)
         {
-            StdlibFunctionInfo info{symbol, ret, args, defs};
+            StdlibFunctionInfo info{symbol, ret, args, defs, nms};
             stdlib_symbols[mangle_name(fab_name, args)] = info;
 
             for (size_t n = first_def; n < args.size(); ++n)
@@ -1370,7 +1377,7 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
         if (stdlib_methods.contains(key))
             throw std::runtime_error("Manifest: duplicate method " + fab_name);
 
-        StdlibFunctionInfo info{symbol, ret, args, defs};
+        StdlibFunctionInfo info{symbol, ret, args, defs, nms};
         stdlib_methods[key] = info;
 
         for (size_t n = first_def; n < args.size(); ++n)
@@ -1530,5 +1537,25 @@ void Parser::synchronize()
         if (t == token_type::LBRACKET) depth++;
         else if (t == token_type::RBRACKET) depth--;
         else if (t == token_type::SEMI && depth == 0) return;
+    }
+}
+
+void Parser::parse_call_args(const std::function<void(std::string, std::unique_ptr<Expression>)>& add)
+{
+    bool named = false;
+    while (!match(token_type::RPARENT))
+    {
+        std::string n;
+        if (get(0).get_type() == token_type::WORDS && get(1).get_type() == token_type::EQ)
+        {
+            n = get(0).get_text();
+            pos += 2;
+            named = true;
+        }
+        else if (named)
+            throw std::runtime_error("Positional argument after named argument!");
+
+        add(n, expression());
+        match(token_type::COMMA);
     }
 }

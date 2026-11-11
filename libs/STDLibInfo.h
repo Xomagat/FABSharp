@@ -14,6 +14,7 @@ struct StdlibFunctionInfo
     std::string return_type;
     std::vector<std::string> arg_types;
     std::vector<std::string> defaults;
+    std::vector<std::string> names;
 };
 
 struct StdlibVarInfo

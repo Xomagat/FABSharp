@@ -96,6 +96,9 @@ public:
 
     void codegen(CodegenContext &context) const override
     {
+        auto defs = defaults;
+        defs.resize(arg_types.size());
+
         std::vector<llvm::Type*> param_types;
         for (auto& arg_type : arg_types)
             param_types.push_back(type_to_llvm(arg_type, context.builder));
@@ -110,9 +113,11 @@ public:
         context.functions[mangle_name(name, arg_types)] = function;
         context.func_ret[mangle_name(name, arg_types)]  = type;
 
-        size_t first_def = arg_types.size();
-        for (size_t i = 0; i < defaults.size(); ++i)
-            if (defaults[i]) { first_def = i; break; }
+        context.overloads[name].push_back({arg_types, arg_names, defs});
+
+        size_t first_def = 0;
+        for (size_t i = 0; i < defs.size(); ++i)
+            if (!defs[i]) first_def = i + 1;
 
         for (size_t n = first_def; n < arg_types.size(); ++n)
         {
@@ -120,7 +125,7 @@ public:
             auto k = mangle_name(name, sub);
             context.functions[k] = function;
             context.func_ret[k]  = type;
-            context.func_defaults[k] = {arg_types, defaults};
+            context.func_defaults[k] = {arg_types, defs};
         }
 
         llvm::BasicBlock* entry = llvm::BasicBlock::Create(context.context, "entry", function);
