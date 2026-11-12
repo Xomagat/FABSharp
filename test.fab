@@ -1,24 +1,17 @@
-class A
-{
-public:
-    A(int a, int b = 2) { writeln a - b; }
-    define m(int x, int y = 1) writeln x / y;
-    static define s(int x, int y = 1) writeln x * y;
-}
+use thread;
+use system;
 
-define f(int y = 3, int x) writeln x / y;
+define worker(int id, string name)
+{
+    writeln $"worker {id}: {name}";
+}
 
 define main() -> int
 {
-    int x = 123;
-
-    f(x=123);               // 41
-    f(3, 123);              // 41
-    A a = new A(b=1, a=5);  // 4
-    a.m(y=2, x=10);         // 5
-    a.m(10);                // 10
-
-    writeln $"{10} {x}";
-
+    auto ss = ticks_ms();
+    //thread t = spawn(worker, 1, "a");   // первый аргумент: имя функции
+    //t.join();
+    worker(1, "a");
+    writeln ticks_ms() - ss;
     return 0;
 }

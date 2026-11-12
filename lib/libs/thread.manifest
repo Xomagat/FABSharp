@@ -1,0 +1,15 @@
+# Thread functions v0.1
+# Created on 11.11.26
+# Last update 12.11.26
+
+class thread free fab_thread_free
+class mutex  free fab_mutex_free
+
+thread.join        fab_thread_join       bool  : thread
+thread.is_running  fab_thread_is_running bool  : thread
+thread_id          fab_thread_self       long  :
+
+mutex_new          fab_mutex_new         mutex :
+mutex.lock         fab_mutex_lock        void  : mutex
+mutex.unlock       fab_mutex_unlock      void  : mutex
+mutex.try_lock     fab_mutex_try_lock    bool  : mutex

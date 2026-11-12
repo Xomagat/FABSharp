@@ -11,8 +11,8 @@
 // DO NOT use it for anything that is passed to free() or realloc() (lists, dicts, objects).
 extern "C"
 {
-inline char*  fab_bump_cur  = nullptr;
-inline size_t fab_bump_left = 0;
+inline thread_local char*  fab_bump_cur  = nullptr;
+inline thread_local size_t fab_bump_left = 0;
 void* fab_alloc_slow(size_t n);
 [[noreturn]] void fab_oom();
 static inline void* fab_xmalloc(size_t n)           { void* p = malloc(n);     if (!p) fab_oom(); return p; }

@@ -9,6 +9,7 @@
 #include "AssigementStatement.h"
 
 #include "Expression.h"
+#include "VariableExpression.h"
 #include "../../libs/STDLibInfo.h"
 #include "../../CodeGen/Runtimeatters.h"
 
@@ -72,6 +73,87 @@ inline const StdlibFunctionInfo* find_static_with_conversion(const std::string& 
     }
     if (tie) throw std::runtime_error("Ambiguous call to '" + cls + "." + name + "'");
     return best;
+}
+
+inline llvm::Value* emit_spawn(CodegenContext& ctx, const std::string& fname,
+                               const std::vector<llvm::Value*>& vals)
+{
+    auto& b = ctx.builder;
+
+    std::vector<std::string> types;
+    for (auto* v : vals) types.push_back(type_of(ctx, v));
+
+    // 1. Ищем пользовательскую функцию: сначала точное совпадение типов,
+    //    потом ближайшая перегрузка с допустимым приведением (int -> long и т.п.)
+    llvm::Function* fn = nullptr;
+    int best = INT_MAX;
+    for (auto& q : ns_candidates(ctx, fname))
+    {
+        if (auto it = ctx.functions.find(mangle_name(q, types)); it != ctx.functions.end())
+            { fn = it->second; break; }
+
+        auto ov = ctx.overloads.find(q);
+        if (ov == ctx.overloads.end()) continue;
+        for (auto& sig : ov->second)
+        {
+            if (sig.types.size() != types.size()) continue;
+            int total = 0; bool ok = true;
+            for (size_t i = 0; i < types.size() && ok; ++i)
+            {
+                int c = conversion_cost(types[i], sig.types[i]);
+                if (c < 0) ok = false; else total += c;
+            }
+            if (ok && total < best)
+            {
+                best = total;
+                fn = ctx.functions.at(mangle_name(q, sig.types));
+            }
+        }
+        if (fn) break;
+    }
+    if (!fn)
+        throw std::runtime_error("spawn: function '" + fname + "' with these arguments not found "
+                                 "(it must be defined above; default arguments must be passed explicitly)");
+
+    // 2. env: структура из параметров функции, лежит на куче
+    auto* fty = fn->getFunctionType();
+    std::vector<llvm::Type*> pt(fty->param_begin(), fty->param_end());
+    auto* envTy = llvm::StructType::get(ctx.context, pt);
+
+    auto* nullp = llvm::ConstantPointerNull::get(b.getPtrTy());
+    llvm::Value* size = b.CreatePtrToInt(b.CreateGEP(envTy, nullp, {b.getInt32(1)}), b.getInt64Ty());
+    auto mallocFn = ctx.module.getOrInsertFunction("malloc",
+        llvm::FunctionType::get(b.getPtrTy(), {b.getInt64Ty()}, false));
+    llvm::Value* env = b.CreateCall(mallocFn, {size});
+
+    for (size_t i = 0; i < vals.size(); ++i)
+        b.CreateStore(coerceToType(vals[i], pt[i], b), b.CreateStructGEP(envTy, env, (unsigned)i));
+
+    // 3. thunk: ptr thunk(ptr env). Отдельный builder, чтобы не сбить ctx.builder
+    auto* tty = llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy()}, false);
+    auto* thunk = llvm::Function::Create(tty, llvm::Function::InternalLinkage, "spawn.thunk", ctx.module);
+    thunk->addFnAttr(llvm::Attribute::NoUnwind);
+    {
+        llvm::IRBuilder<> tb(ctx.context);
+        tb.SetInsertPoint(llvm::BasicBlock::Create(ctx.context, "entry", thunk));
+
+        llvm::Value* e = thunk->getArg(0);
+        std::vector<llvm::Value*> a;
+        for (size_t i = 0; i < pt.size(); ++i)
+            a.push_back(tb.CreateLoad(pt[i], tb.CreateStructGEP(envTy, e, (unsigned)i)));
+        tb.CreateCall(fn, a);
+
+        tb.CreateCall(ctx.module.getOrInsertFunction("free",
+            llvm::FunctionType::get(tb.getVoidTy(), {tb.getPtrTy()}, false)), {e});
+        tb.CreateRet(llvm::ConstantPointerNull::get(tb.getPtrTy()));
+    }
+
+    // 4. запуск
+    auto spawnFn = ctx.module.getOrInsertFunction("fab_thread_spawn",
+        llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy(), b.getPtrTy()}, false));
+    llvm::Value* r = b.CreateCall(spawnFn, {thunk, env});
+    ctx.value_types[r] = "thread";
+    return r;
 }
 
 class FunctionalExpression : public Expression
@@ -276,6 +358,19 @@ public:
 
     llvm::Value* codegen(CodegenContext& context) const override
     {
+        if (name == "spawn" && !args.empty() && !has_named()
+        && !context.overloads.contains("spawn"))
+        {
+            auto* fv = dynamic_cast<VariableExpression*>(args[0].get());
+            if (!fv)
+                throw std::runtime_error("spawn: first argument must be a function name");
+
+            std::vector<llvm::Value*> vals;
+            for (size_t i = 1; i < args.size(); ++i)
+                vals.push_back(args[i]->codegen(context));
+            return emit_spawn(context, fv->to_str(), vals);
+        }
+
         if (has_named()) return codegen_named(context);
 
         std::vector<llvm::Value*> vals;
