@@ -490,6 +490,30 @@ std::unique_ptr<Statement> Parser::do_while_statement()
 std::unique_ptr<Statement> Parser::for_statement()
 {
     consume(token_type::LPARENT);
+    // foreach: for (int n in a) / for (auto n in a) / for (n in a)
+    {
+        int save = pos;
+        std::string t;
+
+        if (get(0).get_type() == token_type::TYPES || at_decl())
+            t = parse_type();
+        else if (get(0).get_type() == token_type::WORDS)
+            t = "auto";                       // for (n in a)
+
+        if (!t.empty()
+            && get(0).get_type() == token_type::WORDS
+            && get(1).get_type() == token_type::WORDS
+            && get(1).get_text() == "in")
+        {
+            std::string var = consume(token_type::WORDS).get_text();
+            consume(token_type::WORDS);       // слово 'in'
+            auto coll = expression();
+            consume(token_type::RPARENT);
+            auto body = statement_or_block();
+            return std::make_unique<ForEachStatement>(t, var, std::move(coll), std::move(body));
+        }
+        pos = save;                           // не foreach, обычный for
+    }
 
     std::unique_ptr<Statement> init;
     if (!match(token_type::SEMI))

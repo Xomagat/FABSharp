@@ -1,17 +1,19 @@
-use thread;
-use system;
-
-define worker(int id, string name)
+list<int> a = [1, 2, 3, 4];
+for (int n in a)
 {
-    writeln $"worker {id}: {name}";
+    if (n == 2) { continue; }
+    writeln n;
 }
 
-define main() -> int
-{
-    auto ss = ticks_ms();
-    //thread t = spawn(worker, 1, "a");   // первый аргумент: имя функции
-    //t.join();
-    worker(1, "a");
-    writeln ticks_ms() - ss;
-    return 0;
-}
+for (char c in "abc") { writeln c; }
+
+dict<string,int> d = {"x": 1, "y": 2};
+for (string k in d) { writeln $"{k} = {d[k]}"; }
+
+for (auto s in "hi".split("")) { writeln s; }   // auto берёт тип элемента
+
+writeln;
+
+for (auto n in a)
+    for (auto s in "abc")
+        writeln $"{n}. {s}";
