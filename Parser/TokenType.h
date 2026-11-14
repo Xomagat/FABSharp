@@ -41,6 +41,7 @@ enum token_type
     PUBLIC,         // Public methods
     DELETE_KW,      // Delete command
     NAMESPACE,      // Namespace
+    THROW,          // Called errors
 
     NULLVAL,        // Value null
     TRUEVAL,        // Value true

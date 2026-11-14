@@ -202,6 +202,7 @@ void Lexer::tokenize_word()
         {"public",     token_type::PUBLIC},
         {"delete",     token_type::DELETE_KW},
         {"namespace",  token_type::NAMESPACE},
+        {"throw",      token_type::THROW},
     };
 
     auto it = keywords.find(buffer);

@@ -244,6 +244,13 @@ std::unique_ptr<Statement> Parser::statement_impl()
             if (!match(token_type::SEMI)) throw std::runtime_error("You miss the ;");
             return std::make_unique<DeleteStatement>(name);
         }
+        case token_type::THROW: {
+            consume(token_type::THROW);
+            std::unique_ptr<Expression> expr = expression();
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<ThrowStatement>(std::move(expr));
+        }
 
         case token_type::INC:
         case token_type::DEC: {

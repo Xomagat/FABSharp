@@ -22,7 +22,7 @@
 #include "AST/MethodCallExpression.h"
 #include "AST/ListLiteralExpression.h"
 #include "AST/DictLiteralExpression.h"
-#include "AST/BuiltinExpression.h"
+#include "AST/BuiltinExpressionAndStatement.h"
 
 #include "AST/IndexExprAndStat.h"
 

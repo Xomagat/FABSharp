@@ -1,19 +1,8 @@
-list<int> a = [1, 2, 3, 4];
-for (int n in a)
+define main() -> int
 {
-    if (n == 2) { continue; }
-    writeln n;
+    int i;
+    input_in i;
+
+    if i == 5
+        throw 42;
 }
-
-for (char c in "abc") { writeln c; }
-
-dict<string,int> d = {"x": 1, "y": 2};
-for (string k in d) { writeln $"{k} = {d[k]}"; }
-
-for (auto s in "hi".split("")) { writeln s; }   // auto берёт тип элемента
-
-writeln;
-
-for (auto n in a)
-    for (auto s in "abc")
-        writeln $"{n}. {s}";

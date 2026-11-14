@@ -65,7 +65,7 @@ add_executable(fab main.cpp
         Parser/AST/DictLiteralExpression.h
         Parser/AST/IndexExprAndStat.h
         Parser/AST/ClassStatement.h
-        Parser/AST/BuiltinExpression.h
+        Parser/AST/BuiltinExpressionAndStatement.h
         CodeGen/Runtimeatters.h
         Parser/AST/IncDecExpression.h
         Parser/Diagnostics.h
@@ -116,6 +116,7 @@ add_library(fabstd STATIC
         lib/alloc.cpp
         lib/libs/strbuf.cpp
         lib/libs/thread.cpp
+        lib/exception.cpp
 )
 
 if (MSVC)
