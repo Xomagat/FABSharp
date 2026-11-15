@@ -4,9 +4,48 @@
 
 class strbuf free fab_sb_free
 
-sb_new           fab_sb_new           strbuf :
-strbuf.append    fab_sb_append        void   : strbuf, string
-strbuf.append_char fab_sb_append_char void   : strbuf, char
 strbuf.length    fab_sb_length        int    : strbuf
-strbuf.clear     fab_sb_clear         void   : strbuf
 strbuf.to_str    fab_sb_to_str        string : strbuf
+
+# Create
+sb_new             fab_sb_new               strbuf :
+sb_from            fab_sb_from            strbuf : string
+sb_with_capacity   fab_sb_with_capacity   strbuf : int
+strbuf.copy        fab_sb_copy            strbuf : strbuf
+
+# Addend (точные типы, неявных приведений для методов нет)
+strbuf.addend      fab_sb_append_char     void : strbuf, char
+strbuf.addend      fab_sb_append_short    void : strbuf, short
+strbuf.addend      fab_sb_append_int      void : strbuf, int
+strbuf.addend      fab_sb_append_long     void : strbuf, long
+strbuf.addend      fab_sb_append_float    void : strbuf, float
+strbuf.addend      fab_sb_append_double   void : strbuf, double
+strbuf.addend      fab_sb_append_bool     void : strbuf, bool
+strbuf.addend_line fab_sb_append_line     void : strbuf, string
+strbuf.addend_repeat fab_sb_append_repeat void : strbuf, string, int
+strbuf.addend_char_repeat fab_sb_append_char_repeat void : strbuf, char, int
+strbuf.addend_join fab_sb_append_join     void : strbuf, list<string>, string
+
+# Edit
+strbuf.clear       fab_sb_clear           void : strbuf
+strbuf.insert      fab_sb_insert          void : strbuf, int, string
+strbuf.remove      fab_sb_remove          void : strbuf, int, int
+strbuf.truncate    fab_sb_truncate        void : strbuf, int
+strbuf.reverse     fab_sb_reverse         void : strbuf
+strbuf.set_at      fab_sb_set_at          void : strbuf, int, char
+strbuf.replace     fab_sb_replace         int  : strbuf, string, string
+
+# Read
+strbuf.is_empty    fab_sb_is_empty        bool   : strbuf
+strbuf.capacity    fab_sb_capacity        int    : strbuf
+strbuf.at          fab_sb_at              char   : strbuf, int
+strbuf.find        fab_sb_find            int    : strbuf, string
+strbuf.contains    fab_sb_contains        bool   : strbuf, string
+strbuf.starts_with fab_sb_starts_with     bool   : strbuf, string
+strbuf.ends_with   fab_sb_ends_with       bool   : strbuf, string
+strbuf.substr      fab_sb_substr          string : strbuf, int, int
+
+# Output without a copy
+strbuf.print       fab_sb_print           void : strbuf
+strbuf.println     fab_sb_println         void : strbuf
+strbuf.write_to    fab_sb_write_to        bool : strbuf, file
