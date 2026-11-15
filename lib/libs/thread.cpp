@@ -70,7 +70,7 @@ extern "C" void fab_thread_free(void* h)
 }
 extern "C" long long fab_thread_self() { return (long long)pthread_self(); }
 
-extern "C" void* fab_mutex_new() { auto* m = (pthread_mutex_t*)malloc(sizeof *m); pthread_mutex_init(m, nullptr); return m; }
+extern "C" void* fab_mutex_new() { auto* m = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t)); pthread_mutex_init(m, nullptr); return m; }
 extern "C" void  fab_mutex_lock(void* m)   { if (m) pthread_mutex_lock((pthread_mutex_t*)m); }
 extern "C" void  fab_mutex_unlock(void* m) { if (m) pthread_mutex_unlock((pthread_mutex_t*)m); }
 extern "C" bool  fab_mutex_try_lock(void* m) { return m && pthread_mutex_trylock((pthread_mutex_t*)m) == 0; }
