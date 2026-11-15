@@ -1,0 +1,74 @@
+# Bits v0.1
+# Created on 15.11.2026
+# Last update 15.11.2026
+
+const INT_BITS  int 32
+const LONG_BITS int 64
+
+# Logic
+band       fab_bandi       int  : int, int
+band       fab_bandl       long : long, long
+bor        fab_bori        int  : int, int
+bor        fab_borl        long : long, long
+bxor       fab_bxori       int  : int, int
+bxor       fab_bxorl       long : long, long
+bnot       fab_bnoti       int  : int
+bnot       fab_bnotl       long : long
+
+# Shifts and rotates
+shl        fab_shli        int  : int, int
+shl        fab_shll        long : long, int
+shr        fab_shri        int  : int, int
+shr        fab_shrl        long : long, int
+ushr       fab_ushri       int  : int, int
+ushr       fab_ushrl       long : long, int
+rotl       fab_rotli       int  : int, int
+rotl       fab_rotll       long : long, int
+rotr       fab_rotri       int  : int, int
+rotr       fab_rotrl       long : long, int
+
+# Counting
+popcount   fab_popcounti   int  : int
+popcount   fab_popcountl   int  : long
+clz        fab_clzi        int  : int
+clz        fab_clzl        int  : long
+ctz        fab_ctzi        int  : int
+ctz        fab_ctzl        int  : long
+bit_length fab_bit_lengthi int  : int
+bit_length fab_bit_lengthl int  : long
+parity     fab_parityi     bool : int
+parity     fab_parityl     bool : long
+
+# Single bits
+bit_get    fab_bit_geti    bool : int, int
+bit_get    fab_bit_getl    bool : long, int
+bit_set    fab_bit_seti    int  : int, int
+bit_set    fab_bit_setl    long : long, int
+bit_clear  fab_bit_cleari  int  : int, int
+bit_clear  fab_bit_clearl  long : long, int
+bit_toggle fab_bit_togglei int  : int, int
+bit_toggle fab_bit_togglel long : long, int
+
+# Masks and fields
+bit_mask    fab_bit_maski    int  : int
+bit_mask    fab_bit_maskl    long : int
+bit_extract fab_bit_extracti int  : int, int, int
+bit_extract fab_bit_extractl long : long, int, int
+
+# Layout
+bswap       fab_bswapi       int  : int
+bswap       fab_bswapl       long : long
+bit_reverse fab_bit_reversei int  : int
+bit_reverse fab_bit_reversel long : long
+
+# Powers of two
+is_pow2    fab_is_pow2i    bool : int
+is_pow2    fab_is_pow2l    bool : long
+next_pow2  fab_next_pow2i  int  : int
+next_pow2  fab_next_pow2l  long : long
+
+# Text
+bin_str    fab_bin_stri    string : int, int:width=0
+bin_str    fab_bin_strl    string : long, int:width=0
+hex_str    fab_hex_stri    string : int, int:width=0
+hex_str    fab_hex_strl    string : long, int:width=0

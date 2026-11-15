@@ -1,8 +1,14 @@
+use bits;
+
 define main() -> int
 {
-    int i;
-    input_in i;
-
-    if i == 5
-        throw 42;
+    int flags = 0;
+    flags = bor(flags, shl(1, 3));      // 8
+    flags = bit_set(flags, 0);          // 9
+    writeln bin_str(flags, 8);          // 00001001
+    writeln bit_get(flags, 3);          // true
+    writeln popcount(flags);            // 2
+    writeln hex_str(bswap(#12345678)); // 78563412  (hex-литералы у вас: #12345678)
+    writeln bin_str(5, width=8);        // именованный аргумент тоже работает
+    return 0;
 }
