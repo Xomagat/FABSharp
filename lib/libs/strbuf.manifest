@@ -15,6 +15,7 @@ strbuf.copy        fab_sb_copy            strbuf : strbuf
 
 # Addend (точные типы, неявных приведений для методов нет)
 strbuf.addend      fab_sb_append_char     void : strbuf, char
+strbuf.addend      fab_sb_append          void : strbuf, string
 strbuf.addend      fab_sb_append_short    void : strbuf, short
 strbuf.addend      fab_sb_append_int      void : strbuf, int
 strbuf.addend      fab_sb_append_long     void : strbuf, long
