@@ -115,13 +115,14 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements,
     PB.registerLoopAnalyses(LAM);
     PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-    llvm::OptimizationLevel level = llvm::OptimizationLevel::O2;
+    llvm::OptimizationLevel level = llvm::OptimizationLevel::O0;
     if      (opts.size_opt == 's') level = llvm::OptimizationLevel::Os;
     else if (opts.size_opt == 'z') level = llvm::OptimizationLevel::Oz;
     else switch (opts.opt_level)
     {
         case 0: level = llvm::OptimizationLevel::O0; break;
         case 1: level = llvm::OptimizationLevel::O1; break;
+        case 2: level = llvm::OptimizationLevel::O2; break;
         case 3: level = llvm::OptimizationLevel::O3; break;
         default: break;
     }
