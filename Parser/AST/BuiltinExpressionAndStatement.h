@@ -197,3 +197,81 @@ public:
         b.CreateUnreachable();
     }
 };
+
+class CastExpression : public Expression
+{
+private:
+    std::string type;
+    std::unique_ptr<Expression> expr;
+
+public:
+    explicit CastExpression(std::string type, std::unique_ptr<Expression> e)
+        : type(std::move(type)), expr(std::move(e)) {}
+
+    llvm::Value* codegen(CodegenContext& ctx) const override
+    {
+        if (type == "void" || type == "auto")
+            throw std::runtime_error("Cannot convert to " + type + " type!");
+
+        auto& b = ctx.builder;
+        llvm::Type* dst = type_to_llvm(type, b);
+
+        if (expr->is_null_literal())
+        {
+            if (!dst->isPointerTy())
+                throw std::runtime_error("Cannot cast null to non-pointer type '" + type + "'!");
+            llvm::Value* n = llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(dst));
+            ctx.value_types[n] = type;
+            return n;
+        }
+
+        llvm::Value* val = expr->codegen(ctx);
+        std::string src  = type_of(ctx, val);
+        llvm::Type* st   = val->getType();
+
+        if (src == "void")
+            throw std::runtime_error("Cannot cast a void value!");
+
+        if (src == type) return val;
+
+        bool dst_num = dst->isIntegerTy() || dst->isFloatingPointTy();
+        bool src_num = st->isIntegerTy()  || st->isFloatingPointTy();
+
+        llvm::Value* r = nullptr;
+
+        if (type == "string")
+        {
+            const StdlibFunctionInfo* info = find_lib_method(src, "to_str", {});
+            if (!info)
+                throw std::runtime_error("Cannot cast '" + src + "' to string!");
+            r = FunctionalExpression::emit_stdlib_call(ctx, *info, {val});
+        }
+        else if (src == "string" && dst_num)
+        {
+            std::string m = type == "bool" ? "to_bool"
+                          : type == "long" ? "to_long"
+                          : (type == "float" || type == "double" || type == "ldouble") ? "to_double"
+                          : "to_int";                       // char, short, int
+            const StdlibFunctionInfo* info = find_lib_method("string", m, {});
+            if (!info)
+                throw std::runtime_error("Cannot cast string to '" + type + "'!");
+            llvm::Value* v = FunctionalExpression::emit_stdlib_call(ctx, *info, {val});
+            r = coerceToType(v, dst, b);
+        }
+        else if (dst_num && src_num)
+        {
+            r = coerceToType(val, dst, b);
+        }
+        else if (dst->isIntegerTy(1))
+        {
+            r = to_bool(val, b);
+        }
+        else
+            throw std::runtime_error("Cannot cast '" + src + "' to '" + type + "'!");
+
+        ctx.value_types[r] = type;
+        return r;
+    }
+
+    std::string to_str() const override { return "cast<" + type + ">(" + expr->to_str() + ")"; }
+};

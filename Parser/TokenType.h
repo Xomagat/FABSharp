@@ -42,6 +42,7 @@ enum token_type
     DELETE_KW,      // Delete command
     NAMESPACE,      // Namespace
     THROW,          // Called errors
+    CAST,           // Change value type (don`t supported lists, dicts and classes)
 
     NULLVAL,        // Value null
     TRUEVAL,        // Value true

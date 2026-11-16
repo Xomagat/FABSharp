@@ -1035,6 +1035,17 @@ std::unique_ptr<Expression> Parser::primary_impl()
         pos += len;
         return std::make_unique<VariableExpression>(text);
     }
+    if (current.get_type() == token_type::CAST)
+    {
+        consume(token_type::CAST);
+        consume(token_type::LT);
+        std::string type = parse_type();
+        consume(token_type::GT);
+        consume(token_type::LPARENT);
+        std::unique_ptr<Expression> expr = expression();
+        consume(token_type::RPARENT);
+        return std::make_unique<CastExpression>(type, std::move(expr));
+    }
 
     if (match(token_type::NUMBER))
     {
