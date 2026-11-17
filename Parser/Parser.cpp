@@ -188,7 +188,16 @@ std::unique_ptr<Statement> Parser::statement_impl()
         }
         case token_type::INPUT_IN: {
             consume(token_type::INPUT_IN);
-            std::string name = consume(token_type::WORDS).get_text();
+            std::string name;
+            if (get(0).get_type() == token_type::TYPES)
+            {
+                std::string type = consume(token_type::TYPES).get_text();
+                name = consume(token_type::WORDS).get_text();
+                if (!match(token_type::SEMI))
+                    throw std::runtime_error("You miss the ;");
+                return std::make_unique<InputInStatement>(type, name);
+            }
+            name = consume(token_type::WORDS).get_text();
             if (!match(token_type::SEMI))
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<InputInStatement>(name);

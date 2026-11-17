@@ -96,13 +96,19 @@ public:
 class InputInStatement : public Statement
 {
 private:
-    std::string name;
+    std::string name, type;
 
 public:
     explicit InputInStatement(std::string name) : name(name) {}
+    explicit InputInStatement(std::string type, std::string name) : name(name), type(type) {}
 
     void codegen(CodegenContext& context) const override
     {
+        if (!type.empty())
+        {
+            AssigementStatement(type, name, nullptr, false).codegen(context);
+        }
+
         auto it = context.variables.find(name);
         if (it == context.variables.end())
             throw std::runtime_error("Variable {" + name + "} not found (codegen)!");

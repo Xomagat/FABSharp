@@ -1,5 +1,6 @@
 define main() -> int
 {
-    string i = "15";
-    writeln cast<int>(i) + 5;   // 20
+    write "i = ";
+    input_in int i;
+    writeln $"i^2 = {i * i}";
 }
