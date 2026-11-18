@@ -119,6 +119,8 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {PUBLIC,     "public"},
     {DELETE_KW,  "delete"},
     {NAMESPACE,  "namespace"},
+    {THROW,      "throw"},
+    {CAST,       "cast"},
 
     {NULLVAL,    "null"},
     {TRUEVAL,    "true"},
