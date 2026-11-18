@@ -1234,7 +1234,6 @@ bool is_known_type(std::string& type)
     if (type == "string")  return true;
     if (type == "int")     return true;
     if (type == "short")   return true;
-    if (type == "byte")    return true;
     if (type == "long")    return true;
     if (type == "float")   return true;
     if (type == "double")  return true;
