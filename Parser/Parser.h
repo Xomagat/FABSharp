@@ -78,6 +78,7 @@ private:
     void parse_namespace(std::vector<std::unique_ptr<Statement>>& out);
 
     void parse_call_args(const std::function<void(std::string, std::unique_ptr<Expression>)>& add);
+    std::unique_ptr<Expression> lib_ctor_call(const std::string &type);
 
     Token get(int relative_position);
 

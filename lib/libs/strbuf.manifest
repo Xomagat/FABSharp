@@ -1,14 +1,16 @@
 # String builder v0.1
 # Created on 07.11.2026
-# Last update 07.11.2026
+# Last update 19.11.2026
 
-class strbuf free fab_sb_free
+class strbuf free fab_sb_free new sb_new
 
 strbuf.length    fab_sb_length        int    : strbuf
 strbuf.to_str    fab_sb_to_str        string : strbuf
 
 # Create
-sb_new             fab_sb_new               strbuf :
+sb_new             fab_sb_new             strbuf :
+sb_new             fab_sb_from            strbuf : string    # new strbuf("abc")
+sb_new             fab_sb_with_capacity   strbuf : int       # new strbuf(1024)
 sb_from            fab_sb_from            strbuf : string
 sb_with_capacity   fab_sb_with_capacity   strbuf : int
 strbuf.copy        fab_sb_copy            strbuf : strbuf

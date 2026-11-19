@@ -3,8 +3,8 @@
 # Last update 19.11.2026
 
 # Classes
-class fileinfo free fab_fi_free
-class tempdir  free fab_tmp_free
+class fileinfo free fab_fi_free new file_stat
+class tempdir  free fab_tmp_free new tempdir_new
 
 # Native separator ("/" or "\" on Windows)
 getter path_sep fab_pth_sep string

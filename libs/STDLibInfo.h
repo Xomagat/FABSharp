@@ -59,6 +59,7 @@ struct LibTypeInfo
     std::string name;
     std::string parent;
     std::string free_symbol;
+    std::string ctor;
 };
 
 inline std::unordered_map<std::string, LibTypeInfo> lib_types;

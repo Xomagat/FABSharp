@@ -3,7 +3,7 @@
 # Last update 12.11.26
 
 class thread free fab_thread_free
-class mutex  free fab_mutex_free
+class mutex  free fab_mutex_free new mutex_new
 
 thread.join        fab_thread_join       bool  : thread
 thread.is_running  fab_thread_is_running bool  : thread

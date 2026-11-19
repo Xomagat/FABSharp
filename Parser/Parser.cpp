@@ -996,6 +996,12 @@ std::unique_ptr<Expression> Parser::primary_impl()
 
         if (get(len).get_type() == token_type::LPARENT)
         {
+            if (len == 1 && is_lib_type(text) && !lib_types.at(text).ctor.empty())
+            {
+                pos += len;
+                return lib_ctor_call(text);
+            }
+
             if (len == 1 && text == "size_of")
             {
                 consume(token_type::WORDS); consume(token_type::LPARENT);
@@ -1106,6 +1112,12 @@ std::unique_ptr<Expression> Parser::primary_impl()
         if (!len) throw std::runtime_error("Class name expected after 'new'!");
         std::string text = chain_text(0, len);
         std::string cls = resolve_class(text);
+        if (cls.empty() && len == 1 && is_lib_type(text))
+        {
+            pos += len;
+            return lib_ctor_call(text);
+        }
+
         pos += len;
 
         consume(token_type::LPARENT);
@@ -1328,6 +1340,7 @@ void Parser::load_stdlib_manifest(const std::filesystem::path& path)
             {
                 if (tok == ":")         iss >> t.parent;
                 else if (tok == "free") iss >> t.free_symbol;
+                else if (tok == "new")  iss >> t.ctor;
                 else throw std::runtime_error("Manifest: unexpected '" + tok + "' in class " + t.name);
             }
 
@@ -1608,4 +1621,17 @@ void Parser::parse_call_args(const std::function<void(std::string, std::unique_p
         add(n, expression());
         match(token_type::COMMA);
     }
+}
+
+std::unique_ptr<Expression> Parser::lib_ctor_call(const std::string& type)
+{
+    const std::string& ctor = lib_types.at(type).ctor;
+    if (ctor.empty())
+        throw std::runtime_error("Type '" + type + "' has no constructor: use a library function");
+
+    consume(token_type::LPARENT);
+    auto f = std::make_unique<FunctionalExpression>(ctor);
+    parse_call_args([&](std::string n, std::unique_ptr<Expression> e)
+                    { f->add_arg(std::move(n), std::move(e)); });
+    return f;
 }

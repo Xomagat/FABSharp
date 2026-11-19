@@ -1,9 +1,9 @@
 # Date and time v0.1
 # Created on 28.10.2026
-# Last update 07.11.2026
+# Last update 19.11.2026
 
-class date free fab_date_free
-class time free fab_time_free
+class date free fab_date_free new date_new
+class time free fab_time_free new time_new
 
 # Now (computed variables, read-only)
 getter year_now    fab_year_now    int
@@ -18,11 +18,13 @@ getter unix_now    fab_unix_now    long
 
 # Create (null on invalid values)
 date_new         fab_date_new          date : int, int, int
+date_new         fab_date_now          date :
 date_now         fab_date_now          date :
 date_parse       fab_date_parse        date : string
 date_from_days   fab_date_from_days    date : long
 date_valid       fab_date_valid        bool : int, int, int
 time_new         fab_time_new          time : int, int, int
+time_new         fab_time_new          time :
 time_now         fab_time_now          time :
 time_parse       fab_time_parse        time : string
 time_from_seconds fab_time_from_seconds time : int

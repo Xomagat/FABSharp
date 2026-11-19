@@ -1,11 +1,11 @@
 # IO functions v0.2
 # Created on 19.10.2026
-# Last update 28.10.2026
+# Last update 19.11.2026
 
-class file free fab_file_free
+class file free fab_file_free new file_open
 
 # Create
-file_open     fab_file_open     file         : string, string
+file_open     fab_file_open     file         : string, string:mode="r"
 file_stdin    fab_file_stdin    file         :
 file_stdout   fab_file_stdout   file         :
 file_stderr   fab_file_stderr   file         :

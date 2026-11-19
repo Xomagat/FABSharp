@@ -1,24 +1,18 @@
-use path;
 use io;
+use date;
+use strbuf;
 
 define main() -> int
 {
-    tempdir t = tempdir_new();                    // создаёт, например, /tmp/fab_1a2b_...
-    string f = t.join("data/a.txt");
-    make_dirs(path_dirname(f));
-    file_write(f, "hello");
-
-    fileinfo fi = file_stat(f);
-    if (fi.exists() && fi.is_file())
-        writeln $"size = {fi.size()}";            // size = 5
-
-    copy_dir(t.path(), path_join(t.path(), "../fab_copy"));   // выше корня t: вернёт false
-    for (string x in find_files(t.path(), "*.txt"))
-        writeln x;                                // data/a.txt
-
-    writeln path_relative("/a/b", "/a/c/d");      // ../c/d
-
-    delete fi;
-    delete t;                                     // каталог удалён вместе с содержимым
+    file a = new file("data.txt", "w");
+    file b = file("data.txt");          // как в C++
+    date d = new date(2026, 11, 19);
+    date today = date();
+    strbuf sb = new strbuf();
+    delete a;
+    delete b;
+    delete d;
+    delete today;
+    delete sb;
     return 0;
 }
