@@ -1,6 +1,24 @@
+use path;
+use io;
+
 define main() -> int
 {
-    write "i = ";
-    input_in int i;
-    writeln $"i^2 = {i * i}";
+    tempdir t = tempdir_new();                    // создаёт, например, /tmp/fab_1a2b_...
+    string f = t.join("data/a.txt");
+    make_dirs(path_dirname(f));
+    file_write(f, "hello");
+
+    fileinfo fi = file_stat(f);
+    if (fi.exists() && fi.is_file())
+        writeln $"size = {fi.size()}";            // size = 5
+
+    copy_dir(t.path(), path_join(t.path(), "../fab_copy"));   // выше корня t: вернёт false
+    for (string x in find_files(t.path(), "*.txt"))
+        writeln x;                                // data/a.txt
+
+    writeln path_relative("/a/b", "/a/c/d");      // ../c/d
+
+    delete fi;
+    delete t;                                     // каталог удалён вместе с содержимым
+    return 0;
 }

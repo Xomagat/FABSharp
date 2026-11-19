@@ -118,6 +118,7 @@ add_library(fabstd STATIC
         lib/libs/thread.cpp
         lib/exception.cpp
         lib/libs/bits.cpp
+        lib/libs/path.cpp
 )
 
 if (MSVC)

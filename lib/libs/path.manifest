@@ -1,0 +1,63 @@
+# Path and filesystem v0.1
+# Created on 19.11.2026
+# Last update 19.11.2026
+
+# Classes
+class fileinfo free fab_fi_free
+class tempdir  free fab_tmp_free
+
+# Native separator ("/" or "\" on Windows)
+getter path_sep fab_pth_sep string
+
+# Path text (no disk access, results always use "/")
+path_join           fab_pth_join            string       : string, string
+path_basename       fab_pth_basename        string       : string
+path_dirname        fab_pth_dirname         string       : string
+path_stem           fab_pth_stem            string       : string
+path_extension      fab_pth_extension       string       : string
+path_with_extension fab_pth_with_extension  string       : string, string
+path_normalize      fab_pth_normalize       string       : string
+path_is_absolute    fab_pth_is_absolute     bool         : string
+path_split          fab_pth_split           list<string> : string
+path_to_native      fab_pth_to_native       string       : string
+
+# Disk
+path_exists   fab_fs_exists      bool         : string
+is_file       fab_fs_is_file     bool         : string
+file_mtime    fab_fs_mtime       long         : string
+abs_path      fab_fs_abs_path    string       : string
+list_dir      fab_fs_list_dir    list<string> : string
+walk_dir      fab_fs_walk_dir    list<string> : string
+make_dirs     fab_fs_make_dirs   bool         : string
+remove_all    fab_fs_remove_all  bool         : string
+copy_file     fab_fs_copy_file   bool         : string, string
+temp_dir      fab_fs_temp_dir    string       :
+home_dir      fab_fs_home_dir    string       :
+find_files   fab_fs_find_files  list<string> : string, string
+same_file    fab_fs_same_file   bool         : string, string
+copy_dir     fab_fs_copy_dir    bool         : string, string
+move_path    fab_fs_move        bool         : string, string
+dir_size     fab_fs_dir_size    long         : string
+touch        fab_fs_touch       bool         : string
+
+# Text
+path_relative    fab_pth_relative     string : string, string
+path_expand_user fab_pth_expand_user  string : string
+glob_match       fab_pth_glob_match   bool   : string, string
+
+# fileinfo (always returns an object; check with .exists())
+file_stat            fab_fi_stat        fileinfo : string
+fileinfo.exists      fab_fi_exists      bool     : fileinfo
+fileinfo.size        fab_fi_size        long     : fileinfo
+fileinfo.mtime       fab_fi_mtime       long     : fileinfo
+fileinfo.mode        fab_fi_mode        int      : fileinfo
+fileinfo.is_dir      fab_fi_is_dir      bool     : fileinfo
+fileinfo.is_file     fab_fi_is_file     bool     : fileinfo
+fileinfo.is_symlink  fab_fi_is_symlink  bool     : fileinfo
+
+# tempdir (deleted together with the object, unless keep() was called)
+tempdir_new     fab_tmp_new     tempdir : string:prefix="fab_"
+tempdir.path    fab_tmp_path    string  : tempdir
+tempdir.join    fab_tmp_join    string  : tempdir, string
+tempdir.keep    fab_tmp_keep    void    : tempdir
+tempdir.remove  fab_tmp_remove  bool    : tempdir
