@@ -170,13 +170,21 @@ public:
             llvm::Function::ExternalLinkage, name + ".dtor", ctx.module);
         ci.vslots[0] = ci.dtor;
 
+        if (ctor)
+        {
+            ci.ctor       = make(*ctor, name + ".new");
+            ci.ctor_args  = ctor->arg_types;
+            ci.ctor_names = ctor->arg_names;
+            ci.ctor_defaults = ctor->defaults;
+        }
+
         for (auto& m : methods)
         {
             auto key = mangle_name(m.name, m.arg_types);
             if (m.is_static)
             {
                 auto* fn = make(m, name + ".static." + key);
-                ci.statics[key] = {fn, m.ret, m.arg_types, m.is_public, -1};
+                ci.statics[key] = {fn, m.ret, m.arg_types, m.is_public, -1, true, m.arg_names, m.defaults};
                 continue;
             }
             auto* fn = make(m, name + "." + key);
@@ -190,8 +198,6 @@ public:
                 ci.vslots[slot] = fn;
             }
             else { slot = (int)ci.vslots.size(); ci.vslots.push_back(fn); }
-            if (ctor) { ci.ctor = make(*ctor, name + ".new"); ci.ctor_args = ctor->arg_types;
-                ci.ctor_names = ctor->arg_names; ci.ctor_defaults = ctor->defaults; }
 
             ci.statics[key] = {fn, m.ret, m.arg_types, m.is_public, -1, true,  m.arg_names, m.defaults};
             ci.methods[key] = {fn, m.ret, m.arg_types, m.is_public, slot, false, m.arg_names, m.defaults};

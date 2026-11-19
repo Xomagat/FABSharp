@@ -2,9 +2,16 @@ use io;
 use date;
 use strbuf;
 
+class o
+{
+public:
+    o() {}
+}
+
 define main() -> int
 {
-    file a = new file("data.txt", "w");
+    o obj = new o();
+    /*file a = new file("data.txt", "w");
     file b = file("data.txt");          // как в C++
     date d = new date(2026, 11, 19);
     date today = date();
@@ -13,6 +20,6 @@ define main() -> int
     delete b;
     delete d;
     delete today;
-    delete sb;
+    delete sb;*/
     return 0;
 }

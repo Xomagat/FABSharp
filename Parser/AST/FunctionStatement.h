@@ -61,6 +61,7 @@ inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const st
     ctx.variables = saved_vars; ctx.var_types = saved_types; ctx.const_vars = saved_const;
     ctx.current_class = saved_cls; ctx.current_ret = saved_ret;
     if (saved_bb) ctx.builder.SetInsertPoint(saved_bb);
+    else          ctx.builder.ClearInsertionPoint();
 }
 
 class FunctionStatement : public Statement
