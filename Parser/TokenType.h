@@ -43,6 +43,9 @@ enum token_type
     NAMESPACE,      // Namespace
     THROW,          // Called errors
     CAST,           // Change value type (don`t supported lists, dicts and classes)
+    TRY,            // try
+    CATCH,          // catch
+    FINALLY,        // finally
 
     NULLVAL,        // Value null
     TRUEVAL,        // Value true
@@ -121,6 +124,9 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {NAMESPACE,  "namespace"},
     {THROW,      "throw"},
     {CAST,       "cast"},
+    {TRY,        "try"},
+    {CATCH,      "catch"},
+    {FINALLY,    "finally"},
 
     {NULLVAL,    "null"},
     {TRUEVAL,    "true"},

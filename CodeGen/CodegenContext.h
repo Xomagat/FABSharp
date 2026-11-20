@@ -13,13 +13,17 @@
 #include "llvm/IR/MDBuilder.h"
 
 class Expression;
+class Statement;
 
 struct GlobalInfo { llvm::GlobalVariable* gv; std::string type; bool is_const; };
+
+struct TryScope { const Statement* fin; };
 
 struct LoopTargets
 {
     llvm::BasicBlock* continueTarget;
     llvm::BasicBlock* breakTarget;
+    size_t try_depth = 0;
 };
 
 struct FieldInfo  { std::string name, type; bool is_public; std::string owner;
@@ -84,6 +88,9 @@ struct CodegenContext
 
     std::unordered_map<std::string, std::string> var_types;
     std::unordered_map<llvm::Value*, std::string> value_types;
+
+    std::vector<TryScope> try_stack;
+    bool volatile_locals = false;
 
     std::unordered_map<std::string, ClassInfo> classes;
     std::unordered_map<std::string, std::string> func_ret;

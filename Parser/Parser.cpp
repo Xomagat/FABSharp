@@ -260,6 +260,10 @@ std::unique_ptr<Statement> Parser::statement_impl()
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<ThrowStatement>(std::move(expr));
         }
+        case token_type::TRY: {
+            consume(token_type::TRY);
+            return try_statement();
+        }
 
         case token_type::INC:
         case token_type::DEC: {
@@ -683,6 +687,40 @@ std::unique_ptr<Statement> Parser::class_definition()
     return cls;
 }
 
+std::unique_ptr<Statement> Parser::try_statement()
+{
+    saw_try = true;
+    auto body = block();
+
+    std::vector<CatchClause> catches;
+    while (match(token_type::CATCH))
+    {
+        if (!catches.empty() && catches.back().type.empty())
+            throw std::runtime_error("catch-all 'catch (e)' must be the last catch!");
+
+        CatchClause c;
+        consume(token_type::LPARENT);
+        if (get(1).get_type() == token_type::RPARENT)      // catch (e)
+            c.name = consume(token_type::WORDS).get_text();
+        else                                               // catch (T e)
+        {
+            c.type = parse_type();
+            c.name = consume(token_type::WORDS).get_text();
+        }
+        consume(token_type::RPARENT);
+        c.body = block();
+        catches.push_back(std::move(c));
+    }
+
+    std::shared_ptr<Statement> fin;
+    if (match(token_type::FINALLY)) fin = block();
+
+    if (catches.empty() && !fin)
+        throw std::runtime_error("'try' needs at least one 'catch' or a 'finally'!");
+
+    return std::make_unique<TryStatement>(std::move(body), std::move(catches), std::move(fin));
+}
+
 std::unique_ptr<Statement> Parser::statement_or_block()
 {
     if (get(0).get_type() == token_type::LBRACKET)
@@ -736,10 +774,12 @@ std::unique_ptr<FunctionDefineStatement> Parser::define_function(bool qualified)
     if (match(token_type::ARROW))
         type = parse_type();
 
+    saw_try = false;
     std::unique_ptr<Statement> body = statement_or_block();
 
     auto fn = std::make_unique<FunctionDefineStatement>(type, name, arg_type, arg_name, std::move(body));
     fn->set_defaults(std::move(arg_def));
+    fn->set_has_try(saw_try);
     return fn;
 }
 

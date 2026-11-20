@@ -204,6 +204,9 @@ void Lexer::tokenize_word()
         {"namespace",  token_type::NAMESPACE},
         {"throw",      token_type::THROW},
         {"cast",       token_type::CAST},
+        {"try",        token_type::TRY},
+        {"catch",      token_type::CATCH},
+        {"finally",    token_type::FINALLY},
     };
 
     auto it = keywords.find(buffer);

@@ -1,25 +1,16 @@
-use io;
-use date;
-use strbuf;
-
-class o
-{
-public:
-    o() {}
-}
-
 define main() -> int
 {
-    o obj = new o();
-    /*file a = new file("data.txt", "w");
-    file b = file("data.txt");          // как в C++
-    date d = new date(2026, 11, 19);
-    date today = date();
-    strbuf sb = new strbuf();
-    delete a;
-    delete b;
-    delete d;
-    delete today;
-    delete sb;*/
+    try
+    {
+        throw "boom";
+    }
+    catch (string e)
+    {
+        writeln $"caught: {e}";
+    }
+    finally
+    {
+        writeln "cleanup";
+    }
     return 0;
 }

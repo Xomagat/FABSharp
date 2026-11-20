@@ -76,7 +76,9 @@ public:
         auto& b = ctx.builder;
         LValue lv = resolve(ctx);
 
-        llvm::Value* oldValue = b.CreateLoad(lv.ty, lv.ptr, "old_val");
+        auto* ld = b.CreateLoad(lv.ty, lv.ptr, "old_val");
+        ld->setVolatile(ctx.volatile_locals);
+        llvm::Value* oldValue = ld;
         llvm::Value* newValue = nullptr;
 
         if (lv.ty->isIntegerTy() && !lv.ty->isIntegerTy(1))
@@ -94,7 +96,7 @@ public:
         else
             throw std::runtime_error("Unsupported type '" + lv.type + "' for ++/--");
 
-        b.CreateStore(newValue, lv.ptr);
+        b.CreateStore(newValue, lv.ptr)->setVolatile(ctx.volatile_locals);
 
         llvm::Value* result = is_pref ? newValue : oldValue;
         ctx.value_types[result] = lv.type;

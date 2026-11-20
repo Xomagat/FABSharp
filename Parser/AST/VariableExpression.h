@@ -58,6 +58,7 @@ public:
 
         llvm::AllocaInst* alloc = it->second;
         auto* v = context.builder.CreateLoad(alloc->getAllocatedType(), alloc, name);
+        v->setVolatile(context.volatile_locals);
         context.value_types[v] = context.var_types[name];
         return v;
     }

@@ -82,6 +82,8 @@ private:
 
     Token get(int relative_position);
 
+    bool saw_try = false;
+
     std::unique_ptr<Statement> statement();
     std::string parse_type();
     std::unique_ptr<Statement> declarators(const std::string &type, bool is_const, bool class_decl, bool no_semi);
@@ -91,6 +93,7 @@ private:
     std::unique_ptr<Statement> do_while_statement();
     std::unique_ptr<Statement> for_statement();
     std::unique_ptr<Statement> class_definition();
+    std::unique_ptr<Statement> try_statement();
     std::unique_ptr<Statement> statement_or_block();
     std::unique_ptr<Statement> block();
 

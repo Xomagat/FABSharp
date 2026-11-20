@@ -16,7 +16,7 @@ inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const st
                                const std::vector<std::string>& arg_names,
                                const std::vector<std::string>& arg_types,
                                const std::string& ret, Statement& body,
-                               bool is_static = false)
+                               bool is_static = false, bool has_try = false)
 {
     auto* saved_bb   = ctx.builder.GetInsertBlock();
     auto saved_vars  = ctx.variables;
@@ -24,10 +24,12 @@ inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const st
     auto saved_const = ctx.const_vars;
     auto saved_cls   = ctx.current_class;
     auto saved_ret   = ctx.current_ret;
+    auto saved_has_try  = ctx.volatile_locals;
 
     ctx.variables.clear(); ctx.var_types.clear(); ctx.const_vars.clear();
     ctx.current_class = this_class;
     ctx.current_ret = ret;
+    ctx.volatile_locals = has_try;
 
     ctx.builder.SetInsertPoint(llvm::BasicBlock::Create(ctx.context, "entry", fn));
 
@@ -59,7 +61,7 @@ inline void emit_function_body(CodegenContext& ctx, llvm::Function* fn, const st
     }
 
     ctx.variables = saved_vars; ctx.var_types = saved_types; ctx.const_vars = saved_const;
-    ctx.current_class = saved_cls; ctx.current_ret = saved_ret;
+    ctx.current_class = saved_cls; ctx.current_ret = saved_ret; ctx.volatile_locals = saved_has_try;
     if (saved_bb) ctx.builder.SetInsertPoint(saved_bb);
     else          ctx.builder.ClearInsertionPoint();
 }
@@ -87,6 +89,7 @@ private:
     std::vector<std::string> arg_types;
     std::shared_ptr<Statement> body;
     std::vector<std::shared_ptr<Expression>> defaults;
+    bool has_try = false;
 
 public:
     explicit FunctionDefineStatement(std::string& type, std::string& name, std::vector<std::string>& arg_types, std::vector<std::string>& arg_names, std::unique_ptr<Statement> body)
@@ -94,6 +97,7 @@ public:
 
     void set_defaults(std::vector<std::shared_ptr<Expression>> d) { defaults = std::move(d); }
     auto get_defaults() const { return defaults; }
+    void set_has_try(bool ht) { has_try = ht; }
 
     void codegen(CodegenContext &context) const override
     {
@@ -163,6 +167,7 @@ public:
         if (name == "main" && context.init_fn)
             context.builder.CreateCall(context.init_fn);
 
+        context.volatile_locals = has_try;
         body->codegen(context);
 
         if (!context.builder.GetInsertBlock()->getTerminator())
@@ -173,6 +178,7 @@ public:
                 context.builder.CreateRet(llvm::Constant::getNullValue(type_to_llvm(type, context.builder)));
         }
 
+        context.volatile_locals = false;
         context.variables = save_variables;
         context.var_types = save_var_types;
         context.const_vars    = save_const;

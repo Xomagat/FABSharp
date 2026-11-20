@@ -16,6 +16,7 @@ struct MethodDecl
     std::vector<std::shared_ptr<Expression>> base_args;
     bool is_static;
     std::vector<std::shared_ptr<Expression>> defaults;
+    bool has_try;
 };
 
 class DtorBody : public Statement

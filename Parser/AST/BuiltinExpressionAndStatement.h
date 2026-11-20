@@ -147,6 +147,73 @@ public:
     std::string to_str() const override { return "concat(...)"; }
 };
 
+inline llvm::Value* emit_rt(CodegenContext& ctx, const char* name, llvm::Type* ret,
+                            std::vector<llvm::Type*> pt, std::vector<llvm::Value*> args,
+                            bool noreturn = false)
+{
+    auto& b = ctx.builder;
+    auto fn = ctx.module.getOrInsertFunction(name, llvm::FunctionType::get(ret, pt, false));
+    if (noreturn)
+        if (auto* f = llvm::dyn_cast<llvm::Function>(fn.getCallee())) f->setDoesNotReturn();
+    return b.CreateCall(fn, args);
+}
+
+inline void emit_try_pop(CodegenContext& ctx)
+{
+    emit_rt(ctx, "fab_try_pop", ctx.builder.getVoidTy(), {}, {});
+}
+
+inline void emit_unwind_to(CodegenContext& ctx, size_t depth)
+{
+    auto saved = ctx.try_stack;
+    for (size_t i = saved.size(); i > depth; --i)
+    {
+        ctx.try_stack.resize(i - 1);
+        emit_try_pop(ctx);
+        if (saved[i - 1].fin) saved[i - 1].fin->codegen(ctx);
+    }
+    ctx.try_stack = saved;
+}
+
+constexpr unsigned FAB_TRY_BYTES = 512;
+
+inline llvm::Value* emit_setjmp(CodegenContext& ctx, llvm::Value* rec)
+{
+    auto& b = ctx.builder;
+    llvm::FunctionCallee fn;
+    std::vector<llvm::Value*> args{rec};
+
+#ifdef _WIN32
+    fn = ctx.module.getOrInsertFunction("_setjmp",
+        llvm::FunctionType::get(b.getInt32Ty(), {b.getPtrTy(), b.getPtrTy()}, false));
+    args.push_back(llvm::ConstantPointerNull::get(b.getPtrTy()));
+#else
+    fn = ctx.module.getOrInsertFunction("_setjmp",
+        llvm::FunctionType::get(b.getInt32Ty(), {b.getPtrTy()}, false));
+#endif
+
+    if (auto* f = llvm::dyn_cast<llvm::Function>(fn.getCallee()))
+        f->addFnAttr(llvm::Attribute::ReturnsTwice);
+
+    auto* call = b.CreateCall(fn, args);
+    call->addFnAttr(llvm::Attribute::ReturnsTwice);
+    return call;
+}
+
+inline llvm::AllocaInst* emit_try_enter(CodegenContext& ctx, llvm::BasicBlock* normal,
+                                        llvm::BasicBlock* thrown)
+{
+    auto& b = ctx.builder;
+    auto* rec = entry_alloca(b, llvm::ArrayType::get(b.getInt8Ty(), FAB_TRY_BYTES), "try.rec");
+    rec->setAlignment(llvm::Align(16));
+
+    emit_rt(ctx, "fab_try_push", b.getVoidTy(), {b.getPtrTy()}, {rec});
+
+    llvm::Value* r = emit_setjmp(ctx, rec);
+    b.CreateCondBr(b.CreateICmpEQ(r, b.getInt32(0)), normal, thrown);
+    return rec;
+}
+
 class ThrowStatement : public Statement
 {
 private:
@@ -274,4 +341,132 @@ public:
     }
 
     std::string to_str() const override { return "cast<" + type + ">(" + expr->to_str() + ")"; }
+};
+
+struct CatchClause
+{
+    std::string type, name;
+    std::shared_ptr<Statement> body;
+};
+
+class TryStatement : public Statement
+{
+    std::shared_ptr<Statement> body, fin;
+    std::vector<CatchClause> catches;
+
+public:
+    TryStatement(std::shared_ptr<Statement> b, std::vector<CatchClause> c, std::shared_ptr<Statement> f)
+        : body(std::move(b)), fin(std::move(f)), catches(std::move(c)) {}
+
+    void codegen(CodegenContext& ctx) const override
+    {
+        auto& b = ctx.builder;
+        llvm::Function* fn = b.GetInsertBlock()->getParent();
+        fn->addFnAttr(llvm::Attribute::NoInline);
+
+        auto mk = [&](const char* n) { return llvm::BasicBlock::Create(ctx.context, n, fn); };
+        auto* endBB = mk("try.end");
+
+        llvm::AllocaInst* outer = nullptr;
+        llvm::BasicBlock* outerThrown = nullptr;
+        if (fin)
+        {
+            auto* outerBody = mk("try.outer");
+            outerThrown = mk("try.fin.throw");
+            outer = emit_try_enter(ctx, outerBody, outerThrown);
+            b.SetInsertPoint(outerBody);
+            ctx.try_stack.push_back({fin.get()});
+        }
+
+        if (catches.empty())
+            body->codegen(ctx);
+        else
+        {
+            auto* tryBB  = mk("try.body");
+            auto* dispBB = mk("try.dispatch");
+            auto* after  = mk("try.after");
+            llvm::AllocaInst* rec = emit_try_enter(ctx, tryBB, dispBB);
+
+            b.SetInsertPoint(tryBB);
+            ctx.try_stack.push_back({nullptr});
+            body->codegen(ctx);
+            ctx.try_stack.pop_back();
+            if (!b.GetInsertBlock()->getTerminator())
+            {
+                emit_try_pop(ctx);
+                b.CreateBr(after);
+            }
+
+            b.SetInsertPoint(dispBB);
+            std::vector<llvm::BasicBlock*> cbb;
+            for (size_t i = 0; i < catches.size(); ++i) cbb.push_back(mk("catch.body"));
+            auto* noMatch = mk("catch.nomatch");
+
+            llvm::Value* id = emit_rt(ctx, "fab_exc_type", b.getInt32Ty(), {b.getPtrTy()}, {rec});
+            for (size_t i = 0; i < catches.size(); ++i)
+            {
+                if (catches[i].type.empty()) { b.CreateBr(cbb[i]); break; }
+                auto* next = (i + 1 < catches.size()) ? mk("catch.test") : noMatch;
+                b.CreateCondBr(b.CreateICmpEQ(id, b.getInt32(exc_type_id(catches[i].type))),
+                               cbb[i], next);
+                if (next != noMatch) b.SetInsertPoint(next);
+            }
+
+            b.SetInsertPoint(noMatch);
+            emit_rt(ctx, "fab_rethrow", b.getVoidTy(), {b.getPtrTy()}, {rec}, true);
+            b.CreateUnreachable();
+
+            for (size_t i = 0; i < catches.size(); ++i)
+            {
+                auto& c = catches[i];
+                b.SetInsertPoint(cbb[i]);
+
+                auto sv_vars = ctx.variables; auto sv_types = ctx.var_types; auto sv_const = ctx.const_vars;
+
+                std::string vt = c.type.empty() ? "string" : c.type;
+                llvm::Value* val;
+                if (c.type.empty())
+                    val = emit_rt(ctx, "fab_exc_msg", b.getPtrTy(), {b.getPtrTy()}, {rec});
+                else
+                {
+                    llvm::Value* p = emit_rt(ctx, "fab_exc_payload", b.getPtrTy(), {b.getPtrTy()}, {rec});
+                    val = b.CreateLoad(type_to_llvm(vt, b), p);
+                }
+                auto* slot = entry_alloca(b, type_to_llvm(vt, b), c.name);
+                b.CreateStore(val, slot);
+                ctx.variables[c.name] = slot;
+                ctx.var_types[c.name] = vt;
+                ctx.const_vars.erase(c.name);
+
+                c.body->codegen(ctx);
+
+                ctx.variables = sv_vars; ctx.var_types = sv_types; ctx.const_vars = sv_const;
+                if (!b.GetInsertBlock()->getTerminator()) b.CreateBr(after);
+            }
+            b.SetInsertPoint(after);
+        }
+
+        if (fin)
+        {
+            ctx.try_stack.pop_back();
+            if (!b.GetInsertBlock()->getTerminator())
+            {
+                emit_try_pop(ctx);
+                fin->codegen(ctx);
+                if (!b.GetInsertBlock()->getTerminator()) b.CreateBr(endBB);
+            }
+
+            b.SetInsertPoint(outerThrown);
+            fin->codegen(ctx);
+            if (!b.GetInsertBlock()->getTerminator())
+            {
+                emit_rt(ctx, "fab_rethrow", b.getVoidTy(), {b.getPtrTy()}, {outer}, true);
+                b.CreateUnreachable();
+            }
+        }
+        else if (!b.GetInsertBlock()->getTerminator())
+            b.CreateBr(endBB);
+
+        b.SetInsertPoint(endBB);
+    }
 };

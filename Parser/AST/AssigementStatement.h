@@ -479,7 +479,7 @@ public:
             std::string real = type_of(context, val);
 
             llvm::AllocaInst* alloc = entry_alloca(context.builder, type_to_llvm(real, context.builder), name);
-            context.builder.CreateStore(val, alloc);
+            context.builder.CreateStore(val, alloc)->setVolatile(context.volatile_locals);
 
             context.variables[name] = alloc;
             context.var_types[name] = real;
@@ -536,7 +536,7 @@ public:
                                     : llvm::Constant::getNullValue(it->second->getAllocatedType()))
                 : expression->codegen_expected(context, vt);
             val = coerceToType(val, it->second->getAllocatedType(), context.builder);
-            context.builder.CreateStore(val, it->second);
+            context.builder.CreateStore(val, it->second)->setVolatile(context.volatile_locals);
             return;
         }
 
@@ -552,7 +552,7 @@ public:
             auto& ci = get_class(context, type);
             if (ci.ctor && ci.ctor_args.empty())
                 context.builder.CreateCall(ci.ctor, {obj});
-            context.builder.CreateStore(obj, alloc);
+            context.builder.CreateStore(obj, alloc)->setVolatile(context.volatile_locals);
         }
         else if (expression)
         {
@@ -565,7 +565,7 @@ public:
                 val = expression->codegen_expected(context, type);
 
             val = coerceToType(val, llvmType, context.builder);
-            context.builder.CreateStore(val, alloc);
+            context.builder.CreateStore(val, alloc)->setVolatile(context.volatile_locals);
         }
 
         if (is_const)

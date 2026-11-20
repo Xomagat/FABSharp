@@ -23,9 +23,14 @@ public:
             auto* it = type_to_llvm(context.current_ret, context.builder);
             llvm::Value* v = expr->is_null_literal() ? llvm::Constant::getNullValue(it)
                                              : expr->codegen_expected(context, context.current_ret);
-            context.builder.CreateRet(coerceToType(v, it, context.builder));
+            v = coerceToType(v, it, context.builder);
+            emit_unwind_to(context, 0);
+            context.builder.CreateRet(v);
         }
         else
+        {
+            emit_unwind_to(context, 0);
             context.builder.CreateRetVoid();
+        }
     }
 };

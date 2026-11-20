@@ -15,6 +15,7 @@ public:
         if (context.loop_stack.empty())
             throw std::runtime_error("'continue' outside of a loop!");
 
+        emit_unwind_to(context, context.loop_stack.back().try_depth);
         context.builder.CreateBr(context.loop_stack.back().continueTarget);
     }
 };
