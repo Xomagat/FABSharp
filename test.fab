@@ -1,37 +1,13 @@
-use thread;
+define f(long x) -> long { return x * 2; }
+define g(long a, long b = 10) -> long { return a + b; }
 
-define work(int n) -> int
-{
-    int s = 0;
-    for (int i = 1; i <= n; i++) s += i;
-    return s;
-}
-
-define greet(string who) -> string
-{
-    return $"hello, {who}";
-}
-
-define log_it(string m)
-{
-    writeln m;
-}
+class A { public: define h(long x) -> long { return x + 1; } }
 
 define main() -> int
 {
-    thread a = spawn(work, 1000);
-    thread b = spawn(greet, "FAB#");
-
-    int r = await a;
-    string g = await b;
-    writeln $"{r} {g}";            // 500500 hello, FAB#
-
-    int again = await a;           // повторный await: тот же результат
-    writeln again;                 // 500500
-
-    await spawn(log_it, "done");   // statement: просто ждём
-
-    delete a;
-    delete b;
+    writeln f(100);       // 200
+    writeln g(5);         // 15
+    A a = new A();
+    writeln a.h(41);      // 42
     return 0;
 }

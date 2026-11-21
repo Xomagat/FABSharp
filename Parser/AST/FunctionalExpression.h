@@ -182,6 +182,59 @@ inline llvm::Value* emit_spawn(CodegenContext& ctx, const std::string& fname,
     return r;
 }
 
+inline llvm::Value* call_user_converted(CodegenContext& ctx, const std::string& q,
+                                        const std::vector<llvm::Value*>& vals,
+                                        const std::vector<std::string>& types)
+{
+    auto ov = ctx.overloads.find(q);
+    if (ov == ctx.overloads.end()) return nullptr;
+
+    const FuncSig* best = nullptr;
+    int  best_cost = INT_MAX;
+    bool tie = false;
+
+    for (auto& sig : ov->second)
+    {
+        if (sig.types.size() < types.size()) continue;
+
+        bool ok = true;
+
+        for (size_t i = types.size(); i < sig.types.size() && ok; ++i)
+            if (i >= sig.defaults.size() || !sig.defaults[i]) ok = false;
+        if (!ok) continue;
+
+        int total = 0;
+        for (size_t i = 0; i < types.size() && ok; ++i)
+        {
+            int c = conversion_cost(types[i], sig.types[i]);
+            if (c < 0) ok = false; else total += c;
+        }
+        if (!ok) continue;
+
+        if (total < best_cost)       { best = &sig; best_cost = total; tie = false; }
+        else if (total == best_cost) tie = true;
+    }
+
+    if (!best) return nullptr;
+    if (tie) throw std::runtime_error("Ambiguous call to '" + q + "'");
+
+    auto key = mangle_name(q, best->types);
+    llvm::Function* fn = ctx.functions.at(key);
+    auto* fty = fn->getFunctionType();
+
+    std::vector<llvm::Value*> out = vals;
+    for (size_t i = out.size(); i < best->types.size(); ++i)
+        out.push_back(best->defaults[i]->codegen_expected(ctx, best->types[i]));
+
+    for (size_t i = 0; i < out.size(); ++i)
+        out[i] = coerceToType(out[i], fty->getParamType(i), ctx.builder);
+
+    llvm::Value* r = ctx.builder.CreateCall(fn, out);
+    auto& rt = ctx.func_ret[key];
+    if (rt != "void") ctx.value_types[r] = rt;
+    return r;
+}
+
 class FunctionalExpression : public Expression
 {
 private:
@@ -255,40 +308,10 @@ public:
         std::vector<std::string> cands = std_only ? std::vector<std::string>{name}
                                                   : ns_candidates(context, name);
 
-        for (auto& q : cands)
-        {
-            auto key = mangle_name(q, arg_type_names);
-
-            if (!std_only)
-            {
-                auto it = context.functions.find(key);
-                if (it != context.functions.end())
-                {
-                    auto vals = args_values;
-
-                    auto d = context.func_defaults.find(key);
-                    if (d != context.func_defaults.end())
-                    {
-                        auto& fd = d->second;
-                        for (size_t i = vals.size(); i < fd.arg_types.size(); ++i)
-                            vals.push_back(fd.defaults[i]->codegen_expected(context, fd.arg_types[i]));
-                    }
-
-                    auto* fty = it->second->getFunctionType();
-                    for (size_t i = 0; i < vals.size(); ++i)
-                        vals[i] = coerceToType(vals[i], fty->getParamType(i), context.builder);
-
-                    auto* r = context.builder.CreateCall(it->second, vals);
-                    auto& rt = context.func_ret[key];
-                    if (rt != "void") context.value_types[r] = rt;
+        if (!std_only)
+            for (auto& q : cands)
+                if (auto* r = call_user_converted(context, q, args_values, arg_type_names))
                     return r;
-                }
-            }
-
-            auto libIt = stdlib_symbols.find(key);
-            if (libIt != stdlib_symbols.end())
-                return emit_stdlib_call(context, libIt->second, args_values);
-        }
 
         std::vector<std::string> widened = arg_type_names;
         bool changed = false;

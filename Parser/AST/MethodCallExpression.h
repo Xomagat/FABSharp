@@ -12,6 +12,33 @@
 #include "Expression.h"
 #include "FunctionalExpression.h"
 
+inline const MethodInfo* pick_method_converted(
+        const std::unordered_map<std::string, MethodInfo>& table,
+        const std::string& name, const std::vector<std::string>& types)
+{
+    const MethodInfo* best = nullptr;
+    int  best_cost = INT_MAX;
+    bool tie = false;
+
+    for (auto& [key, mi] : table)
+    {
+        if (!key.starts_with(name + "#") || mi.args.size() != types.size()) continue;
+
+        int total = 0; bool ok = true;
+        for (size_t i = 0; i < types.size() && ok; ++i)
+        {
+            int c = conversion_cost(types[i], mi.args[i]);
+            if (c < 0) ok = false; else total += c;
+        }
+        if (!ok) continue;
+
+        if (total < best_cost)       { best = &mi; best_cost = total; tie = false; }
+        else if (total == best_cost) tie = true;
+    }
+    if (tie) throw std::runtime_error("Ambiguous call to method '" + name + "'");
+    return best;
+}
+
 class MethodCallExpression : public Expression
 {
 private:
@@ -154,17 +181,22 @@ public:
         if (is_class(recv_type))
         {
             auto& ci = get_class(ctx, recv_type);
-            auto m = ci.methods.find(mangle_name(name, tail_types));
-            if (m == ci.methods.end())
+            const MethodInfo* mi = nullptr;
+            if (auto m = ci.methods.find(mangle_name(name, tail_types)); m != ci.methods.end())
+                mi = &m->second;
+            else
+                mi = pick_method_converted(ci.methods, name, tail_types);
+
+            if (!mi)
                 throw std::runtime_error("Class '" + recv_type + "' has no method '" + name + "' with these arguments");
-            if (!m->second.is_public && ctx.current_class != recv_type)
+            if (!mi->is_public && ctx.current_class != recv_type)
                 throw std::runtime_error("Method '" + name + "' is private!");
 
             std::vector<llvm::Value*> cargs{self};
-            for (size_t i = 0; i < m->second.args.size(); ++i)
+            for (size_t i = 0; i < mi->args.size(); ++i)
                 cargs.push_back(coerceToType(vals[i + 1],
-                                type_to_llvm(m->second.args[i], ctx.builder), ctx.builder));
-            return emit_virtual(ctx, self, m->second, cargs);
+                                type_to_llvm(mi->args[i], ctx.builder), ctx.builder));
+            return emit_virtual(ctx, self, *mi, cargs);
         }
 
         const StdlibFunctionInfo* it = find_lib_method(recv_type, name, tail_types);

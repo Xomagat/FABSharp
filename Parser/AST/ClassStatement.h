@@ -6,6 +6,7 @@
 #include <optional>
 #include "FunctionStatement.h"
 #include "AssigementStatement.h"
+#include "MethodCallExpression.h"
 
 struct MethodDecl
 {
@@ -496,23 +497,29 @@ public:
 
         std::vector<llvm::Value*> vals;
         std::vector<std::string> types;
+
         for (auto& a : args)
         {
             vals.push_back(a->codegen(ctx));
             types.push_back(type_of(ctx, vals.back()));
         }
 
-        auto m = ci.statics.find(mangle_name(name, types));
-        if (m == ci.statics.end())
+        const MethodInfo* mi = nullptr;
+        if (auto m = ci.statics.find(mangle_name(name, types)); m != ci.statics.end())
+            mi = &m->second;
+        else
+            mi = pick_method_converted(ci.statics, name, types);
+
+        if (!mi)
             throw std::runtime_error("Class '" + cls + "' has no static method '" + name + "' with these arguments");
-        if (!m->second.is_public && ctx.current_class != cls)
+        if (!mi->is_public && ctx.current_class != cls)
             throw std::runtime_error("Static method '" + name + "' is private!");
 
         for (size_t i = 0; i < vals.size(); ++i)
-            vals[i] = coerceToType(vals[i], type_to_llvm(m->second.args[i], ctx.builder), ctx.builder);
+            vals[i] = coerceToType(vals[i], type_to_llvm(mi->args[i], ctx.builder), ctx.builder);
 
-        llvm::Value* r = ctx.builder.CreateCall(m->second.fn, vals);
-        if (m->second.ret != "void") ctx.value_types[r] = m->second.ret;
+        llvm::Value* r = ctx.builder.CreateCall(mi->fn, vals);
+        if (mi->ret != "void") ctx.value_types[r] = mi->ret;
         return r;
     }
 
