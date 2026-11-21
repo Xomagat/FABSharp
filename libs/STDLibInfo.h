@@ -29,6 +29,9 @@ struct StdlibVarInfo
 inline std::unordered_set<std::string> class_names;
 inline std::unordered_set<std::string> namespace_names;
 
+inline std::unordered_set<std::string> struct_names;
+inline bool is_struct(const std::string& t) { return struct_names.contains(t); }
+
 inline std::unordered_map<std::string, StdlibVarInfo> stdlib_vars;
 
 inline std::unordered_map<std::string, StdlibFunctionInfo> stdlib_symbols;

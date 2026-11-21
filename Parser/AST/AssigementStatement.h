@@ -203,7 +203,7 @@ inline llvm::Value* emit_field_ptr(CodegenContext& ctx, llvm::Value* obj, const 
 
     type_out = ci.fields[i].type;
     if (!nonnull) emit_null_check(ctx, obj, "Null reference: field '" + field + "' of " + cls);
-    return ctx.builder.CreateStructGEP(ci.st, obj, i + 1, field);
+    return ctx.builder.CreateStructGEP(ci.st, obj, i + ci.off, field);
 }
 
 inline llvm::Value* emit_this_field_ptr(CodegenContext& ctx, const std::string& name, std::string& ftype)
@@ -243,6 +243,12 @@ inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& buil
     if (type == "string")   return builder.getInt8Ty()->getPointerTo();
     if (type == "ldouble")  return llvm::Type::getX86_FP80Ty(builder.getContext());
     if (is_container(type)) return builder.getPtrTy();
+    if (is_struct(type))
+    {
+        auto* st = llvm::StructType::getTypeByName(builder.getContext(), type);
+        if (!st) throw std::runtime_error("Struct '" + type + "' is used before its definition");
+        return st;
+    }
     if (is_class(type))     return builder.getPtrTy();
     if (is_lib_type(type))  return builder.getPtrTy();
 
@@ -261,8 +267,31 @@ inline std::string llvm_to_type(llvm::Type* t)
     if (t->isDoubleTy())               return "double";
     if (t->isX86_FP80Ty())             return "ldouble";
     if (t->isPointerTy())              return "string";
+    if (t->isStructTy()) return t->getStructName().str();
 
     throw std::runtime_error("Cannot demangle llvm type for overload resolution!");
+}
+
+inline llvm::Value* emit_struct_default(CodegenContext& ctx, const std::string& name)
+{
+    auto& b = ctx.builder;
+    auto& ci = get_class(ctx, name);
+    llvm::Value* v = llvm::Constant::getNullValue(ci.st);
+
+    for (size_t i = 0; i < ci.fields.size(); ++i)
+    {
+        auto& f = ci.fields[i];
+        llvm::Value* init = nullptr;
+
+        if (f.init && !f.init->is_null_literal())
+            init = coerceToType(f.init->codegen_expected(ctx, f.type), type_to_llvm(f.type, b), b);
+        else if (is_struct(f.type)) init = emit_struct_default(ctx, f.type);
+        else if (f.type == "string") init = b.CreateGlobalStringPtr("");
+
+        if (init) v = b.CreateInsertValue(v, init, {(unsigned)i});
+    }
+    ctx.value_types[v] = name;
+    return v;
 }
 
 inline llvm::Value* emit_object_alloc(CodegenContext& ctx, const std::string& cls)
@@ -350,6 +379,28 @@ inline std::string type_of(CodegenContext& ctx, llvm::Value* v)
     return llvm_to_type(v->getType());
 }
 
+inline llvm::Value* emit_base(CodegenContext& ctx, const Expression& e, std::string& type)
+{
+    auto& b = ctx.builder;
+    if (llvm::Value* a = e.codegen_addr(ctx, type))
+    {
+        if (is_struct(type)) return a;
+        auto* v = b.CreateLoad(type_to_llvm(type, b), a);
+        v->setVolatile(ctx.volatile_locals);
+        ctx.value_types[v] = type;
+        return v;
+    }
+    llvm::Value* v = e.codegen(ctx);
+    type = type_of(ctx, v);
+    if (is_struct(type))
+    {
+        auto* tmp = entry_alloca(b, v->getType(), "struct.tmp");
+        b.CreateStore(v, tmp);
+        return tmp;
+    }
+    return v;
+}
+
 inline void emit_free_lib(CodegenContext& ctx, llvm::Value* v, const std::string& t)
 {
     std::string sym = lib_free_symbol(t);
@@ -404,6 +455,8 @@ private:
     llvm::Value* init_value(CodegenContext& ctx, const std::string& t, llvm::Type* lt) const
     {
         auto& b = ctx.builder;
+        if (is_struct(t) && (!expression || expression->is_null_literal()))
+            return emit_struct_default(ctx, t);
         if (!expression && is_class(t))
         {
             llvm::Value* obj = emit_object_alloc(ctx, t);
@@ -546,7 +599,10 @@ public:
         context.variables[name] = alloc;
         context.var_types[name] = type;
 
-        if (!expression && is_class(type))
+        if (!expression && is_struct(type))
+            context.builder.CreateStore(emit_struct_default(context, type), alloc)
+                ->setVolatile(context.volatile_locals);
+        else if (!expression && is_class(type))
         {
             llvm::Value* obj = emit_object_alloc(context, type);
             auto& ci = get_class(context, type);

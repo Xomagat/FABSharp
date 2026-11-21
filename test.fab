@@ -1,16 +1,23 @@
+struct Point
+{
+    int x;
+    int y = 5;
+}
+
+define moved(Point p) -> Point
+{
+    p.x = p.x + 10;      // p — копия, оригинал не меняется
+    return p;
+}
+
 define main() -> int
 {
-    try
-    {
-        throw "boom";
-    }
-    catch (string e)
-    {
-        writeln $"caught: {e}";
-    }
-    finally
-    {
-        writeln "cleanup";
-    }
+    Point a = Point(1, 2);
+    Point b = a;             // копия
+    b.x = 100;
+    Point c = Point(x = 7);  // y = 5 по умолчанию
+    Point d = moved(a);
+
+    writeln $"{a.x} {b.x} {c.y} {d.x}";   // 1 100 5 11
     return 0;
 }

@@ -92,7 +92,7 @@ private:
     std::unique_ptr<Statement> while_statement();
     std::unique_ptr<Statement> do_while_statement();
     std::unique_ptr<Statement> for_statement();
-    std::unique_ptr<Statement> class_definition();
+    std::unique_ptr<Statement> class_definition(bool is_struct = false);
     std::unique_ptr<Statement> try_statement();
     std::unique_ptr<Statement> statement_or_block();
     std::unique_ptr<Statement> block();

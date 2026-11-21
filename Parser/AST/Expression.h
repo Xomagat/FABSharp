@@ -24,6 +24,8 @@ public:
     {
         return codegen(context);
     }
+    
+    virtual llvm::Value* codegen_addr(CodegenContext&, std::string& type_out) const { return nullptr; }
 
     virtual bool is_null_literal() const { return false; }
 

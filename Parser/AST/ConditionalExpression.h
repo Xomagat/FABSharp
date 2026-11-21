@@ -33,6 +33,9 @@ public:
         llvm::Value* left = expr1->codegen(ctx);
         llvm::Value* right = expr2->codegen(ctx);
 
+        if (left->getType()->isStructTy() || right->getType()->isStructTy())
+            throw std::runtime_error("Structs cannot be compared with ==/<: compare fields");
+
         auto is_str = [&](llvm::Value* v) {
             return v->getType()->isPointerTy() && type_of(ctx, v) == "string";
         };

@@ -53,6 +53,9 @@ struct ClassInfo
     std::vector<llvm::Function*> vslots;
     llvm::GlobalVariable* vtable = nullptr;
 
+    bool is_struct = false;
+    int  off = 1;
+
     std::vector<std::string> ctor_names;
     std::vector<std::shared_ptr<Expression>> ctor_defaults;
 

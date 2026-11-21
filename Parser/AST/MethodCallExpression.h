@@ -138,6 +138,8 @@ public:
         llvm::Value* self = receiver->codegen(ctx);
         std::string recv_type = type_of(ctx, self);
 
+        if (is_struct(recv_type)) throw std::runtime_error("Struct methods are not supported yet");
+
         if (has_named() || (is_class(recv_type) && !has_arity(get_class(ctx, recv_type))))
             return codegen_named(ctx, self, recv_type);
 

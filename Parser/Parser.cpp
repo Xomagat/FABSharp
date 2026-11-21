@@ -39,8 +39,15 @@ Parser::Parser(std::vector<Token> tokens, std::filesystem::path base_dir, std::f
 std::vector<std::unique_ptr<Statement>> Parser::parse()
 {
     for (int i = 0; i + 1 < size; ++i)
-        if (tokens[i].get_type() == token_type::CLASS && tokens[i + 1].get_type() == token_type::WORDS)
+    {
+        auto t = tokens[i].get_type();
+        if ((t == token_type::CLASS || t == token_type::STRUCT)
+            && tokens[i + 1].get_type() == token_type::WORDS)
+        {
             class_names.insert(tokens[i + 1].get_text());
+            if (t == token_type::STRUCT) struct_names.insert(tokens[i + 1].get_text());
+        }
+    }
 
     std::vector<std::unique_ptr<Statement>> result;
 
@@ -83,11 +90,13 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
             }
             --depth;
         }
-        else if (t == token_type::CLASS && tokens[i + 1].get_type() == token_type::WORDS)
+        else if ((t == token_type::CLASS || t == token_type::STRUCT)
+         && tokens[i + 1].get_type() == token_type::WORDS)
         {
             std::string q;
             for (auto& n : names) q += n + "::";
             class_names.insert(q + tokens[i + 1].get_text());
+            if (t == token_type::STRUCT) struct_names.insert(q + tokens[i + 1].get_text());
         }
     }
 
@@ -246,6 +255,10 @@ std::unique_ptr<Statement> Parser::statement_impl()
         case token_type::CLASS: {
             consume(token_type::CLASS);
             return class_definition();
+        }
+        case token_type::STRUCT: {
+            consume(token_type::STRUCT);
+            return class_definition(true);
         }
         case token_type::DELETE_KW: {
             consume(token_type::DELETE_KW);
@@ -582,7 +595,7 @@ std::unique_ptr<Statement> Parser::for_statement()
                                           std::move(increment), std::move(body));
 }
 
-std::unique_ptr<Statement> Parser::class_definition()
+std::unique_ptr<Statement> Parser::class_definition(bool is_struct)
 {
     std::string name = consume(token_type::WORDS).get_text();
     std::string full = qualify(name);
@@ -590,6 +603,8 @@ std::unique_ptr<Statement> Parser::class_definition()
 
     if (match(token_type::COLON))
     {
+        if (is_struct) throw std::runtime_error("Structs cannot inherit!");
+
         int len = chain_len(0);
         if (!len) throw std::runtime_error("Parent class name expected!");
 
@@ -601,8 +616,8 @@ std::unique_ptr<Statement> Parser::class_definition()
     }
 
     consume(token_type::LBRACKET);
-    auto cls = std::make_unique<ClassDefineStatement>(full, parent);
-    bool is_public = false;
+    auto cls = std::make_unique<ClassDefineStatement>(full, parent, is_struct);
+    bool is_public = is_struct;
 
     while (!match(token_type::RBRACKET))
     {
@@ -612,6 +627,8 @@ std::unique_ptr<Statement> Parser::class_definition()
         bool st = match(token_type::STATIC);
         if (match(token_type::DEFINE))
         {
+            if (is_struct) throw std::runtime_error("Struct methods are not supported yet!");
+
             auto fn = define_function(false);
             MethodDecl d{fn->get_type(), fn->get_name(), fn->get_arg_types(),
                          fn->get_arg_names(), fn->get_body(), is_public};
@@ -625,6 +642,8 @@ std::unique_ptr<Statement> Parser::class_definition()
 
         if (match(token_type::TILDE))
         {
+            if (is_struct) throw std::runtime_error("Structs have no destructor!");
+
             if (consume(token_type::WORDS).get_text() != name)
                 throw std::runtime_error("Destructor name must match class name!");
             consume(token_type::LPARENT);
@@ -636,6 +655,8 @@ std::unique_ptr<Statement> Parser::class_definition()
         if (get(0).get_type() == token_type::WORDS && get(0).get_text() == name
             && get(1).get_type() == token_type::LPARENT)
         {
+            if (is_struct) throw std::runtime_error("Structs have no constructors: use Name(a, b)");
+
             consume(token_type::WORDS);
             consume(token_type::LPARENT);
             std::vector<std::string> at, an;

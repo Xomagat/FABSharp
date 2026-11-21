@@ -288,6 +288,39 @@ public:
         throw std::runtime_error("Unknown function or overload for codegen: " + sig);
     }
 
+    llvm::Value* try_struct_ctor(CodegenContext& ctx) const
+    {
+        std::string st;
+        for (auto& q : ns_candidates(ctx, name))
+            if (is_struct(q)) { st = q; break; }
+        if (st.empty()) return nullptr;
+
+        auto& b = ctx.builder;
+        auto& ci = get_class(ctx, st);
+        if (args.size() > ci.fields.size())
+            throw std::runtime_error("Too many arguments for struct '" + st + "'");
+
+        llvm::Value* v = emit_struct_default(ctx, st);
+        for (size_t i = 0; i < args.size(); ++i)
+        {
+            size_t idx = i;
+            if (i < names.size() && !names[i].empty())
+            {
+                int k = ci.field_index(names[i]);
+                if (k < 0) throw std::runtime_error("Struct '" + st + "' has no field '" + names[i] + "'");
+                idx = (size_t)k;
+            }
+            auto& f = ci.fields[idx];
+            llvm::Type* lt = type_to_llvm(f.type, b);
+            llvm::Value* a = args[i]->is_null_literal()
+                ? llvm::Constant::getNullValue(lt)
+                : args[i]->codegen_expected(ctx, f.type);
+            v = b.CreateInsertValue(v, coerceToType(a, lt, b), {(unsigned)idx});
+        }
+        ctx.value_types[v] = st;
+        return v;
+    }
+
     llvm::Value* codegen_named(CodegenContext& ctx) const
     {
         std::string base = name;
@@ -358,6 +391,8 @@ public:
 
     llvm::Value* codegen(CodegenContext& context) const override
     {
+        if (auto* s = try_struct_ctor(context)) return s;
+
         if (name == "spawn" && !args.empty() && !has_named()
         && !context.overloads.contains("spawn"))
         {

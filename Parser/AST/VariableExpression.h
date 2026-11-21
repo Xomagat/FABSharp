@@ -16,6 +16,16 @@ private:
 public:
     explicit VariableExpression(std::string name) : name(name) {}
 
+    llvm::Value* codegen_addr(CodegenContext& ctx, std::string& type_out) const override
+    {
+        if (auto it = ctx.variables.find(name); it != ctx.variables.end())
+        { type_out = ctx.var_types[name]; return it->second; }
+        std::string ft;
+        if (auto* p = emit_this_field_ptr(ctx, name, ft)) { type_out = ft; return p; }
+        if (auto* g = find_global(ctx, name)) { type_out = g->type; return g->gv; }
+        return nullptr;
+    }
+
     llvm::Value *codegen(CodegenContext &context) const override
     {
         auto it = context.variables.find(name);

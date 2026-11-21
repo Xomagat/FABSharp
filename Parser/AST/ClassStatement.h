@@ -121,8 +121,11 @@ class ClassDefineStatement : public Statement
     std::vector<FieldInfo> fields;
     std::vector<MethodDecl> methods;
     std::optional<MethodDecl> ctor;
+    bool is_struct_;
 
 public:
+    explicit ClassDefineStatement(std::string name, std::string parent = "", bool st = false)
+        : name(std::move(name)), parent(std::move(parent)), is_struct_(st) {}
     explicit ClassDefineStatement(std::string name, std::string parent = "")
     : name(std::move(name)), parent(std::move(parent)) {}
     void set_dtor(std::shared_ptr<Statement> b) { dtor_body = std::move(b); }
@@ -136,6 +139,8 @@ public:
         ClassInfo ci;
         ci.st = llvm::StructType::create(ctx.context, name);
         ci.parent = parent;
+        ci.is_struct = is_struct_;
+        ci.off = is_struct_ ? 0 : 1;
 
         if (!parent.empty())
         {
@@ -147,14 +152,28 @@ public:
             ci.ctor = p.ctor; ci.ctor_args = p.ctor_args;
             ci.ctor_names = p.ctor_names; ci.ctor_defaults = p.ctor_defaults;
         }
-        else ci.vslots.push_back(nullptr);
+        else if (!is_struct_) ci.vslots.push_back(nullptr);
 
+        for (auto f : fields)
+        {
+            if (is_struct_ && (is_container(f.type) || is_lib_type(f.type)))
+                throw std::runtime_error("Struct field '" + f.name + "' cannot be '" + f.type
+                                         + "': only numbers, bool, char, string, class refs and other structs");
+            if (is_struct_ && f.type == name)
+                throw std::runtime_error("Struct '" + name + "' cannot contain itself");
+            f.owner = name; ci.fields.push_back(f);
+        }
 
-        for (auto f : fields) { f.owner = name; ci.fields.push_back(f); }
-
-        std::vector<llvm::Type*> ft{b.getPtrTy()};
+        std::vector<llvm::Type*> ft;
+        if (!is_struct_) ft.push_back(b.getPtrTy());
         for (auto& f : ci.fields) ft.push_back(type_to_llvm(f.type, b));
         ci.st->setBody(ft);
+
+        if (is_struct_)
+        {
+            ctx.classes[name] = std::move(ci);
+            return;
+        }
 
         auto make = [&](const MethodDecl& m, const std::string& sym) {
             std::vector<llvm::Type*> p;
@@ -214,6 +233,8 @@ public:
 
     void codegen(CodegenContext& ctx) const override
     {
+        if (is_struct_) return;
+
         auto& ci = ctx.classes.at(name);
 
         if (ctor)
@@ -247,6 +268,8 @@ public:
 
     llvm::Value* codegen(CodegenContext& ctx) const override
     {
+        if (is_struct(cls)) throw std::runtime_error("Struct '" + cls + "' is a value: create it as Name(...), no 'new'");
+
         auto& b = ctx.builder;
         auto& ci = get_class(ctx, cls);
 
@@ -306,10 +329,15 @@ public:
 
     llvm::Value* codegen_ptr(CodegenContext& ctx, std::string& ftype) const
     {
-        llvm::Value* obj = target->codegen(ctx);
-        std::string cls = type_of(ctx, obj);
+        std::string cls;
+        llvm::Value* obj = emit_base(ctx, *target, cls);
         if (!is_class(cls)) throw std::runtime_error("Type '" + cls + "' has no fields!");
-        return emit_field_ptr(ctx, obj, cls, name, ftype);
+        return emit_field_ptr(ctx, obj, cls, name, ftype, is_struct(cls));
+    }
+
+    llvm::Value* codegen_addr(CodegenContext& ctx, std::string& type_out) const override
+    {
+        return codegen_ptr(ctx, type_out);
     }
 
     llvm::Value* codegen(CodegenContext& ctx) const override
@@ -362,6 +390,7 @@ public:
         if (it != ctx.variables.end()) { slot = it->second; type = ctx.var_types[name]; }
         else slot = emit_this_field_ptr(ctx, name, type);
         if (!slot) throw std::runtime_error("Variable {" + name + "} not found!");
+        if (is_struct(type)) throw std::runtime_error("Struct is a value type, 'delete' is not needed");
 
         llvm::Value* v = b.CreateLoad(b.getPtrTy(), slot);
 

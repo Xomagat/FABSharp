@@ -46,6 +46,7 @@ enum token_type
     TRY,            // try
     CATCH,          // catch
     FINALLY,        // finally
+    STRUCT,         // Struct
 
     NULLVAL,        // Value null
     TRUEVAL,        // Value true
@@ -127,6 +128,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {TRY,        "try"},
     {CATCH,      "catch"},
     {FINALLY,    "finally"},
+    {STRUCT,     "struct"},
 
     {NULLVAL,    "null"},
     {TRUEVAL,    "true"},

@@ -207,6 +207,7 @@ void Lexer::tokenize_word()
         {"try",        token_type::TRY},
         {"catch",      token_type::CATCH},
         {"finally",    token_type::FINALLY},
+        {"struct",     token_type::STRUCT},
     };
 
     auto it = keywords.find(buffer);
