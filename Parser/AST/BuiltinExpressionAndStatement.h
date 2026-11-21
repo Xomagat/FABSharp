@@ -470,3 +470,61 @@ public:
         b.SetInsertPoint(endBB);
     }
 };
+
+class AwaitExpression : public Expression
+{
+    std::unique_ptr<Expression> target;
+
+public:
+    explicit AwaitExpression(std::unique_ptr<Expression> t) : target(std::move(t)) {}
+
+    static llvm::Value* emit_wait(CodegenContext& ctx, const Expression& target, const std::string& want)
+    {
+        auto& b = ctx.builder;
+        if (target.is_null_literal())
+            throw std::runtime_error("Cannot await null!");
+
+        llvm::Value* th = target.codegen(ctx);
+        std::string t = type_of(ctx, th);
+        if (t != "thread")
+            throw std::runtime_error("await needs a thread, not '" + t + "'!");
+
+        llvm::Value* w = want.empty()
+            ? (llvm::Value*)llvm::ConstantPointerNull::get(b.getPtrTy())
+            : b.CreateGlobalStringPtr(want);
+
+        return emit_rt(ctx, "fab_thread_await", b.getPtrTy(),
+                       {b.getPtrTy(), b.getPtrTy()}, {th, w});
+    }
+
+    llvm::Value* codegen_expected(CodegenContext& ctx, const std::string& expected) const override
+    {
+        if (expected == "void" || expected == "auto" || is_struct(expected))
+            throw std::runtime_error("await: cannot take a result of type '" + expected + "'!");
+
+        llvm::Value* slot = emit_wait(ctx, *target, expected);
+        llvm::Value* v = ctx.builder.CreateLoad(type_to_llvm(expected, ctx.builder), slot);
+        ctx.value_types[v] = expected;
+        return v;
+    }
+
+    llvm::Value* codegen(CodegenContext&) const override
+    {
+        throw std::runtime_error("await needs a type context: int x = await t;");
+    }
+
+    std::string to_str() const override { return "await " + target->to_str(); }
+};
+
+class AwaitStatement : public Statement
+{
+    std::unique_ptr<Expression> target;
+
+public:
+    explicit AwaitStatement(std::unique_ptr<Expression> t) : target(std::move(t)) {}
+
+    void codegen(CodegenContext& ctx) const override
+    {
+        AwaitExpression::emit_wait(ctx, *target, "");
+    }
+};

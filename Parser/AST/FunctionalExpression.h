@@ -83,14 +83,17 @@ inline llvm::Value* emit_spawn(CodegenContext& ctx, const std::string& fname,
     std::vector<std::string> types;
     for (auto* v : vals) types.push_back(type_of(ctx, v));
 
-    // 1. Ищем пользовательскую функцию: сначала точное совпадение типов,
-    //    потом ближайшая перегрузка с допустимым приведением (int -> long и т.п.)
     llvm::Function* fn = nullptr;
+    std::string ret_name;
     int best = INT_MAX;
     for (auto& q : ns_candidates(ctx, fname))
     {
         if (auto it = ctx.functions.find(mangle_name(q, types)); it != ctx.functions.end())
-            { fn = it->second; break; }
+        {
+            fn = it->second;
+            ret_name = ctx.func_ret[mangle_name(q, types)];
+            break;
+        }
 
         auto ov = ctx.overloads.find(q);
         if (ov == ctx.overloads.end()) continue;
@@ -107,6 +110,7 @@ inline llvm::Value* emit_spawn(CodegenContext& ctx, const std::string& fname,
             {
                 best = total;
                 fn = ctx.functions.at(mangle_name(q, sig.types));
+                ret_name = ctx.func_ret[mangle_name(q, sig.types)]; // NEW
             }
         }
         if (fn) break;
@@ -115,10 +119,19 @@ inline llvm::Value* emit_spawn(CodegenContext& ctx, const std::string& fname,
         throw std::runtime_error("spawn: function '" + fname + "' with these arguments not found "
                                  "(it must be defined above; default arguments must be passed explicitly)");
 
-    // 2. env: структура из параметров функции, лежит на куче
+    if (is_struct(ret_name))
+        throw std::runtime_error("spawn: a function that returns a struct is not supported yet");
+
     auto* fty = fn->getFunctionType();
     std::vector<llvm::Type*> pt(fty->param_begin(), fty->param_end());
-    auto* envTy = llvm::StructType::get(ctx.context, pt);
+
+    std::vector<llvm::Type*> et{b.getPtrTy()};
+    et.insert(et.end(), pt.begin(), pt.end());
+    auto* envTy = llvm::StructType::get(ctx.context, et);
+
+    auto newFn = ctx.module.getOrInsertFunction("fab_thread_new",
+        llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy()}, false));
+    llvm::Value* th = b.CreateCall(newFn, {b.CreateGlobalStringPtr(ret_name)});
 
     auto* nullp = llvm::ConstantPointerNull::get(b.getPtrTy());
     llvm::Value* size = b.CreatePtrToInt(b.CreateGEP(envTy, nullp, {b.getInt32(1)}), b.getInt64Ty());
@@ -126,10 +139,10 @@ inline llvm::Value* emit_spawn(CodegenContext& ctx, const std::string& fname,
         llvm::FunctionType::get(b.getPtrTy(), {b.getInt64Ty()}, false));
     llvm::Value* env = b.CreateCall(mallocFn, {size});
 
+    b.CreateStore(th, b.CreateStructGEP(envTy, env, 0));
     for (size_t i = 0; i < vals.size(); ++i)
-        b.CreateStore(coerceToType(vals[i], pt[i], b), b.CreateStructGEP(envTy, env, (unsigned)i));
+        b.CreateStore(coerceToType(vals[i], pt[i], b), b.CreateStructGEP(envTy, env, (unsigned)i + 1));
 
-    // 3. thunk: ptr thunk(ptr env). Отдельный builder, чтобы не сбить ctx.builder
     auto* tty = llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy()}, false);
     auto* thunk = llvm::Function::Create(tty, llvm::Function::InternalLinkage, "spawn.thunk", ctx.module);
     thunk->addFnAttr(llvm::Attribute::NoUnwind);
@@ -138,20 +151,33 @@ inline llvm::Value* emit_spawn(CodegenContext& ctx, const std::string& fname,
         tb.SetInsertPoint(llvm::BasicBlock::Create(ctx.context, "entry", thunk));
 
         llvm::Value* e = thunk->getArg(0);
+        llvm::Value* h = tb.CreateLoad(tb.getPtrTy(), tb.CreateStructGEP(envTy, e, 0));
+
         std::vector<llvm::Value*> a;
         for (size_t i = 0; i < pt.size(); ++i)
-            a.push_back(tb.CreateLoad(pt[i], tb.CreateStructGEP(envTy, e, (unsigned)i)));
-        tb.CreateCall(fn, a);
+            a.push_back(tb.CreateLoad(pt[i], tb.CreateStructGEP(envTy, e, (unsigned)i + 1)));
+
+        llvm::Value* r = tb.CreateCall(fn, a);
+
+        if (!fty->getReturnType()->isVoidTy())
+        {
+            auto resFn = ctx.module.getOrInsertFunction("fab_thread_result",
+                llvm::FunctionType::get(tb.getPtrTy(), {tb.getPtrTy()}, false));
+            tb.CreateStore(r, tb.CreateCall(resFn, {h}));
+        }
 
         tb.CreateCall(ctx.module.getOrInsertFunction("free",
             llvm::FunctionType::get(tb.getVoidTy(), {tb.getPtrTy()}, false)), {e});
+
+        tb.CreateCall(ctx.module.getOrInsertFunction("fab_thread_finish",
+            llvm::FunctionType::get(tb.getVoidTy(), {tb.getPtrTy()}, false)), {h});
+
         tb.CreateRet(llvm::ConstantPointerNull::get(tb.getPtrTy()));
     }
 
-    // 4. запуск
-    auto spawnFn = ctx.module.getOrInsertFunction("fab_thread_spawn",
-        llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy(), b.getPtrTy()}, false));
-    llvm::Value* r = b.CreateCall(spawnFn, {thunk, env});
+    auto startFn = ctx.module.getOrInsertFunction("fab_thread_start",
+        llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy(), b.getPtrTy(), b.getPtrTy()}, false));
+    llvm::Value* r = b.CreateCall(startFn, {th, thunk, env});
     ctx.value_types[r] = "thread";
     return r;
 }

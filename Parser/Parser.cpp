@@ -277,6 +277,13 @@ std::unique_ptr<Statement> Parser::statement_impl()
             consume(token_type::TRY);
             return try_statement();
         }
+        case token_type::AWAIT: {
+            consume(token_type::AWAIT);
+            auto e = unary();
+            if (!match(token_type::SEMI))
+                throw std::runtime_error("You miss the ;");
+            return std::make_unique<AwaitStatement>(std::move(e));
+        }
 
         case token_type::INC:
         case token_type::DEC: {
@@ -982,6 +989,8 @@ std::unique_ptr<Expression> Parser::unary()
         return std::make_unique<UnaryExpression>('-', std::move(unary()));
     if (match(token_type::PLUS))
         return std::make_unique<UnaryExpression>('+', std::move(unary()));
+    if (match(token_type::AWAIT))
+        return std::make_unique<AwaitExpression>(unary());
 
     return postfix();
 }

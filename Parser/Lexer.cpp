@@ -208,6 +208,7 @@ void Lexer::tokenize_word()
         {"catch",      token_type::CATCH},
         {"finally",    token_type::FINALLY},
         {"struct",     token_type::STRUCT},
+        {"await",      token_type::AWAIT},
     };
 
     auto it = keywords.find(buffer);
