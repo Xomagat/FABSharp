@@ -327,7 +327,10 @@ public:
         }
         else if (dst_num && src_num)
         {
-            r = coerceToType(val, dst, b);
+            if (st->isFloatingPointTy() && dst->isIntegerTy() && !dst->isIntegerTy(1) && is_unsigned(type))
+                r = b.CreateIntrinsic(llvm::Intrinsic::fptoui_sat, {dst, st}, {val});
+            else
+                r = coerceToType(val, dst, b);
         }
         else if (dst->isIntegerTy(1))
         {

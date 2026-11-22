@@ -27,7 +27,7 @@ public:
             if (val->getType()->isFloatingPointTy())
                 return ctx.builder.CreateFNeg(val);
             if (val->getType()->isIntegerTy())
-                return ctx.builder.CreateNeg(val);
+                return tag(ctx, ctx.builder.CreateNeg(val), type_of(ctx, val));
             throw std::runtime_error("Codegen unary '-' not supported for this type!");
 
         case '+':

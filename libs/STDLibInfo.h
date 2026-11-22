@@ -104,3 +104,17 @@ inline const StdlibFunctionInfo* find_lib_method(const std::string& type, const 
     }
     return nullptr;
 }
+
+inline bool is_unsigned(const std::string& t)
+{
+    return t == "unint" || t == "unshort" || t == "unlong" || t == "unchar";
+}
+
+inline std::string signed_of(const std::string& t)
+{
+    if (t == "unint")   return "int";
+    if (t == "unshort") return "short";
+    if (t == "unlong")  return "long";
+    if (t == "unchar")  return "char";
+    return t;
+}

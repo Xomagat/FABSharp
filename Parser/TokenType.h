@@ -48,6 +48,7 @@ enum token_type
     FINALLY,        // finally
     STRUCT,         // Struct
     AWAIT,          // Await
+    UN,             // unsigned vars
 
     NULLVAL,        // Value null
     TRUEVAL,        // Value true
@@ -131,6 +132,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {FINALLY,    "finally"},
     {STRUCT,     "struct"},
     {AWAIT,      "await"},
+    {UN,         "un"},
 
     {NULLVAL,    "null"},
     {TRUEVAL,    "true"},

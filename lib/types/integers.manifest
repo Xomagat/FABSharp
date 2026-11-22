@@ -1,6 +1,6 @@
 # Integers functions
 # Create on 08.10.2026
-# Last update 11.10.2026
+# Last update 22.11.2026
 
 # Const
 const INT_MIN int -2147483648
@@ -20,6 +20,11 @@ const DOUBLE_EPSILON double 2.2204460492503131e-16
 const LDOUBLE_MIN ldouble 3.36210314311209350626e-4932
 const LDOUBLE_MAX ldouble 1.18973149535723176502e+4932
 const LDOUBLE_EPSILON ldouble 1.08420217248550443401e-19
+
+const UINT_MAX   unint   4294967295
+const ULONG_MAX  unlong  18446744073709551615
+const USHORT_MAX unshort 65535
+const UCHAR_MAX  unchar  255
 
 # Short
 short.to_str      fab_to_str_short      string : short
@@ -136,3 +141,47 @@ ldouble.to_int      fab_to_int_ldouble      int     : ldouble
 ldouble.to_long     fab_to_long_ldouble     long    : ldouble
 ldouble.to_float    fab_to_float_ldouble    float   : ldouble
 ldouble.to_double   fab_to_double_ldouble   double  : ldouble
+
+# Un short
+unshort.to_str      fab_to_str_unshort      string : unshort
+unshort.is_zero     fab_is_zero_unshort     bool   : unshort
+unshort.is_even     fab_is_even_unshort     bool   : unshort
+unshort.is_odd      fab_is_odd_unshort      bool   : unshort
+unshort.abs         fab_abs_unshort         short  : unshort
+unshort.sign        fab_sign_unshort        int    : unshort
+unshort.to_bool     fab_to_bool_unshort     bool   : unshort
+unshort.to_char     fab_to_char_unshort     char   : unshort
+unshort.to_int      fab_to_int_unshort      int    : unshort
+unshort.to_long     fab_to_long_unshort     long   : unshort
+unshort.to_float    fab_to_float_unshort    float  : unshort
+unshort.to_double   fab_to_double_unshort   double : unshort
+unshort.to_ldouble  fab_to_ldouble_unshort  ldouble : unshort
+
+# Un int
+unint.to_str      fab_to_str_unint      string : unint
+unint.is_zero     fab_is_zero_unint     bool   : unint
+unint.is_even     fab_is_even_unint     bool   : unint
+unint.is_odd      fab_is_odd_unint      bool   : unint
+unint.abs         fab_abs_unint         int    : unint
+unint.sign        fab_sign_unint        int    : unint
+unint.to_bool     fab_to_bool_unint     bool   : unint
+unint.to_char     fab_to_char_unint     char   : unint
+unint.to_short    fab_to_short_unint    short  : unint
+unint.to_long     fab_to_long_unint     long   : unint
+unint.to_float    fab_to_float_unint    float  : unint
+unint.to_double   fab_to_double_unint   double : unint
+unint.to_ldouble  fab_to_ldouble_unint  ldouble : unint
+
+# Un long
+unlong.to_str      fab_to_str_unlong      string : unlong
+unlong.is_zero     fab_is_zero_unlong     bool   : unlong
+unlong.is_even     fab_is_even_unlong     bool   : unlong
+unlong.is_odd      fab_is_odd_unlong      bool   : unlong
+unlong.abs         fab_abs_unlong         long   : unlong
+unlong.sign        fab_sign_unlong        int    : unlong
+unlong.to_bool     fab_to_bool_unlong     bool   : unlong
+unlong.to_char     fab_to_char_unlong     char   : unlong
+unlong.to_short    fab_to_short_unlong    short  : unlong
+unlong.to_int      fab_to_int_unlong      int    : unlong
+unlong.to_float    fab_to_float_unlong    float  : unlong
+unlong.to_ldouble  fab_to_ldouble_unlong  ldouble : unlong

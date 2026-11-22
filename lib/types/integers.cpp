@@ -198,3 +198,31 @@ extern "C" int   fab_to_int_ldouble(long double x)         { return (int)fab_sat
 extern "C" long long fab_to_long_ldouble(long double x)    { return fab_sat_ld(x, (-9223372036854775807LL - 1), 9223372036854775807LL); }
 extern "C" float  fab_to_float_ldouble(long double x)      { return (float)x; }
 extern "C" double fab_to_double_ldouble(long double x)     { return (double)x; }
+
+static char* fab_u64_str(unsigned long long u)
+{
+    char buf[24];
+    char* end = buf + sizeof buf;
+    do { *--end = (char)('0' + u % 10); u /= 10; } while (u);
+    return dup_buf(end, (size_t)(buf + sizeof buf - end));
+}
+
+#define FAB_UNSIGNED(NAME, T, MASK) \
+  extern "C" char*       fab_to_str_##NAME(unsigned long long x)     { return fab_u64_str(x & (MASK)); } \
+  extern "C" bool        fab_is_zero_##NAME(unsigned long long x)    { return (x & (MASK)) == 0; } \
+  extern "C" bool        fab_is_even_##NAME(unsigned long long x)    { return ((x & (MASK)) & 1) == 0; } \
+  extern "C" bool        fab_is_odd_##NAME(unsigned long long x)     { return ((x & (MASK)) & 1) != 0; } \
+  extern "C" int         fab_sign_##NAME(unsigned long long x)       { return (x & (MASK)) != 0; } \
+  extern "C" bool        fab_to_bool_##NAME(unsigned long long x)    { return (x & (MASK)) != 0; } \
+  extern "C" char        fab_to_char_##NAME(unsigned long long x)    { return (char)(x & (MASK)); } \
+  extern "C" short       fab_to_short_##NAME(unsigned long long x)   { return (short)(x & (MASK)); } \
+  extern "C" int         fab_to_int_##NAME(unsigned long long x)     { return (int)(T)(x & (MASK)); } \
+  extern "C" long long   fab_to_long_##NAME(unsigned long long x)    { return (long long)(T)(x & (MASK)); } \
+  extern "C" float       fab_to_float_##NAME(unsigned long long x)   { return (float)(T)(x & (MASK)); } \
+  extern "C" double      fab_to_double_##NAME(unsigned long long x)  { return (double)(T)(x & (MASK)); } \
+  extern "C" long double fab_to_ldouble_##NAME(unsigned long long x) { return (long double)(T)(x & (MASK)); }
+
+FAB_UNSIGNED(unchar,  unsigned char,      0xFFULL)
+FAB_UNSIGNED(unshort, unsigned short,     0xFFFFULL)
+FAB_UNSIGNED(unint,   unsigned int,       0xFFFFFFFFULL)
+FAB_UNSIGNED(unlong,  unsigned long long, ~0ULL)

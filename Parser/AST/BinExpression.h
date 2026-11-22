@@ -67,22 +67,33 @@ public:
         if (!left->getType()->isIntegerTy() || !right->getType()->isIntegerTy())
             throw std::runtime_error("Codegen only supports integer/float arithmetic for now!");
 
-        unsigned w = std::max({left->getType()->getIntegerBitWidth(),
-                               right->getType()->getIntegerBitWidth(), 32u});
+        std::string lt = type_of(context, left), rt = type_of(context, right);
+        unsigned lw = left->getType()->getIntegerBitWidth();
+        unsigned rw = right->getType()->getIntegerBitWidth();
+
+        unsigned w = std::max({lw, rw, 32u});
+        bool un = (is_unsigned(lt) && lw == w) || (is_unsigned(rt) && rw == w);
+        std::string res = un ? (w == 64 ? "unlong" : "unint")
+                             : (w == 64 ? "long"   : "int");
+
         llvm::Type* wide = llvm::Type::getIntNTy(context.context, w);
         left  = coerceToType(left,  wide, b);
         right = coerceToType(right, wide, b);
 
         switch (op)
         {
-        case '+': return b.CreateAdd(left, right);
-        case '-': return b.CreateSub(left, right);
-        case '*': return b.CreateMul(left, right);
+        case '+': return tag(context, b.CreateAdd(left, right), res);
+        case '-': return tag(context, b.CreateSub(left, right), res);
+        case '*': return tag(context, b.CreateMul(left, right), res);
         case '/':
         case '%':
         {
             emit_fail_if(context, b.CreateICmpEQ(right, llvm::ConstantInt::get(wide, 0)),
                          "Division by zero");
+
+            if (un)
+                return tag(context, op == '/' ? b.CreateUDiv(left, right)
+                                              : b.CreateURem(left, right), res);
 
             llvm::Value* isM1 = b.CreateICmpEQ(right, llvm::ConstantInt::getSigned(wide, -1));
             llvm::Value* safe = b.CreateSelect(isM1, llvm::ConstantInt::get(wide, 1), right);

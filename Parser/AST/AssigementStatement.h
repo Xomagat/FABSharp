@@ -21,6 +21,21 @@ inline llvm::Value* to_bool(llvm::Value* v, llvm::IRBuilder<>& b)
     return b.CreateIsNotNull(v);
 }
 
+inline CodegenContext* g_ctx = nullptr;
+
+inline bool value_is_unsigned(llvm::Value* v)
+{
+    if (!g_ctx || llvm::isa<llvm::Constant>(v)) return false;
+    auto it = g_ctx->value_types.find(v);
+    return it != g_ctx->value_types.end() && is_unsigned(it->second);
+}
+
+inline llvm::Value* tag(CodegenContext& ctx, llvm::Value* v, const std::string& t)
+{
+    if (!llvm::isa<llvm::Constant>(v)) ctx.value_types[v] = t;
+    return v;
+}
+
 inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm::IRBuilder<>& builder)
 {
     llvm::Type* srcType = val->getType();
@@ -37,7 +52,11 @@ inline llvm::Value* coerceToType(llvm::Value* val, llvm::Type* targetType, llvm:
         return builder.CreateFCmpUNE(val, llvm::ConstantFP::get(srcType, 0.0));
 
     if (srcType->isIntegerTy() && targetType->isIntegerTy())
-        return builder.CreateIntCast(val, targetType, true);
+        return builder.CreateIntCast(val, targetType, !value_is_unsigned(val));
+
+    if (srcType->isIntegerTy() && targetType->isFloatingPointTy())
+        return value_is_unsigned(val) ? builder.CreateUIToFP(val, targetType)
+                                      : builder.CreateSIToFP(val, targetType);
 
     if (srcType->isIntegerTy() && targetType->isFloatingPointTy())
         return builder.CreateSIToFP(val, targetType);
@@ -232,6 +251,7 @@ inline void emit_free_container(CodegenContext& ctx, llvm::Value* v, const std::
 
 inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& builder)
 {
+    if (is_unsigned(type)) return type_to_llvm(signed_of(type), builder);
     if (type == "void")     return builder.getVoidTy();
     if (type == "int")      return builder.getInt32Ty();
     if (type == "short")    return builder.getInt16Ty();
@@ -354,7 +374,9 @@ inline llvm::Value* emit_stdlib_const(CodegenContext& ctx, const StdlibVarInfo& 
     if (t->isFloatingPointTy())
         return llvm::ConstantFP::get(t, llvm::StringRef(s));
     if (t->isIntegerTy())
-        return llvm::ConstantInt::get(t, std::stoll(s), true);
+        return is_unsigned(v.type)
+            ? llvm::ConstantInt::get(t, std::stoull(s), false)
+            : llvm::ConstantInt::get(t, std::stoll(s), true);
 
     throw std::runtime_error("Unsupported library const type: " + v.type);
 }

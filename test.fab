@@ -1,13 +1,15 @@
-define f(long x) -> long { return x * 2; }
-define g(long a, long b = 10) -> long { return a + b; }
-
-class A { public: define h(long x) -> long { return x + 1; } }
-
 define main() -> int
 {
-    writeln f(100);       // 200
-    writeln g(5);         // 15
-    A a = new A();
-    writeln a.h(41);      // 42
-    return 0;
+    un int a = 4000000000;
+    un int b = 3;
+    writeln a;              // 4000000000   (не -294967296)
+    writeln a / b;          // 1333333333   (udiv)
+    writeln a > b;          // true         (ult, а не slt)
+    un long c = a + b;       // 4000000003   (zext, не sext)
+    writeln c;
+    writeln a % 7;          // 4000000000 % 7 = 1
+    writeln $"{a}";         // 4000000000   (to_str)
+    un int z = 0;
+    z--;
+    writeln z;              // 4294967295   (wraparound)
 }

@@ -17,8 +17,9 @@
 #include "Expression.h"
 #include "../../libs/STDLibInfo.h"
 
-inline int numeric_rank(const std::string& t)
+inline int numeric_rank(const std::string& t0)
 {
+    std::string t = signed_of(t0);
     if (t == "short")  return 1;
     if (t == "int")    return 2;
     if (t == "long")   return 3;
@@ -37,7 +38,7 @@ inline int conversion_cost(const std::string& from, const std::string& to)
     if (!a || !b) return -1;
     if (a >= 4 && b <= 3) return -1;
 
-    return std::abs(a - b);
+    return std::abs(a - b) * 2 + (is_unsigned(from) != is_unsigned(to) ? 1 : 0);
 }
 
 struct NamedCand

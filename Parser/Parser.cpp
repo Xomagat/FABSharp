@@ -198,9 +198,9 @@ std::unique_ptr<Statement> Parser::statement_impl()
         case token_type::INPUT_IN: {
             consume(token_type::INPUT_IN);
             std::string name;
-            if (get(0).get_type() == token_type::TYPES)
+            if (get(0).get_type() == token_type::TYPES || get(0).get_type() == token_type::UN)
             {
-                std::string type = consume(token_type::TYPES).get_text();
+                std::string type = parse_type();
                 name = consume(token_type::WORDS).get_text();
                 if (!match(token_type::SEMI))
                     throw std::runtime_error("You miss the ;");
@@ -351,9 +351,8 @@ std::unique_ptr<Statement> Parser::statement_impl()
                 return std::make_unique<FunctionStatement>(std::move(e));
             }
         }
-        case token_type::TYPES: {
-            return assigment_statement();
-        }
+        case token_type::UN:
+        case token_type::TYPES:
         case token_type::CONST: {
             return assigment_statement();
         }
@@ -374,7 +373,12 @@ std::string Parser::parse_type()
         if (len == 1 && is_lib_type(text))   { pos++;      return text; }
     }
 
-    std::string t = consume(token_type::TYPES).get_text();
+    std::string t;
+
+    if (get(0).get_type() == token_type::UN)
+        t += consume(token_type::UN).get_text();
+
+    t += consume(token_type::TYPES).get_text();
     if (t == "long" && get(0).get_type() == token_type::TYPES && get(0).get_text() == "double")
     {
         consume(token_type::TYPES);
@@ -438,7 +442,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
 
     bool decl = at_decl();
 
-    if (current.get_type() == token_type::TYPES || decl)
+    if (current.get_type() == token_type::TYPES || current.get_type() == token_type::UN || decl)
     {
         std::string type = parse_type();
         return declarators(type, false, decl && !is_lib_type(type), no_semi);
@@ -476,7 +480,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
             return std::make_unique<AssigementStatement>("", name, std::move(binExpr));
         }
     }
-    else if (current.get_type() == token_type::CONST && get(1).get_type() == token_type::TYPES)
+    else if (current.get_type() == token_type::CONST && get(1).get_type() == token_type::TYPES || get(1).get_type() == token_type::UN)
     {
         consume(token_type::CONST);
         std::string type = parse_type();
@@ -535,7 +539,7 @@ std::unique_ptr<Statement> Parser::for_statement()
         int save = pos;
         std::string t;
 
-        if (get(0).get_type() == token_type::TYPES || at_decl())
+        if (get(0).get_type() == token_type::TYPES ||  get(0).get_type() == token_type::UN || at_decl())
             t = parse_type();
         else if (get(0).get_type() == token_type::WORDS)
             t = "auto";                       // for (n in a)
@@ -1077,6 +1081,7 @@ std::unique_ptr<Expression> Parser::primary_impl()
                 consume(token_type::WORDS); consume(token_type::LPARENT);
 
                 bool is_type = get(0).get_type() == token_type::TYPES
+                            || get(0).get_type() == token_type::UN
                             || (get(0).get_type() == token_type::WORDS
                                 && !resolve_class(chain_text(0, chain_len(0))).empty());
 
@@ -1313,6 +1318,7 @@ Token Parser::consume(token_type type)
 
 bool is_known_type(std::string& type)
 {
+    if (is_unsigned(type)) return true;
     if (type == "string")  return true;
     if (type == "int")     return true;
     if (type == "short")   return true;

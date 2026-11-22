@@ -43,6 +43,12 @@ inline void emit_print(CodegenContext& ctx, llvm::Value* val, bool newline)
         return;
     }
 
+    if (is_unsigned(t))
+    {
+        rt("u64", b.CreateZExt(val, b.getInt64Ty()));
+        return;
+    }
+
     llvm::Type* ty = val->getType();
 
     if (ty->isIntegerTy(1))

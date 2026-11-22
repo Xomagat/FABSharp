@@ -8,6 +8,7 @@ void compile(std::vector<std::unique_ptr<Statement>>& statements,
     llvm::IRBuilder<> builder(context);
 
     CodegenContext ctx{context, module, builder};
+    g_ctx = &ctx;
 
     ctx.init_fn = llvm::Function::Create(
     llvm::FunctionType::get(builder.getVoidTy(), false),

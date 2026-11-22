@@ -76,11 +76,22 @@ public:
 
         if (left->getType()->isIntegerTy() && right->getType()->isIntegerTy())
         {
+            std::string lt = type_of(ctx, left), rt = type_of(ctx, right);
             unsigned lw = left->getType()->getIntegerBitWidth();
             unsigned rw = right->getType()->getIntegerBitWidth();
-            llvm::Type* wide = (lw >= rw) ? left->getType() : right->getType();
+            unsigned w  = std::max(lw, rw);                     // здесь 32 не добавляем, как и раньше
+            bool un = (is_unsigned(lt) && lw == w) || (is_unsigned(rt) && rw == w);
+
+            llvm::Type* wide = llvm::Type::getIntNTy(ctx.context, w);
             left  = coerceToType(left,  wide, ctx.builder);
             right = coerceToType(right, wide, ctx.builder);
+
+            if (op == "==") return ctx.builder.CreateICmpEQ(left, right);
+            if (op == "!=") return ctx.builder.CreateICmpNE(left, right);
+            if (op == "<")  return un ? ctx.builder.CreateICmpULT(left, right) : ctx.builder.CreateICmpSLT(left, right);
+            if (op == ">")  return un ? ctx.builder.CreateICmpUGT(left, right) : ctx.builder.CreateICmpSGT(left, right);
+            if (op == "<=") return un ? ctx.builder.CreateICmpULE(left, right) : ctx.builder.CreateICmpSLE(left, right);
+            if (op == ">=") return un ? ctx.builder.CreateICmpUGE(left, right) : ctx.builder.CreateICmpSGE(left, right);
         }
 
         if (op == "==") return ctx.builder.CreateICmpEQ(left, right);

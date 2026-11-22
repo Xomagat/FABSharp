@@ -85,6 +85,20 @@ extern "C" void fab_out_i32ln(int x)       { ensure_init(); out_i64(x, true); }
 extern "C" void fab_out_i64(long long x)   { ensure_init(); out_i64(x, false); }
 extern "C" void fab_out_i64ln(long long x) { ensure_init(); out_i64(x, true); }
 
+static void out_u64(unsigned long long u, bool neg, bool nl)
+{
+    ensure_init();
+    char buf[32];
+    char* end = buf + sizeof buf;
+    if (nl) *--end = '\n';
+    do { *--end = (char)('0' + u % 10); u /= 10; } while (u);
+    if (neg) *--end = '-';
+    FAB_WRITE(end, (size_t)(buf + sizeof buf - end));
+}
+
+extern "C" void fab_out_u64(unsigned long long x)   { out_u64(x, false, false); }
+extern "C" void fab_out_u64ln(unsigned long long x) { out_u64(x, false, true); }
+
 // Floating point: same output as before (%.17g / %.9g), but without printf's format parsing
 static void out_fp(double v, const char* fmt, bool nl)
 {
