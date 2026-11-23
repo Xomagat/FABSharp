@@ -1,15 +1,6 @@
 define main() -> int
 {
-    un int a = 4000000000;
-    un int b = 3;
-    writeln a;              // 4000000000   (не -294967296)
-    writeln a / b;          // 1333333333   (udiv)
-    writeln a > b;          // true         (ult, а не slt)
-    un long c = a + b;       // 4000000003   (zext, не sext)
-    writeln c;
-    writeln a % 7;          // 4000000000 % 7 = 1
-    writeln $"{a}";         // 4000000000   (to_str)
-    un int z = 0;
-    z--;
-    writeln z;              // 4294967295   (wraparound)
+    int a = 5;
+
+    writeln a != 5 ? "YES" : a == 5 ? "a = 5" : "NO";   // a = 5
 }

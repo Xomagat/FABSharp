@@ -11,7 +11,7 @@
 // funcs
 Lexer::Lexer(std::string code, int file)
 {
-    OPERATION_CHARS = "+-*/%(){}[]=;:.,<>!&|~";
+    OPERATION_CHARS = "+-*/%(){}[]=;:.,<>!&|~?";
     OPERATORS = {
         {"++", token_type::INC},
         {"--", token_type::DEC},
@@ -27,6 +27,7 @@ Lexer::Lexer(std::string code, int file)
         {":", token_type::COLON},
         {",", token_type::COMMA},
         {".", token_type::DOT},
+        {"?", token_type::QMARK},
 
         {"+=", token_type::PLUSEQ},
         {"-=", token_type::MINUSEQ},

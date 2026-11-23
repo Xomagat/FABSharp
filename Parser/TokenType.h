@@ -85,6 +85,7 @@ enum token_type
     INC,            // ++
     DEC,            // --
     SCOPE,          // ::
+    QMARK,          // ?
 
     LPARENT,        // (
     RPARENT,        // )
@@ -169,6 +170,7 @@ inline std::unordered_map<token_type, std::string> tokens_string = {
     {INC,        "++"},
     {DEC,        "--"},
     {SCOPE,      "::"},
+    {QMARK,      "?"},
 
     {LPARENT,    "("},
     {RPARENT,    ")"},

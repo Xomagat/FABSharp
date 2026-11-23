@@ -101,6 +101,7 @@ private:
 
     std::unique_ptr<Expression> function();
     std::unique_ptr<Expression> expression();
+    std::unique_ptr<Expression> ternary();
     std::unique_ptr<Expression> conditional();
     std::unique_ptr<Expression> additive();
     std::unique_ptr<Expression> multiply();

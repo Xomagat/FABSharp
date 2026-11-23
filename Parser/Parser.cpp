@@ -834,7 +834,22 @@ std::unique_ptr<Expression> Parser::function()
 
 std::unique_ptr<Expression> Parser::expression()
 {
-    return logic_or();
+    return ternary();
+}
+
+std::unique_ptr<Expression> Parser::ternary()
+{
+    std::unique_ptr<Expression> expr = logic_or();
+
+    if (match(token_type::QMARK))
+    {
+        auto true_expr = ternary();
+        consume(token_type::COLON);
+        auto false_expr = ternary();
+        return std::make_unique<TernaryExpression>(std::move(expr), std::move(true_expr), std::move(false_expr));
+    }
+
+    return expr;
 }
 
 std::unique_ptr<Expression> Parser::logic_or()

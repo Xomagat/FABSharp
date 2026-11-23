@@ -57,6 +57,71 @@ public:
     }
 };
 
+class TernaryExpression : public Expression
+{
+private:
+    std::unique_ptr<Expression> condition;
+    std::unique_ptr<Expression> true_expr;
+    std::unique_ptr<Expression> false_expr;
+
+public:
+    explicit TernaryExpression(std::unique_ptr<Expression> condition,
+                               std::unique_ptr<Expression> true_expr,
+                               std::unique_ptr<Expression> false_expr)
+        : condition(std::move(condition)),
+          true_expr(std::move(true_expr)),
+          false_expr(std::move(false_expr))
+    {
+    }
+
+    llvm::Value* codegen(CodegenContext &context) const override
+    {
+        auto condVal = condition->codegen(context);
+
+        if (!condVal->getType()->isIntegerTy(1))
+        {
+            condVal = context.builder.CreateICmpNE(
+                condVal, llvm::ConstantInt::get(condVal->getType(), 0), "terncond");
+        }
+
+        llvm::Function* function = context.builder.GetInsertBlock()->getParent();
+
+        llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context.context, "tern.then", function);
+        llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(context.context, "tern.else", function);
+        llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context.context, "tern.cont", function);
+
+        context.builder.CreateCondBr(condVal, thenBB, elseBB);
+
+        context.builder.SetInsertPoint(thenBB);
+        llvm::Value* thenVal = true_expr->codegen(context);
+        thenBB = context.builder.GetInsertBlock();
+        context.builder.CreateBr(mergeBB);
+
+        context.builder.SetInsertPoint(elseBB);
+        llvm::Value* elseVal = false_expr->codegen(context);
+        elseBB = context.builder.GetInsertBlock();
+        context.builder.CreateBr(mergeBB);
+
+        context.builder.SetInsertPoint(mergeBB);
+
+        if (thenVal->getType() != elseVal->getType())
+        {
+            throw std::runtime_error("Ternary branches must have the same type!");
+        }
+
+        llvm::PHINode* phi = context.builder.CreatePHI(thenVal->getType(), 2, "terntmp");
+        phi->addIncoming(thenVal, thenBB);
+        phi->addIncoming(elseVal, elseBB);
+
+        return phi;
+    }
+
+    std::string to_str() const override
+    {
+        return condition->to_str() + " ? " + true_expr->to_str() + " : " + false_expr->to_str();
+    }
+};
+
 class BlockStatement : public Statement
 {
 private:
