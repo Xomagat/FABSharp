@@ -292,7 +292,9 @@ extern "C" bool fab_equals_ignore_case(const char* x, const char* y)
 extern "C" void* fab_split(const char* x, const char* sep)
 {
     void* list = fab_list_new_string();
-    if (x == nullptr) return list;
+    if (list == nullptr) return nullptr;
+
+    x = S(x);
 
     if (sep == nullptr || *sep == '\0')
     {
@@ -300,15 +302,21 @@ extern "C" void* fab_split(const char* x, const char* sep)
         return list;
     }
 
-    size_t sep_len = strlen(sep);
+    const size_t sep_len = strlen(sep);
     const char* start = x;
 
-    while (const char* p = strstr(start, sep))
+    for (;;)
     {
-        fab_list_addend_string(list, str_dup_n(start, (size_t)(p - start)));
+        const char* p = strstr(start, sep);
+        const size_t token_len = p ? (size_t)(p - start) : strlen(start);
+
+        char* token = str_dup_n(start, token_len);
+        if (token == nullptr) { fab_oom(); }
+        fab_list_addend_string(list, token);
+
+        if (!p) break;
         start = p + sep_len;
     }
-    fab_list_addend_string(list, str_dup_n(start, strlen(start)));
 
     return list;
 }
