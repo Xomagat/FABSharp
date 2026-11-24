@@ -26,7 +26,7 @@
 
 struct CompileOptions
 {
-    int  opt_level = 2;               // 0,1,2,3
+    int  opt_level = 0;               // 0,1,2,3
     char size_opt  = 0;               // 's' или 'z' (перекрывает opt_level)
     std::string cpu = "x86-64-v3";
     std::string ir_path;              // не пусто -> записать .ll
