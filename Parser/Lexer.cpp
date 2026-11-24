@@ -211,6 +211,7 @@ void Lexer::tokenize_word()
         {"struct",     token_type::STRUCT},
         {"await",      token_type::AWAIT},
         {"un",         token_type::UN},
+        {"enum",       token_type::ENUM},
     };
 
     auto it = keywords.find(buffer);

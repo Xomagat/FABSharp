@@ -80,6 +80,15 @@ std::vector<std::unique_ptr<Statement>> Parser::parse()
             opened.push_back({depth + 1, cnt});
             i = j - 1;
         }
+        else if ((t == token_type::CLASS || t == token_type::STRUCT || t == token_type::ENUM)
+                && tokens[i + 1].get_type() == token_type::WORDS)
+        {
+            std::string q;
+            for (auto& n : names) q += n + "::";
+            if (t == token_type::ENUM) { enum_names.insert(q + tokens[i + 1].get_text()); continue; }
+            class_names.insert(q + tokens[i + 1].get_text());
+            if (t == token_type::STRUCT) struct_names.insert(q + tokens[i + 1].get_text());
+        }
         else if (t == token_type::LBRACKET) ++depth;
         else if (t == token_type::RBRACKET)
         {
@@ -284,6 +293,10 @@ std::unique_ptr<Statement> Parser::statement_impl()
                 throw std::runtime_error("You miss the ;");
             return std::make_unique<AwaitStatement>(std::move(e));
         }
+        case token_type::ENUM: {
+            consume(token_type::ENUM);
+            return enum_definition();
+        }
 
         case token_type::INC:
         case token_type::DEC: {
@@ -370,6 +383,8 @@ std::string Parser::parse_type()
         std::string text = chain_text(0, len);
         std::string cls = resolve_class(text);
         if (!cls.empty())                    { pos += len; return cls; }
+        std::string en = resolve_enum(text);
+        if (!en.empty())                     { pos += len; return en; }
         if (len == 1 && is_lib_type(text))   { pos++;      return text; }
     }
 
@@ -445,7 +460,7 @@ std::unique_ptr<Statement> Parser::assigment_statement(bool no_semi)
     if (current.get_type() == token_type::TYPES || current.get_type() == token_type::UN || decl)
     {
         std::string type = parse_type();
-        return declarators(type, false, decl && !is_lib_type(type), no_semi);
+        return declarators(type, false, decl && !is_lib_type(type) && !is_enum(type), no_semi);
     }
     else if (current.get_type() == token_type::WORDS)
     {
@@ -751,6 +766,45 @@ std::unique_ptr<Statement> Parser::try_statement()
         throw std::runtime_error("'try' needs at least one 'catch' or a 'finally'!");
 
     return std::make_unique<TryStatement>(std::move(body), std::move(catches), std::move(fin));
+}
+
+std::unique_ptr<Statement> Parser::enum_definition()
+{
+    std::string name = consume(token_type::WORDS).get_text();
+    std::string full = qualify(name);
+    consume(token_type::LBRACKET);
+
+    EnumInfo info;
+    long long next = 0;
+
+    while (!match(token_type::RBRACKET))
+    {
+        std::string m = consume(token_type::WORDS).get_text();
+        if (info.index_of(m) >= 0)
+            throw std::runtime_error("Duplicate enum member '" + m + "'!");
+
+        if (match(token_type::EQ))
+        {
+            bool neg = match(token_type::MINUS);
+            long long v = std::stoll(consume(token_type::NUMBER).get_text());
+            next = neg ? -v : v;
+        }
+        if (next < INT32_MIN || next > INT32_MAX)
+            throw std::runtime_error("Enum value of '" + m + "' does not fit into int!");
+
+        info.names.push_back(m);
+        info.values.push_back(next);
+        ++next;
+
+        if (!match(token_type::COMMA) && get(0).get_type() != token_type::RBRACKET)
+            throw std::runtime_error("Expected ',' or '}' in enum '" + name + "'!");
+    }
+
+    if (info.names.empty())
+        throw std::runtime_error("Enum '" + name + "' must have at least one member!");
+
+    enum_table[full] = std::move(info);
+    return std::make_unique<EnumDefineStatement>();
 }
 
 std::unique_ptr<Statement> Parser::statement_or_block()
@@ -1068,6 +1122,16 @@ std::unique_ptr<Expression> Parser::primary_impl()
         int len = chain_len(0);
         std::string text = chain_text(0, len);
         std::string cls = resolve_class(text);
+        std::string en = resolve_enum(text);
+        if (!en.empty()
+            && get(len).get_type() == token_type::DOT
+            && get(len + 1).get_type() == token_type::WORDS
+            && get(len + 2).get_type() != token_type::LPARENT)
+        {
+            std::string member = get(len + 1).get_text();
+            pos += len + 2;
+            return std::make_unique<EnumValueExpression>(en, member);
+        }
 
         if ((!cls.empty() || static_classes.contains(text))
             && get(len).get_type() == token_type::DOT
@@ -1610,7 +1674,7 @@ bool Parser::at_decl()
     int len = chain_len(0);
     if (!len) return false;
     std::string t = chain_text(0, len);
-    return (!resolve_class(t).empty() || (len == 1 && is_lib_type(t)))
+    return (!resolve_class(t).empty() || !resolve_enum(t).empty() || (len == 1 && is_lib_type(t)))
         && get(len).get_type() == token_type::WORDS;
 }
 

@@ -118,3 +118,20 @@ inline std::string signed_of(const std::string& t)
     if (t == "unchar")  return "char";
     return t;
 }
+
+struct EnumInfo
+{
+    std::vector<std::string> names;
+    std::vector<long long>   values;
+
+    int index_of(const std::string& n) const
+    {
+        for (size_t i = 0; i < names.size(); ++i)
+            if (names[i] == n) return (int)i;
+        return -1;
+    }
+};
+
+inline std::unordered_set<std::string> enum_names;
+inline std::unordered_map<std::string, EnumInfo> enum_table;
+inline bool is_enum(const std::string& t) { return enum_names.contains(t); }

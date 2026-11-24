@@ -36,6 +36,12 @@ inline void emit_print(CodegenContext& ctx, llvm::Value* val, bool newline)
         b.CreateCall(fn, {arg});
     };
 
+    if (is_enum(t))
+    {
+        rt("str", emit_enum_to_str(ctx, val, t));
+        return;
+    }
+
     // list<T> and dict<K,V> have their own printers
     if (emit_container_print(ctx, val, t))
     {

@@ -199,6 +199,20 @@ public:
             return emit_virtual(ctx, self, *mi, cargs);
         }
 
+        if (is_enum(recv_type))
+        {
+            if (!args.empty())
+                throw std::runtime_error("Enum method '" + name + "' takes no arguments");
+            if (name == "to_str") return emit_enum_to_str(ctx, self, recv_type);
+            if (name == "to_int")
+            {
+                llvm::Value* r = ctx.builder.CreateFreeze(self);
+                ctx.value_types[r] = "int";
+                return r;
+            }
+            throw std::runtime_error("Enum '" + recv_type + "' has no method '" + name + "'");
+        }
+
         const StdlibFunctionInfo* it = find_lib_method(recv_type, name, tail_types);
         if (recv_type.starts_with("list<") || recv_type.starts_with("dict<"))
         {

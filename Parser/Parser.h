@@ -71,6 +71,7 @@ private:
     std::string qualify(const std::string& n) const;
     std::string resolve(const std::unordered_set<std::string>& known, const std::string& n) const;
     std::string resolve_class(const std::string& n) const { return resolve(class_names, n); }
+    std::string resolve_enum(const std::string& n) const  { return resolve(enum_names, n); }
     int  chain_len(int at);
     std::string chain_text(int at, int len);
     bool at_decl();
@@ -93,6 +94,7 @@ private:
     std::unique_ptr<Statement> do_while_statement();
     std::unique_ptr<Statement> for_statement();
     std::unique_ptr<Statement> class_definition(bool is_struct = false);
+    std::unique_ptr<Statement> enum_definition();
     std::unique_ptr<Statement> try_statement();
     std::unique_ptr<Statement> statement_or_block();
     std::unique_ptr<Statement> block();

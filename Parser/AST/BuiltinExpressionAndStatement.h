@@ -107,6 +107,7 @@ public:
         llvm::Value* v = expr->codegen(ctx);
         std::string t = type_of(ctx, v);
 
+        if (is_enum(t)) return emit_enum_to_str(ctx, v, t);
         if (t == "string") return v;
 
         const StdlibFunctionInfo* info = find_lib_method(t, "to_str", {});
@@ -298,6 +299,8 @@ public:
 
         if (src == "void")
             throw std::runtime_error("Cannot cast a void value!");
+        else if (src == "string" && is_enum(type))
+            throw std::runtime_error("Cannot cast string to enum '" + type + "'!");
 
         if (src == type) return val;
 
@@ -306,7 +309,9 @@ public:
 
         llvm::Value* r = nullptr;
 
-        if (type == "string")
+        if (type == "string" && is_enum(src))
+            r = emit_enum_to_str(ctx, val, src);
+        else if (type == "string")
         {
             const StdlibFunctionInfo* info = find_lib_method(src, "to_str", {});
             if (!info)
@@ -339,6 +344,7 @@ public:
         else
             throw std::runtime_error("Cannot cast '" + src + "' to '" + type + "'!");
 
+        if (r == val || llvm::isa<llvm::Constant>(r)) r = b.CreateFreeze(r);
         ctx.value_types[r] = type;
         return r;
     }
@@ -530,4 +536,35 @@ public:
     {
         AwaitExpression::emit_wait(ctx, *target, "");
     }
+};
+
+class EnumDefineStatement : public Statement
+{
+public:
+    void codegen(CodegenContext&) const override {}
+};
+
+class EnumValueExpression : public Expression
+{
+    std::string en, member;
+
+public:
+    EnumValueExpression(std::string e, std::string m) : en(std::move(e)), member(std::move(m)) {}
+
+    llvm::Value* codegen(CodegenContext& ctx) const override
+    {
+        auto it = enum_table.find(en);
+        if (it == enum_table.end())
+            throw std::runtime_error("Unknown enum '" + en + "'!");
+
+        int i = it->second.index_of(member);
+        if (i < 0)
+            throw std::runtime_error("Enum '" + en + "' has no member '" + member + "'!");
+
+        llvm::Value* v = ctx.builder.CreateFreeze(ctx.builder.getInt32((uint32_t)it->second.values[i]));
+        ctx.value_types[v] = en;
+        return v;
+    }
+
+    std::string to_str() const override { return en + "." + member; }
 };

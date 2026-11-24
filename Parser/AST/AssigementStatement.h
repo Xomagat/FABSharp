@@ -263,6 +263,7 @@ inline llvm::Type* type_to_llvm(const std::string& type, llvm::IRBuilder<>& buil
     if (type == "string")   return builder.getInt8Ty()->getPointerTo();
     if (type == "ldouble")  return llvm::Type::getX86_FP80Ty(builder.getContext());
     if (is_container(type)) return builder.getPtrTy();
+    if (is_enum(type))      return builder.getInt32Ty();
     if (is_struct(type))
     {
         auto* st = llvm::StructType::getTypeByName(builder.getContext(), type);
@@ -399,6 +400,28 @@ inline std::string type_of(CodegenContext& ctx, llvm::Value* v)
     auto it = ctx.value_types.find(v);
     if (it != ctx.value_types.end()) return it->second;
     return llvm_to_type(v->getType());
+}
+
+inline llvm::Value* emit_enum_to_str(CodegenContext& ctx, llvm::Value* v, const std::string& en)
+{
+    auto& b = ctx.builder;
+    auto& info = enum_table.at(en);
+    v = coerceToType(v, b.getInt32Ty(), b);
+
+    llvm::Value* r = b.CreateGlobalStringPtr("<?>");
+    for (size_t i = info.names.size(); i-- > 0; )
+        r = b.CreateSelect(b.CreateICmpEQ(v, b.getInt32((uint32_t)info.values[i])),
+                           b.CreateGlobalStringPtr(info.names[i]), r);
+    return tag(ctx, r, "string");
+}
+
+// Color <-> int и Color <-> Color2 только через cast<>
+inline void check_enum_assign(CodegenContext& ctx, llvm::Value* v, const std::string& target)
+{
+    std::string src = type_of(ctx, v);
+    if ((is_enum(src) || is_enum(target)) && src != target)
+        throw std::runtime_error("Cannot convert '" + src + "' to '" + target
+                                 + "': use cast<" + target + ">(...)");
 }
 
 inline llvm::Value* emit_base(CodegenContext& ctx, const Expression& e, std::string& type)
@@ -610,6 +633,7 @@ public:
                 ? (is_container(vt) ? emit_container_new(context, vt)
                                     : llvm::Constant::getNullValue(it->second->getAllocatedType()))
                 : expression->codegen_expected(context, vt);
+            if (!expression->is_null_literal()) check_enum_assign(context, val, vt);
             val = coerceToType(val, it->second->getAllocatedType(), context.builder);
             context.builder.CreateStore(val, it->second)->setVolatile(context.volatile_locals);
             return;
@@ -640,7 +664,10 @@ public:
                     ? emit_container_new(context, type)
                     : llvm::Constant::getNullValue(llvmType);
             else
+            {
                 val = expression->codegen_expected(context, type);
+                check_enum_assign(context, val, type);
+            }
 
             val = coerceToType(val, llvmType, context.builder);
             context.builder.CreateStore(val, alloc)->setVolatile(context.volatile_locals);
