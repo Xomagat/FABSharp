@@ -70,6 +70,7 @@ add_executable(fab main.cpp
         Parser/AST/IncDecExpression.h
         Parser/Diagnostics.h
         Parser/AST/NamedCall.h
+        Parser/AST/StructList.h
 )
 
 if (NOT WIN32)

@@ -180,6 +180,7 @@ public:
         std::string vt   = (type == "auto") ? elem : type;
 
         bool ok = vt == elem
+               || class_is_a(ctx, elem, vt)
                || (numeric_rank(vt) && numeric_rank(elem))
                || (elem == "char" && numeric_rank(vt) >= 2);
         if (!ok)

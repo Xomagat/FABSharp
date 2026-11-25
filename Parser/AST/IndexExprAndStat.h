@@ -74,6 +74,24 @@ public:
         return b.CreateGEP(et, data, idx, "list.elem");
     }
 
+    llvm::Value* codegen_addr(CodegenContext& ctx, std::string& type_out) const override
+    {
+        auto& b = ctx.builder;
+        llvm::Value* base = target->codegen(ctx);
+        std::string t = type_of(ctx, base);
+        if (!t.starts_with("list<")) return nullptr;
+
+        type_out = list_elem(t);
+        llvm::Type* et = type_to_llvm(type_out, b);
+        llvm::Value* idx = coerceToType(index->codegen(ctx), b.getInt64Ty(), b);
+
+        emit_null_check(ctx, base, "Null reference: list index");
+        emit_list_bounds(ctx, base, idx);
+
+        llvm::Value* data = b.CreateLoad(b.getPtrTy(), base, "list.data");
+        return b.CreateGEP(et, data, idx, "list.elem");
+    }
+
     llvm::Value* codegen(CodegenContext& ctx) const override
     {
         auto& b = ctx.builder;

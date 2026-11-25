@@ -1,6 +1,29 @@
-use convert;
+struct Point { int x; int y; }
+
+class Animal
+{
+public:
+    string name;
+    Animal(string n) { name = n; }
+    define hello() -> string { return "I am " + name; }
+}
 
 define main() -> int
 {
-    writeln convert.to_hex("255").to_str();
+    // классы
+    list<Animal> zoo = [];
+    zoo.addend(new Animal("Rex"));
+    zoo.addend(new Animal("Tom"));
+    writeln zoo.length();                 // 2
+    writeln zoo[0].hello();               // I am Rex
+    for (Animal a in zoo) writeln a.hello();
+
+    // структуры
+    list<Point> pts = [Point(1, 2), Point(3, 4)];
+    pts.addend(Point(5, 6));
+    pts[1].x = 30;                        // меняется на месте
+    for (Point p in pts) writeln $"{p.x},{p.y}";   // 1,2  30,4  5,6
+    Point last = pts.pop();
+    writeln last.x;                       // 5
+    writeln pts.length();                 // 2
 }

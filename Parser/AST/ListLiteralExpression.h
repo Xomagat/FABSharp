@@ -8,6 +8,7 @@
 
 #include "Expression.h"
 #include "FunctionalExpression.h"
+#include "StructList.h"
 
 class ListLiteralExpression : public Expression
 {
@@ -49,8 +50,7 @@ public:
         llvm::Value* list = emit_list_new(ctx, list_type);
 
         StdlibFunctionInfo info{"fab_list_addend_" + elem, "void", {list_type, elem}};
-        for (auto* v : vals)
-            FunctionalExpression::emit_stdlib_call(ctx, info, {list, v});
+        for (auto* v : vals) emit_list_addend(ctx, list_type, list, v);
 
         return list;
     }
@@ -65,8 +65,10 @@ public:
 
         for (auto& item : items)
         {
-            StdlibFunctionInfo info{"fab_list_addend_" + elem, "void", {expected, elem}};
-            FunctionalExpression::emit_stdlib_call(ctx, info, {list, item->codegen(ctx)});
+            llvm::Value* v = item->is_null_literal()
+                ? llvm::Constant::getNullValue(type_to_llvm(elem, ctx.builder))
+                : item->codegen_expected(ctx, elem);
+            emit_list_addend(ctx, expected, list, v);
         }
         return list;
     }

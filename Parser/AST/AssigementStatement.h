@@ -86,10 +86,26 @@ inline std::string list_elem(const std::string& t)
     return t.substr(5, t.size() - 6);
 }
 
+inline bool is_container(const std::string& t)
+{
+    return t.starts_with("list<") || t.starts_with("dict<");
+}
+
+inline bool is_class(const std::string& t) { return class_names.contains(t); }
+
+inline std::string list_sym(const std::string& elem)
+{
+    if (is_class(elem) || is_container(elem) || is_lib_type(elem)) return "ptr";
+    return elem;
+}
+
 inline void check_elem(const std::string& what, const std::string& t, bool key)
 {
     static const std::unordered_set<std::string> vals = {"int","long","short","char","float","double","string","bool"};
     static const std::unordered_set<std::string> keys = {"int","long","short","char","string"};
+
+    if (what == "list element" && (is_class(t) || is_container(t) || is_lib_type(t))) return;
+
     if (!(key ? keys : vals).contains(t))
         throw std::runtime_error(what + ": type '" + t + "' is not supported");
 }
@@ -100,7 +116,7 @@ inline llvm::Value* emit_list_new(CodegenContext& ctx, const std::string& list_t
     auto& b = ctx.builder;
     llvm::Type* ptr = b.getInt8Ty()->getPointerTo();
     auto fn = ctx.module.getOrInsertFunction(
-        "fab_list_new_" + list_elem(list_type),
+    "fab_list_new_" + list_sym(list_elem(list_type)),
         llvm::FunctionType::get(ptr, {}, false));
     llvm::Value* v = b.CreateCall(fn);
     ctx.value_types[v] = list_type;
@@ -136,16 +152,17 @@ inline llvm::Value* emit_container_new(CodegenContext& ctx, const std::string& t
     return r;
 }
 
-inline bool is_container(const std::string& t)
-{
-    return t.starts_with("list<") || t.starts_with("dict<");
-}
-
 inline bool emit_container_print(CodegenContext& ctx, llvm::Value* val, const std::string& t)
 {
     auto& b = ctx.builder;
     std::string sym;
-    if      (t.starts_with("list<")) sym = "fab_list_print_" + list_elem(t);
+    if (t.starts_with("list<"))
+    {
+        std::string e = list_elem(t);
+        if (is_struct(e))
+            throw std::runtime_error("Cannot print list<" + e + ">: print the fields in a foreach loop");
+        sym = "fab_list_print_" + list_sym(e);
+    }
     else if (t.starts_with("dict<")) { auto [k, v] = dict_kv(t); sym = "fab_dict_print_" + k + "_" + v; }
     else return false;
 
@@ -155,7 +172,17 @@ inline bool emit_container_print(CodegenContext& ctx, llvm::Value* val, const st
     return true;
 }
 
-inline bool is_class(const std::string& t) { return class_names.contains(t); }
+inline bool class_is_a(CodegenContext& ctx, std::string from, const std::string& to)
+{
+    while (!from.empty())
+    {
+        if (from == to) return true;
+        auto it = ctx.classes.find(from);
+        if (it == ctx.classes.end()) break;
+        from = it->second.parent;
+    }
+    return false;
+}
 
 inline ClassInfo& get_class(CodegenContext& ctx, const std::string& n)
 {
@@ -242,7 +269,7 @@ inline void emit_free_container(CodegenContext& ctx, llvm::Value* v, const std::
     auto& b = ctx.builder;
     std::string sym;
     if (t.starts_with("list<")) sym = "fab_list_free_" + list_elem(t);
-    else { auto [k, val] = dict_kv(t); sym = "fab_dict_free_" + k + "_" + val; }
+    else { auto [k, val] = dict_kv(t); sym = "fab_list_free_" + list_sym(list_elem(t)); }
 
     auto fn = ctx.module.getOrInsertFunction(sym,
         llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false));

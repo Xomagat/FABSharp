@@ -339,6 +339,7 @@ inline void print_elem(long long v)     { printf("%lld", v); }
 inline void print_elem(float v)         { printf("%f", (double)v); }
 inline void print_elem(double v)        { printf("%f", v); }
 inline void print_elem(const char* v)   { printf("%s", v); }
+inline void print_elem(void* v)         { printf("%p", v); }
 
 template<class T> void list_print(FabList<T>* l)
 {
@@ -360,6 +361,7 @@ inline int fmt_elem(char* b, size_t n, long long v)     { return snprintf(b, n, 
 inline int fmt_elem(char* b, size_t n, float v)         { return snprintf(b, n, "%.9g", (double)v); }
 inline int fmt_elem(char* b, size_t n, double v)        { return snprintf(b, n, "%.17g", v); }
 inline int fmt_elem(char* b, size_t n, const char* v)   { return snprintf(b, n, "%s", v ? v : ""); }
+inline int fmt_elem(char* b, size_t n, void* v)         { return snprintf(b, n, "%p", v); }
 
 template<class T> char* list_join(FabList<T>* l, const char* sep)
 {
@@ -384,6 +386,153 @@ template<class T> char* list_join(FabList<T>* l, const char* sep)
     }
     *p = '\0';
 
+    return r;
+}
+
+struct FabRaw { unsigned char* data; int len; int cap; };
+
+static inline unsigned char* raw_at(FabRaw* l, int i, int esz) { return l->data + (size_t)i * (size_t)esz; }
+
+static void raw_reserve(FabRaw* l, long long need, int esz)
+{
+    if (need <= l->cap) return;
+    if (need > INT_MAX) fab_oom();
+    long long c = l->cap ? (long long)l->cap * 2 : 4;
+    if (c < need)    c = need;
+    if (c > INT_MAX) c = INT_MAX;
+    if ((unsigned long long)c > (size_t)-1 / (size_t)esz) fab_oom();
+    l->data = (unsigned char*)fab_xrealloc(l->data, (size_t)c * (size_t)esz);
+    l->cap  = (int)c;
+}
+
+static void swap_bytes(unsigned char* a, unsigned char* b, size_t n)
+{
+    unsigned char t[64];
+    while (n)
+    {
+        size_t k = n < sizeof t ? n : sizeof t;
+        memcpy(t, a, k); memcpy(a, b, k); memcpy(b, t, k);
+        a += k; b += k; n -= k;
+    }
+}
+
+#define RAW(p) ((FabRaw*)(p))
+
+extern "C" void fab_slist_addend(void* h, const void* v, int esz)
+{
+    FabRaw* l = RAW(h);
+    raw_reserve(l, (long long)l->len + 1, esz);
+    memcpy(raw_at(l, l->len, esz), v, (size_t)esz);
+    l->len++;
+}
+
+extern "C" void fab_slist_add(void* h, const void* v, int esz)
+{
+    FabRaw* l = RAW(h);
+    raw_reserve(l, (long long)l->len + 1, esz);
+    memmove(raw_at(l, 1, esz), l->data, (size_t)l->len * (size_t)esz);
+    memcpy(l->data, v, (size_t)esz);
+    l->len++;
+}
+
+extern "C" void fab_slist_insert(void* h, int i, const void* v, int esz)
+{
+    FabRaw* l = RAW(h);
+    if (i < 0 || i > l->len) return;
+    raw_reserve(l, (long long)l->len + 1, esz);
+    memmove(raw_at(l, i + 1, esz), raw_at(l, i, esz), (size_t)(l->len - i) * (size_t)esz);
+    memcpy(raw_at(l, i, esz), v, (size_t)esz);
+    l->len++;
+}
+
+extern "C" void fab_slist_set(void* h, int i, const void* v, int esz)
+{
+    FabRaw* l = RAW(h);
+    if (i < 0 || i >= l->len) return;
+    memcpy(raw_at(l, i, esz), v, (size_t)esz);
+}
+
+extern "C" void fab_slist_get(void* h, int i, void* out, int esz)
+{
+    FabRaw* l = RAW(h);
+    memset(out, 0, (size_t)esz);
+    if (i >= 0 && i < l->len) memcpy(out, raw_at(l, i, esz), (size_t)esz);
+}
+
+extern "C" void fab_slist_pop(void* h, void* out, int esz)
+{
+    FabRaw* l = RAW(h);
+    memset(out, 0, (size_t)esz);
+    if (l->len == 0) return;
+    l->len--;
+    memcpy(out, raw_at(l, l->len, esz), (size_t)esz);
+}
+
+extern "C" void fab_slist_pop_first(void* h, void* out, int esz)
+{
+    FabRaw* l = RAW(h);
+    memset(out, 0, (size_t)esz);
+    if (l->len == 0) return;
+    memcpy(out, l->data, (size_t)esz);
+    memmove(l->data, raw_at(l, 1, esz), (size_t)(l->len - 1) * (size_t)esz);
+    l->len--;
+}
+
+extern "C" void fab_slist_remove_at(void* h, int i, int esz)
+{
+    FabRaw* l = RAW(h);
+    if (i < 0 || i >= l->len) return;
+    memmove(raw_at(l, i, esz), raw_at(l, i + 1, esz), (size_t)(l->len - i - 1) * (size_t)esz);
+    l->len--;
+}
+
+extern "C" void fab_slist_reverse(void* h, int esz)
+{
+    FabRaw* l = RAW(h);
+    for (int i = 0; i < l->len / 2; ++i)
+        swap_bytes(raw_at(l, i, esz), raw_at(l, l->len - 1 - i, esz), (size_t)esz);
+}
+
+extern "C" void fab_slist_swap(void* h, int i, int j, int esz)
+{
+    FabRaw* l = RAW(h);
+    if (i < 0 || j < 0 || i >= l->len || j >= l->len || i == j) return;
+    swap_bytes(raw_at(l, i, esz), raw_at(l, j, esz), (size_t)esz);
+}
+
+extern "C" void fab_slist_reserve(void* h, int n, int esz) { raw_reserve(RAW(h), n, esz); }
+
+extern "C" void fab_slist_extend(void* h, void* o, int esz)
+{
+    FabRaw* l = RAW(h); FabRaw* s = RAW(o);
+    int n = s->len;
+    if (n <= 0) return;
+    if ((long long)l->len + n > INT_MAX) fab_oom();
+    raw_reserve(l, (long long)l->len + n, esz);
+    memcpy(raw_at(l, l->len, esz), s->data, (size_t)n * (size_t)esz);
+    l->len += n;
+}
+
+extern "C" void* fab_slist_copy(void* h, int esz)
+{
+    FabRaw* l = RAW(h);
+    FabRaw* r = (FabRaw*)list_new<void*>();
+    if (l->len <= 0) return r;
+    raw_reserve(r, l->len, esz);
+    memcpy(r->data, l->data, (size_t)l->len * (size_t)esz);
+    r->len = l->len;
+    return r;
+}
+
+extern "C" void* fab_slist_slice(void* h, int start, int length, int esz)
+{
+    FabRaw* l = RAW(h);
+    FabRaw* r = (FabRaw*)list_new<void*>();
+    if (start < 0 || start >= l->len || length <= 0) return r;
+    if (start + length > l->len) length = l->len - start;
+    raw_reserve(r, length, esz);
+    memcpy(r->data, raw_at(l, start, esz), (size_t)length * (size_t)esz);
+    r->len = length;
     return r;
 }
 
@@ -433,6 +582,7 @@ FAB_LIST(float,  float)
 FAB_LIST(double, double)
 FAB_LIST(string, const char*)
 FAB_LIST(bool,   unsigned char)
+FAB_LIST(ptr, void*)
 
 FAB_LIST_SUM(int,    int)
 FAB_LIST_SUM(long,   long long)

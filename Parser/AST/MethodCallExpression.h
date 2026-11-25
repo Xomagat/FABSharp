@@ -11,6 +11,7 @@
 
 #include "Expression.h"
 #include "FunctionalExpression.h"
+#include "StructList.h"
 
 inline const MethodInfo* pick_method_converted(
         const std::unordered_map<std::string, MethodInfo>& table,
@@ -99,6 +100,9 @@ private:
             }
             return emit_named_call(ctx, args, names, cands, what);
         }
+
+        if (recv_type.starts_with("list<") && is_struct(list_elem(recv_type)))
+            throw std::runtime_error("Named arguments are not supported for list<" + list_elem(recv_type) + "> methods");
 
         std::set<std::string> seen;
         auto add = [&](const StdlibFunctionInfo& inf) {
@@ -213,6 +217,11 @@ public:
             throw std::runtime_error("Enum '" + recv_type + "' has no method '" + name + "'");
         }
 
+        if (recv_type.starts_with("list<") && is_struct(list_elem(recv_type)))
+            if (auto* r = emit_struct_list_method(ctx, self, recv_type, name,
+                                                  std::vector<llvm::Value*>(vals.begin() + 1, vals.end())))
+                return r;
+
         const StdlibFunctionInfo* it = find_lib_method(recv_type, name, tail_types);
         if (recv_type.starts_with("list<") || recv_type.starts_with("dict<"))
         {
@@ -232,7 +241,7 @@ public:
 
             std::unordered_map<std::string, std::string> subst;
             std::string suffix;
-            if (is_list) { subst = {{"T", list_elem(recv_type)}}; suffix = "_" + list_elem(recv_type); }
+            if (is_list) { subst = {{"T", list_elem(recv_type)}}; suffix = "_" + list_sym(list_elem(recv_type)); }
             else         { auto [k, v] = dict_kv(recv_type);
                 subst = {{"K", k}, {"V", v}};        suffix = "_" + k + "_" + v; }
 
