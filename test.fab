@@ -1,22 +1,6 @@
-enum Color { red, green, blue }
-enum Level { low = 1, mid = 5, high }
-
-define paint(Color c) -> string
-{
-    return $"painting {c}";
-}
+use convert;
 
 define main() -> int
 {
-    Color c = Color.green;
-    writeln c;                         // green
-    writeln c == Color.green;          // true
-    writeln c < Color.blue;            // true
-    writeln cast<int>(Level.high);     // 6
-    Level l = cast<Level>(5);
-    writeln l.to_str();                // mid
-    writeln paint(Color.blue);         // painting blue
-    writeln cast<Level>(99);           // <?>
-    Color d;                           // по умолчанию 0
-    writeln d;                         // red
+    writeln convert.to_hex("255").to_str();
 }
