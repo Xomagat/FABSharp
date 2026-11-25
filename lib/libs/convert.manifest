@@ -1,0 +1,11 @@
+# Convert lib v0.1
+# Created on 24.11.26
+# Last update 24.11.26
+
+class hex free fab_hex_free new hex_new
+
+hex_new   fab_hex_create   hex : string:value="0"
+
+static convert.to_hex fab_convert_to_hex hex : string, int:from=10
+
+hex.to_str fab_hex_to_str string : hex
