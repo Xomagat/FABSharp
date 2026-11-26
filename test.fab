@@ -1,31 +1,35 @@
-use convert;
+struct Point { int x; int y; }
+
+class Animal
+{
+public:
+    string name;
+    Animal(string n) { name = n; }
+    define hello() -> string { return "I am " + name; }
+}
 
 define main() -> int
 {
-    hex h = hex("ff");
-    writeln h.to_str();                       // ff
-    writeln h.to_int();                       // 255
-    writeln h.format(width=4, prefix=true);   // 0x00ff
+    // значения-классы
+    dict<string, Animal> zoo = {"a": new Animal("Rex")};
+    zoo["b"] = new Animal("Tom");
+    writeln zoo["a"].hello();               // I am Rex
+    writeln zoo.contains("zzz");            // false
 
-    bin b = h.to_bin();
-    writeln b.to_str();                       // 11111111
-    oct o = oct(8);
-    writeln o.to_str();                       // 10
+    // значения-структуры
+    dict<string, Point> pts = {"o": Point(0, 0)};
+    pts["a"] = Point(1, 2);
+    pts["a"].x = 10;                        // меняется на месте
+    Point p = pts["a"];
+    writeln p.x;                            // 10
+    writeln pts.length();                   // 2
+    for (string k in pts) writeln $"{k}: {pts[k].x},{pts[k].y}";
+    Point gone = pts.pop("o");
+    writeln pts.contains("o");              // false
 
-    b.from_hex("a");                          // still a bin, now 10
-    writeln b.to_str();                       // 1010
-    b.from_int(5);
-    writeln $"{b}";                           // 101
-
-    writeln convert.to_int(h);                // 255
-    writeln convert.to_int("77", 8);          // 63
-    writeln convert.to_int("zz", fallback=-1);// -1
-    writeln convert.to_str(255, 2);           // 11111111
-    hex x = convert.to_hex("1010", 2);        // 0xa
-    writeln convert.to_oct(x).to_str();       // 12
-
-    hex bad = hex("zz");                      // null, but safe to use
-    writeln bad.to_str();                     // 0
-    writeln convert.is_hex("zz");             // false
-    return 0;
+    // вложенные контейнеры
+    dict<string, list<int>> groups = {};
+    groups["even"] = [2, 4];
+    groups["even"].addend(6);
+    writeln groups["even"].length();        // 3
 }

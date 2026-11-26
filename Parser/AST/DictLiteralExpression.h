@@ -8,6 +8,7 @@
 
 #include "Expression.h"
 #include "FunctionalExpression.h"
+#include "StructList.h"
 
 class DictLiteralExpression : public Expression
 {
@@ -39,8 +40,7 @@ public:
             llvm::Value* vv = val->is_null_literal()
                 ? llvm::Constant::getNullValue(type_to_llvm(v, ctx.builder))
                 : val->codegen_expected(ctx, v);
-
-            FunctionalExpression::emit_stdlib_call(ctx, set_info, {d, kv, vv});
+            emit_dict_set(ctx, expected, d, kv, vv);
         }
         return d;
     }

@@ -103,6 +103,8 @@ private:
 
         if (recv_type.starts_with("list<") && is_struct(list_elem(recv_type)))
             throw std::runtime_error("Named arguments are not supported for list<" + list_elem(recv_type) + "> methods");
+        if (recv_type.starts_with("dict<") && is_struct(dict_kv(recv_type).second))
+            throw std::runtime_error("Named arguments are not supported for " + recv_type + " methods");
 
         std::set<std::string> seen;
         auto add = [&](const StdlibFunctionInfo& inf) {
@@ -116,7 +118,7 @@ private:
             std::unordered_map<std::string, std::string> subst;
             std::string suffix;
             if (is_list) { subst = {{"T", list_elem(recv_type)}}; suffix = "_" + list_elem(recv_type); }
-            else { auto [k, v] = dict_kv(recv_type); subst = {{"K", k}, {"V", v}}; suffix = "_" + k + "_" + v; }
+            else { auto [k, v] = dict_kv(recv_type); subst = {{"K", k}, {"V", v}}; suffix = "_" + k + "_" + list_sym(v); }
 
             auto fix = [&](std::string& t) {
                 if (t == "list<T>" || t == "dict<K,V>") t = recv_type;
@@ -178,6 +180,12 @@ public:
         std::vector<std::string> tail_types;
         for (auto& a : args)
         {
+            if (a->is_null_literal() && (recv_type.starts_with("list<") || recv_type.starts_with("dict<")))
+            {
+                vals.push_back(llvm::ConstantPointerNull::get(ctx.builder.getPtrTy()));
+                tail_types.push_back("null");
+                continue;
+            }
             vals.push_back(a->codegen(ctx));
             tail_types.push_back(type_of(ctx, vals.back()));
         }
@@ -221,6 +229,10 @@ public:
             if (auto* r = emit_struct_list_method(ctx, self, recv_type, name,
                                                   std::vector<llvm::Value*>(vals.begin() + 1, vals.end())))
                 return r;
+        if (recv_type.starts_with("dict<") && is_struct(dict_kv(recv_type).second))
+            if (auto* r = emit_struct_dict_method(ctx, self, recv_type, name,
+                                                  std::vector<llvm::Value*>(vals.begin() + 1, vals.end())))
+                return r;
 
         const StdlibFunctionInfo* it = find_lib_method(recv_type, name, tail_types);
         if (recv_type.starts_with("list<") || recv_type.starts_with("dict<"))
@@ -242,8 +254,7 @@ public:
             std::unordered_map<std::string, std::string> subst;
             std::string suffix;
             if (is_list) { subst = {{"T", list_elem(recv_type)}}; suffix = "_" + list_sym(list_elem(recv_type)); }
-            else         { auto [k, v] = dict_kv(recv_type);
-                subst = {{"K", k}, {"V", v}};        suffix = "_" + k + "_" + v; }
+            else { auto [k, v] = dict_kv(recv_type); subst = {{"K", k}, {"V", v}}; suffix = "_" + k + "_" + list_sym(v); }
 
             auto fix = [&](std::string& t) {
                 if (t == "list<T>" || t == "dict<K,V>") t = recv_type;

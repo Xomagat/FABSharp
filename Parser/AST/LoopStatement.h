@@ -165,7 +165,7 @@ public:
         {
             auto [k, v] = dict_kv(ct);
             emit_null_check(ctx, coll, "Null reference: foreach over dict");
-            StdlibFunctionInfo info{"fab_dict_keys_" + k + "_" + v, "list<" + k + ">", {ct}};
+            StdlibFunctionInfo info{"fab_dict_keys_" + k + "_" + list_sym(v), "list<" + k + ">", {ct}};
             coll = FunctionalExpression::emit_stdlib_call(ctx, info, {coll});
             ct = "list<" + k + ">";
         }

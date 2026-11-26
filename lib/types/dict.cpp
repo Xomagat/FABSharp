@@ -23,6 +23,7 @@ FAB_LIST_IMPORT(float,  float)
 FAB_LIST_IMPORT(double, double)
 FAB_LIST_IMPORT(string, const char*)
 FAB_LIST_IMPORT(bool,   unsigned char)
+FAB_LIST_IMPORT(ptr,    void*)
 
 // Dict keeps insertion order:
 // keys[] and vals[] are plain arrays, index[] is an open-addressing hash table with entry numbers.
@@ -323,6 +324,7 @@ inline void print_elem(long long v)     { printf("%lld", v); }
 inline void print_elem(float v)         { printf("%f", (double)v); }
 inline void print_elem(double v)        { printf("%f", v); }
 inline void print_elem(const char* v)   { printf("%s", v); }
+inline void print_elem(void* v)         { printf("%p", v); }
 
 template<class K, class V> void dict_print(FabDict<K,V>* d)
 {
@@ -382,10 +384,121 @@ template<class K, class V> void dict_print(FabDict<K,V>* d)
     FAB_DICT(KN, K, float,  float) \
     FAB_DICT(KN, K, double, double) \
     FAB_DICT(KN, K, string, const char*) \
-    FAB_DICT(KN, K, bool,   unsigned char)
+    FAB_DICT(KN, K, bool,   unsigned char) \
+    FAB_DICT(KN, K, ptr,    void*)
 
 FAB_DICT_VALUES(int,    int)
 FAB_DICT_VALUES(long,   long long)
 FAB_DICT_VALUES(short,  short)
 FAB_DICT_VALUES(char,   char)
 FAB_DICT_VALUES(string, const char*)
+
+extern "C" void fab_slist_addend(void* l, const void* v, int esz);
+extern "C" void fab_slist_reserve(void* l, int n, int esz);
+
+template<class K> void sbox_free_all(FabDict<K, void*>* d)
+{
+    for (int i = 0; i < d->len; ++i)
+        if (d->alive[i]) free(d->vals[i]);
+}
+
+template<class K> void sdict_set(FabDict<K, void*>* d, K key, const void* v, int vsz)
+{
+    int e = dict_find(d, key);
+    if (e >= 0) { memcpy(d->vals[e], v, (size_t)vsz); return; }
+    void* box = fab_xmalloc((size_t)vsz);
+    memcpy(box, v, (size_t)vsz);
+    dict_set(d, key, box);
+}
+
+template<class K> void sdict_get(FabDict<K, void*>* d, K key, void* out, int vsz)
+{
+    int e = dict_find(d, key);
+    if (e >= 0) memcpy(out, d->vals[e], (size_t)vsz);
+    else        memset(out, 0, (size_t)vsz);
+}
+
+template<class K> void sdict_get_or(FabDict<K, void*>* d, K key, const void* def, void* out, int vsz)
+{
+    int e = dict_find(d, key);
+    memcpy(out, e >= 0 ? d->vals[e] : def, (size_t)vsz);
+}
+
+template<class K> void* sdict_ref(FabDict<K, void*>* d, K key)
+{
+    int e = dict_find(d, key);
+    return e >= 0 ? d->vals[e] : nullptr;
+}
+
+template<class K> void sdict_value_at(FabDict<K, void*>* d, int i, void* out, int vsz)
+{
+    dict_compact(d);
+    if (i >= 0 && i < d->len) memcpy(out, d->vals[i], (size_t)vsz);
+    else                      memset(out, 0, (size_t)vsz);
+}
+
+template<class K> bool sdict_remove(FabDict<K, void*>* d, K key)
+{
+    int e = dict_find(d, key);
+    if (e < 0) return false;
+    free(d->vals[e]);
+    dict_remove_at(d, e);
+    return true;
+}
+
+template<class K> void sdict_pop(FabDict<K, void*>* d, K key, void* out, int vsz)
+{
+    int e = dict_find(d, key);
+    if (e < 0) { memset(out, 0, (size_t)vsz); return; }
+    memcpy(out, d->vals[e], (size_t)vsz);
+    free(d->vals[e]);
+    dict_remove_at(d, e);
+}
+
+template<class K> void sdict_clear(FabDict<K, void*>* d) { sbox_free_all(d); dict_clear(d); }
+template<class K> void sdict_free(FabDict<K, void*>* d)  { sbox_free_all(d); dict_free(d); }
+
+template<class K> void sdict_merge(FabDict<K, void*>* d, FabDict<K, void*>* o, int vsz)
+{
+    if (d == o) return;
+    for (int i = 0; i < o->len; ++i)
+        if (o->alive[i]) sdict_set(d, o->keys[i], o->vals[i], vsz);
+}
+
+template<class K> void* sdict_copy(FabDict<K, void*>* d, int vsz)
+{
+    auto* r = dict_new<K, void*>();
+    for (int i = 0; i < d->len; ++i)
+        if (d->alive[i]) sdict_set(r, d->keys[i], d->vals[i], vsz);
+    return r;
+}
+
+template<class K> void* sdict_values(FabDict<K, void*>* d, int vsz)
+{
+    void* l = fab_list_new_ptr();
+    fab_slist_reserve(l, d->len - d->dead, vsz);
+    for (int i = 0; i < d->len; ++i)
+        if (d->alive[i]) fab_slist_addend(l, d->vals[i], vsz);
+    return l;
+}
+
+#define FAB_SDICT(KN, K) \
+  extern "C" void  fab_sdict_set_##KN(void* d, K k, const void* v, int n)  { sdict_set<K>((FabDict<K, void*>*)d, k, v, n); } \
+  extern "C" void  fab_sdict_get_##KN(void* d, K k, void* out, int n)      { sdict_get<K>((FabDict<K, void*>*)d, k, out, n); } \
+  extern "C" void  fab_sdict_get_or_##KN(void* d, K k, const void* def, void* out, int n) \
+                                                                           { sdict_get_or<K>((FabDict<K, void*>*)d, k, def, out, n); } \
+  extern "C" void* fab_sdict_ref_##KN(void* d, K k)                        { return sdict_ref<K>((FabDict<K, void*>*)d, k); } \
+  extern "C" void  fab_sdict_value_at_##KN(void* d, int i, void* out, int n) { sdict_value_at<K>((FabDict<K, void*>*)d, i, out, n); } \
+  extern "C" bool  fab_sdict_remove_##KN(void* d, K k)                     { return sdict_remove<K>((FabDict<K, void*>*)d, k); } \
+  extern "C" void  fab_sdict_pop_##KN(void* d, K k, void* out, int n)      { sdict_pop<K>((FabDict<K, void*>*)d, k, out, n); } \
+  extern "C" void  fab_sdict_clear_##KN(void* d)                           { sdict_clear<K>((FabDict<K, void*>*)d); } \
+  extern "C" void  fab_sdict_merge_##KN(void* d, void* o, int n)           { sdict_merge<K>((FabDict<K, void*>*)d, (FabDict<K, void*>*)o, n); } \
+  extern "C" void* fab_sdict_copy_##KN(void* d, int n)                     { return sdict_copy<K>((FabDict<K, void*>*)d, n); } \
+  extern "C" void* fab_sdict_values_##KN(void* d, int n)                   { return sdict_values<K>((FabDict<K, void*>*)d, n); } \
+  extern "C" void  fab_sdict_free_##KN(void* d)                            { sdict_free<K>((FabDict<K, void*>*)d); }
+
+FAB_SDICT(int,    int)
+FAB_SDICT(long,   long long)
+FAB_SDICT(short,  short)
+FAB_SDICT(char,   char)
+FAB_SDICT(string, const char*)

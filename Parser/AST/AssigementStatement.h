@@ -104,7 +104,8 @@ inline void check_elem(const std::string& what, const std::string& t, bool key)
     static const std::unordered_set<std::string> vals = {"int","long","short","char","float","double","string","bool"};
     static const std::unordered_set<std::string> keys = {"int","long","short","char","string"};
 
-    if (what == "list element" && (is_class(t) || is_container(t) || is_lib_type(t))) return;
+    if ((what == "list element" || what == "dict value")
+    && (is_class(t) || is_container(t) || is_lib_type(t))) return;
 
     if (!(key ? keys : vals).contains(t))
         throw std::runtime_error(what + ": type '" + t + "' is not supported");
@@ -145,7 +146,7 @@ inline llvm::Value* emit_container_new(CodegenContext& ctx, const std::string& t
     check_elem("dict key", k, true); check_elem("dict value", v, false);
     auto& b = ctx.builder;
     auto fn = ctx.module.getOrInsertFunction(
-        "fab_dict_new_" + k + "_" + v,
+    "fab_dict_new_" + k + "_" + list_sym(v),
         llvm::FunctionType::get(b.getPtrTy(), {}, false));
     llvm::Value* r = b.CreateCall(fn);
     ctx.value_types[r] = t;
@@ -163,7 +164,13 @@ inline bool emit_container_print(CodegenContext& ctx, llvm::Value* val, const st
             throw std::runtime_error("Cannot print list<" + e + ">: print the fields in a foreach loop");
         sym = "fab_list_print_" + list_sym(e);
     }
-    else if (t.starts_with("dict<")) { auto [k, v] = dict_kv(t); sym = "fab_dict_print_" + k + "_" + v; }
+    else if (t.starts_with("dict<"))
+    {
+        auto [k, v] = dict_kv(t);
+        if (is_struct(v))
+            throw std::runtime_error("Cannot print " + t + ": print the fields in a foreach loop");
+        sym = "fab_dict_print_" + k + "_" + list_sym(v);
+    }
     else return false;
 
     auto fn = ctx.module.getOrInsertFunction(sym,
@@ -268,9 +275,14 @@ inline void emit_free_container(CodegenContext& ctx, llvm::Value* v, const std::
 {
     auto& b = ctx.builder;
     std::string sym;
-    if (t.starts_with("list<")) sym = "fab_list_free_" + list_elem(t);
-    else { auto [k, val] = dict_kv(t); sym = "fab_list_free_" + list_sym(list_elem(t)); }
-
+    if (t.starts_with("list<"))
+        sym = "fab_list_free_" + list_sym(list_elem(t));
+    else
+    {
+        auto [k, val] = dict_kv(t);
+        sym = is_struct(val) ? "fab_sdict_free_" + k
+                             : "fab_dict_free_" + k + "_" + list_sym(val);
+    }
     auto fn = ctx.module.getOrInsertFunction(sym,
         llvm::FunctionType::get(b.getVoidTy(), {b.getPtrTy()}, false));
     b.CreateCall(fn, {v});

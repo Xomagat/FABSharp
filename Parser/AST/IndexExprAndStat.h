@@ -33,8 +33,7 @@ public:
             llvm::Value* vv = value.is_null_literal()
                 ? llvm::Constant::getNullValue(type_to_llvm(v, b))
                 : value.codegen_expected(ctx, v);
-            StdlibFunctionInfo info{"fab_dict_set_" + k + "_" + v, "void", {t, k, v}};
-            FunctionalExpression::emit_stdlib_call(ctx, info, {base, kv, vv});
+            emit_dict_set(ctx, t, base, kv, vv);
             return;
         }
 
@@ -79,6 +78,23 @@ public:
         auto& b = ctx.builder;
         llvm::Value* base = target->codegen(ctx);
         std::string t = type_of(ctx, base);
+
+        if (t.starts_with("dict<"))
+        {
+            auto [k, v] = dict_kv(t);
+            if (!is_struct(v)) return nullptr;
+            emit_null_check(ctx, base, "Null reference: dict index");
+
+            type_out = v;
+            llvm::Type* KT = type_to_llvm(k, b);
+            llvm::Value* key = coerceToType(index->codegen_expected(ctx, k), KT, b);
+            auto fn = ctx.module.getOrInsertFunction("fab_sdict_ref_" + k,
+                llvm::FunctionType::get(b.getPtrTy(), {b.getPtrTy(), KT}, false));
+            llvm::Value* p = b.CreateCall(fn, {base, key});
+            emit_fail_if(ctx, b.CreateIsNull(p), "Key not found in dict");
+            return p;
+        }
+
         if (!t.starts_with("list<")) return nullptr;
 
         type_out = list_elem(t);
@@ -103,9 +119,10 @@ public:
         {
             auto [k, v] = dict_kv(t);
             emit_null_check(ctx, base, "Null reference: dict index");
-            StdlibFunctionInfo info{"fab_dict_get_" + k + "_" + v, v, {t, k}};
-            return FunctionalExpression::emit_stdlib_call(ctx, info,
-                       {base, index->codegen_expected(ctx, k)});
+            llvm::Value* kv = index->codegen_expected(ctx, k);
+            if (is_struct(v)) return emit_struct_dict_method(ctx, base, t, "get", {kv});
+            StdlibFunctionInfo info{"fab_dict_get_" + k + "_" + list_sym(v), v, {t, k}};
+            return FunctionalExpression::emit_stdlib_call(ctx, info, {base, kv});
         }
 
         llvm::Value* idx = coerceToType(index->codegen(ctx), b.getInt64Ty(), b);
