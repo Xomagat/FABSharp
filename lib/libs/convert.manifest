@@ -1,11 +1,119 @@
-# Convert lib v0.1
+# Convert lib v0.3
 # Created on 24.11.26
-# Last update 24.11.26
+# Last update 25.11.26
 
-class hex free fab_hex_free new hex_new
+# Base type: hex / oct / bin share it (unsigned 64-bit value + radix). Its methods are inherited.
+class radixnum free fab_num_free
+class hex : radixnum new hex
+class oct : radixnum new oct
+class bin : radixnum new bin
 
-hex_new   fab_hex_create   hex : string:value="0"
+# ---------- functions hex() oct() bin() ----------
+# hex()  hex("ff")  hex("0xFF")  hex(255)  hex(other_number)   (bad text -> null)
+hex  fab_hex_zero      hex :
+hex  fab_hex_parse     hex : string
+hex  fab_hex_of        hex : long
+hex  fab_hex_from_num  hex : radixnum
 
-static convert.to_hex fab_convert_to_hex hex : string, int:from=10
+oct  fab_oct_zero      oct :
+oct  fab_oct_parse     oct : string
+oct  fab_oct_of        oct : long
+oct  fab_oct_from_num  oct : radixnum
 
-hex.to_str fab_hex_to_str string : hex
+bin  fab_bin_zero      bin :
+bin  fab_bin_parse     bin : string
+bin  fab_bin_of        bin : long
+bin  fab_bin_from_num  bin : radixnum
+
+# ---------- methods: text ----------
+radixnum.to_str     fab_num_to_str     string : radixnum
+radixnum.to_dec     fab_num_to_dec     string : radixnum
+radixnum.to_base    fab_num_to_base    string : radixnum, int
+radixnum.format     fab_num_format     string : radixnum, int:width=0, bool:prefix=false, bool:upper=false
+
+# ---------- methods: to other classes (a new object) ----------
+radixnum.to_hex     fab_hex_from_num   hex : radixnum
+radixnum.to_oct     fab_oct_from_num   oct : radixnum
+radixnum.to_bin     fab_bin_from_num   bin : radixnum
+
+# ---------- methods: to plain values ----------
+radixnum.to_int     fab_num_to_int     int    : radixnum
+radixnum.to_long    fab_num_to_long    long   : radixnum
+radixnum.to_double  fab_num_to_double  double : radixnum
+radixnum.to_bool    fab_num_to_bool    bool   : radixnum
+
+# ---------- methods: set the value in place ----------
+# text versions return false and keep the old value on error
+radixnum.from_str   fab_num_from_str   bool : radixnum, string
+radixnum.from_hex   fab_num_from_hex   bool : radixnum, string
+radixnum.from_oct   fab_num_from_oct   bool : radixnum, string
+radixnum.from_bin   fab_num_from_bin   bool : radixnum, string
+radixnum.from_dec   fab_num_from_dec   bool : radixnum, string
+radixnum.from_base  fab_num_from_base  bool : radixnum, string, int
+radixnum.from_int   fab_num_from_int   void : radixnum, int
+radixnum.from_int   fab_num_from_long  void : radixnum, long
+radixnum.from_long  fab_num_from_long  void : radixnum, long
+
+# ---------- methods: info ----------
+radixnum.base        fab_num_base        int  : radixnum
+radixnum.length      fab_num_length      int  : radixnum
+radixnum.bit_length  fab_num_bit_length  int  : radixnum
+radixnum.popcount    fab_num_popcount    int  : radixnum
+radixnum.is_zero     fab_num_is_zero     bool : radixnum
+radixnum.is_even     fab_num_is_even     bool : radixnum
+radixnum.is_odd      fab_num_is_odd      bool : radixnum
+
+# ---------- methods: per class (the exact type is needed) ----------
+hex.copy     fab_num_copy     hex  : hex
+oct.copy     fab_num_copy     oct  : oct
+bin.copy     fab_num_copy     bin  : bin
+hex.equals   fab_num_equals   bool : hex, hex
+oct.equals   fab_num_equals   bool : oct, oct
+bin.equals   fab_num_equals   bool : bin, bin
+hex.compare  fab_num_compare  int  : hex, hex
+oct.compare  fab_num_compare  int  : oct, oct
+bin.compare  fab_num_compare  int  : bin, bin
+
+# ---------- convert: to the classes ----------
+# convert.to_hex("ff", 16)   convert.to_hex(255)   convert.to_hex(some_bin)
+static convert.to_hex  fab_convert_to_hex  hex : string, int:from=10
+static convert.to_hex  fab_hex_of          hex : long
+static convert.to_hex  fab_hex_from_num    hex : radixnum
+static convert.to_oct  fab_convert_to_oct  oct : string, int:from=10
+static convert.to_oct  fab_oct_of          oct : long
+static convert.to_oct  fab_oct_from_num    oct : radixnum
+static convert.to_bin  fab_convert_to_bin  bin : string, int:from=10
+static convert.to_bin  fab_bin_of          bin : long
+static convert.to_bin  fab_bin_from_num    bin : radixnum
+
+# ---------- convert: to plain values (text versions: base first, fallback by name) ----------
+static convert.to_int     fab_num_to_int          int    : radixnum
+static convert.to_int     fab_convert_parse_int   int    : string, int:base=10, int:fallback=0
+static convert.to_long    fab_num_to_long         long   : radixnum
+static convert.to_long    fab_convert_parse_long  long   : string, int:base=10, long:fallback=0
+static convert.to_double  fab_num_to_double       double : radixnum
+static convert.to_double  fab_convert_parse_double double : string, double:fallback=0.0
+static convert.to_bool    fab_num_to_bool         bool   : radixnum
+static convert.to_bool    fab_convert_parse_bool  bool   : string, bool:fallback=false
+static convert.to_str     fab_num_to_str          string : radixnum
+static convert.to_str     fab_convert_to_base     string : long, int:base=10
+
+# ---------- convert: checks ----------
+static convert.is_int     fab_convert_is_int     bool : string, int:base=10
+static convert.is_long    fab_convert_is_long    bool : string, int:base=10
+static convert.is_double  fab_convert_is_double  bool : string
+static convert.is_bool    fab_convert_is_bool    bool : string
+static convert.is_hex     fab_convert_is_hex     bool : string
+static convert.is_oct     fab_convert_is_oct     bool : string
+static convert.is_bin     fab_convert_is_bin     bool : string
+
+# ---------- convert: encodings ----------
+static convert.bytes_to_hex fab_convert_bytes_to_hex string : string
+static convert.hex_to_bytes fab_convert_hex_to_bytes string : string
+static convert.to_base64    fab_convert_to_base64    string : string
+static convert.from_base64  fab_convert_from_base64  string : string
+
+# ---------- convert: pretty ----------
+static convert.to_roman   fab_convert_to_roman   string : int
+static convert.from_roman fab_convert_from_roman int    : string
+static convert.size_str   fab_convert_size_str   string : long
