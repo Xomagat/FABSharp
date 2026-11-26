@@ -1,6 +1,6 @@
 # Console v0.1
 # Created on 01.11.2026
-# Created on 01.11.2026
+# Created on 26.11.2026
 
 const color_grey    int 0
 const color_red     int 1
@@ -10,6 +10,8 @@ const color_blue    int 4
 const color_purple  int 5
 const color_cyan    int 6
 const color_white   int 7
+
+set_encoding fab_set_encoding bool : string
 
 static console.error     fab_con_error           void : string
 static console.errorln   fab_con_errorln         void : string

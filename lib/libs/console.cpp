@@ -6,11 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #endif
+
+#include "../types/string.cpp"
 
 static char* dup_n(const char* s, size_t n)
 {
@@ -95,4 +98,38 @@ extern "C" void fab_con_title(const char* s)
 {
     enable_vt();
     if (s) printf("\x1b]0;%s\x07", s);
+}
+
+extern "C" bool fab_set_encoding(const char* s)
+{
+    if (!s || !*s) return false;
+
+    char* upper_s = fab_to_upper(s);
+    if (!upper_s) return false;
+
+    bool ok = false;
+
+#ifdef _WIN32
+    if (strcmp(upper_s, "UTF-8") == 0 || strcmp(upper_s, "UTF8") == 0)
+    {
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleCP(CP_UTF8);
+        ok = (setlocale(LC_ALL, ".UTF-8") != nullptr);
+    }
+    else if (strcmp(upper_s, "CP1251") == 0 || strcmp(upper_s, "WINDOWS-1251") == 0)
+    {
+        SetConsoleOutputCP(1251);
+        SetConsoleCP(1251);
+        ok = (setlocale(LC_ALL, ".1251") != nullptr);
+    }
+    else
+    {
+        ok = (setlocale(LC_ALL, upper_s) != nullptr);
+    }
+#else
+    ok = (setlocale(LC_ALL, s) != nullptr);
+#endif
+
+    free(upper_s);
+    return ok;
 }
