@@ -20,6 +20,9 @@
 inline const StdlibFunctionInfo* find_with_conversion(const std::string& name,
                                                       const std::vector<std::string>& actual)
 {
+    if (auto ex = stdlib_symbols.find(mangle_name(name, actual)); ex != stdlib_symbols.end())
+        return &ex->second;
+
     const std::string prefix = name + "#" + std::to_string(actual.size()) + "_";
 
     const StdlibFunctionInfo* best = nullptr;

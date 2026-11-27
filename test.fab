@@ -1,7 +1,6 @@
-use console;
+use system;
 
 define main() -> int
 {
-    set_encoding("utf-8");
-    writeln "Привет, мир!";
+    writeln ticks_ms();
 }
