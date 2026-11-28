@@ -61,12 +61,6 @@ bswap       fab_bswapl       long : long
 bit_reverse fab_bit_reversei int  : int
 bit_reverse fab_bit_reversel long : long
 
-# Powers of two
-is_pow2    fab_is_pow2i    bool : int
-is_pow2    fab_is_pow2l    bool : long
-next_pow2  fab_next_pow2i  int  : int
-next_pow2  fab_next_pow2l  long : long
-
 # Text
 bin_str    fab_bin_stri    string : int, int:width=0
 bin_str    fab_bin_strl    string : long, int:width=0

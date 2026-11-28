@@ -129,14 +129,6 @@ template<class U> static char* to_base(U x, int shift, int width)
       { return (T)(ushr_<UT>((UT)a, pos) & mask_<UT>(len)); } \
   extern "C" T    fab_bswap##SFX(T a)           { return (T)bswap_<UT>((UT)a); } \
   extern "C" T    fab_bit_reverse##SFX(T a)     { return (T)rev_<UT>((UT)a); } \
-  extern "C" bool fab_is_pow2##SFX(T a)         { return a > 0 && (((UT)a & ((UT)a - 1)) == 0); } \
-  extern "C" T    fab_next_pow2##SFX(T a) \
-  { \
-      if (a <= 1) return 1; \
-      int bits = (int)(sizeof(UT) * 8) - clz_<UT>((UT)(a - 1)); \
-      if (bits >= (int)(sizeof(UT) * 8) - 1) return -1;      /* does not fit */ \
-      return (T)((UT)1 << bits); \
-  } \
   extern "C" char* fab_bin_str##SFX(T a, int width) { return to_base<UT>((UT)a, 1, width); } \
   extern "C" char* fab_hex_str##SFX(T a, int width) { return to_base<UT>((UT)a, 4, width); }
 
