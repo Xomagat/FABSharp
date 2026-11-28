@@ -143,6 +143,12 @@ extern "C" void fab_thread_free(void* h)
 
 #ifdef _WIN32
 extern "C" long long fab_thread_self() { return GetCurrentThreadId(); }
+
+extern "C" void* fab_mutex_new() { auto* m = (CRITICAL_SECTION*)malloc(sizeof(CRITICAL_SECTION)); InitializeCriticalSection(m); return m; }
+extern "C" void  fab_mutex_lock(void* m)   { if (m) EnterCriticalSection((CRITICAL_SECTION*)m); }
+extern "C" void  fab_mutex_unlock(void* m) { if (m) LeaveCriticalSection((CRITICAL_SECTION*)m); }
+extern "C" bool  fab_mutex_try_lock(void* m) { return m && TryEnterCriticalSection((CRITICAL_SECTION*)m) == 0; }
+extern "C" void  fab_mutex_free(void* m) { if (m) { DeleteCriticalSection((CRITICAL_SECTION*)m); free(m); } }
 #else
 extern "C" long long fab_thread_self() { return (long long)pthread_self(); }
 

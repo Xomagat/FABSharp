@@ -2,5 +2,7 @@ use system;
 
 define main() -> int
 {
-    writeln ticks_ms();
+    int x = 234;
+    int _x = x;
+    writeln _x;
 }

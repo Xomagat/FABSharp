@@ -178,7 +178,8 @@ public:
             fmt = context.builder.CreateGlobalStringPtr("%d");
 
             auto& b = context.builder;
-            llvm::Value* rc = b.CreateCall(scanfFunc, {fmt, arg});
+            b.CreateStore(b.getInt32(0), tmpAlloc);
+            llvm::Value* rc = b.CreateCall(scanfFunc, {fmt, tmpAlloc});
             auto done = context.module.getOrInsertFunction("fab_input_done",
                 llvm::FunctionType::get(b.getVoidTy(), {b.getInt32Ty()}, false));
             b.CreateCall(done, {rc});
