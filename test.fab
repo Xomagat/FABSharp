@@ -1,10 +1,11 @@
 use console;
+use "s.fab";
+
+use namespace s;
 
 define main() -> int
 {
     set_encoding("utf-8");
 
-    write "x = ";
-    input_in un int x;
-    writeln x.is_pow2() ? "квадратный корень" : "не квадратный корень";
+    f();
 }

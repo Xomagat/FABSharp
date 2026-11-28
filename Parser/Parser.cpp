@@ -153,7 +153,7 @@ std::unique_ptr<Statement> Parser::statement_impl()
                 if (!match(token_type::SEMI))
                     throw std::runtime_error("You miss the ;");
 
-                return std::make_unique<UseStatement>(name);
+                return nullptr;
             }
             else if (get(0).get_type() == token_type::TEXT)
             {
@@ -183,7 +183,7 @@ std::unique_ptr<Statement> Parser::statement_impl()
                 if (!match(token_type::SEMI))
                     throw std::runtime_error("You miss the ;");
 
-                return std::make_unique<UseStatement>(path);
+                return nullptr;
             }
         }
         case token_type::WRITE: {
