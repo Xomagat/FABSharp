@@ -41,6 +41,7 @@ private:
     void tokenize_string();
     void tokenize_fstring();
     void tokenize_char();
+    void tokenize_radix_number(int base, int s, int sc);
     void tokenize_comment();
     void tokenize_mcomment();
 

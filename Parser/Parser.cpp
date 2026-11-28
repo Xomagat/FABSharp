@@ -1286,8 +1286,6 @@ std::unique_ptr<Expression> Parser::primary_impl()
         return std::make_unique<ValueExpression>(BoolTag{true});
     if (match(token_type::FALSEVAL))
         return std::make_unique<ValueExpression>(BoolTag{false});
-    if (match(token_type::HEX_NUMBER))
-        return std::make_unique<ValueExpression>(std::stoll(current.get_text(), nullptr, 16));
     if (match(token_type::CHARS))
         return std::make_unique<ValueExpression>(current.get_text()[0]);
     if (match(token_type::FSTRING))

@@ -1,11 +1,6 @@
-use console;
-use "s.fab";
-
-use namespace s;
+use convert;
 
 define main() -> int
 {
-    set_encoding("utf-8");
-
-    f();
+    writeln cast<char>(0b1100001);
 }

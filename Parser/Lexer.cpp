@@ -127,11 +127,6 @@ std::vector<Token> Lexer::tokenize()
         {
             tokenize_word();
         }
-        else if (current == '#')
-        {
-            next();
-            tokenize_hex_number();
-        }
         else if (current == '$' && peek(1) == '"')
         {
             next();                 // skip $
@@ -361,13 +356,94 @@ void Lexer::tokenize_char()
     add_token(token_type::CHARS, buffer);
 }
 
+void Lexer::tokenize_radix_number(int base, int s, int sc)
+{
+    std::string digits;
+    char current = peek(0);
+
+    auto is_valid_digit = [&](char c) -> bool {
+        c = tolower((unsigned char)c);
+        if (base == 2)  return c == '0' || c == '1';
+        if (base == 8)  return c >= '0' && c <= '7';
+        if (base == 16) return isdigit((unsigned char)c) || (c >= 'a' && c <= 'f');
+        return false;
+    };
+
+    while (true)
+    {
+        if (current == '_')
+        {
+            if (!is_valid_digit(peek(1))) break;
+            current = next();
+            continue;
+        }
+        if (!is_valid_digit(current))
+            break;
+
+        digits.push_back(current);
+        current = next();
+    }
+
+    if (digits.empty())
+    {
+        g_diags.push_back(FabError("Expected digits after base prefix!",
+                                   {file, line, sc, pos - s}));
+        add_token(token_type::NUMBER, "0");
+        return;
+    }
+
+    if (isdigit((unsigned char)current))
+    {
+        while (isalnum((unsigned char)peek(0)) || peek(0) == '_') next();
+        g_diags.push_back(FabError("Invalid digit for this number base!",
+                                   {file, line, sc, pos - s}));
+        add_token(token_type::NUMBER, "0");
+        return;
+    }
+
+    std::string decimal_str;
+    try
+    {
+        unsigned long long val = std::stoull(digits, nullptr, base);
+        decimal_str = std::to_string(val);
+    }
+    catch (...)
+    {
+        g_diags.push_back(FabError("Integer literal is too large!",
+                                   {file, line, sc, pos - s}));
+        decimal_str = "0";
+    }
+
+    char sf = peek(0);
+    if ((sf == 'L' || sf == 'l' || sf == 's' || sf == 'S')
+        && !isalnum((unsigned char)peek(1)) && peek(1) != '_')
+    {
+        decimal_str.push_back((sf == 'l' || sf == 'L') ? 'L' : 's');
+        next();
+    }
+
+    add_token(token_type::NUMBER, decimal_str);
+}
+
 void Lexer::tokenize_number()
 {
+    int s = pos, sc = pos - line_start + 1;
+
+    if (peek(0) == '0')
+    {
+        char p1 = tolower((unsigned char)peek(1));
+        if (p1 == 'x' || p1 == 'b' || p1 == 'o')
+        {
+            next();
+            next();
+            int base = (p1 == 'x') ? 16 : (p1 == 'b' ? 2 : 8);
+            tokenize_radix_number(base, s, sc);
+            return;
+        }
+    }
     std::string buffer;
     bool is_float = false;
     char current = peek(0);
-
-    int s = pos, sc = pos - line_start + 1;
 
     while (true)
     {
@@ -417,20 +493,6 @@ void Lexer::tokenize_number()
     }
 
     add_token(token_type::NUMBER, buffer);
-}
-
-void Lexer::tokenize_hex_number()
-{
-    std::string buffer, chars = "abcdef";
-    char current = peek(0);
-
-    while (isdigit(current) || chars.find(tolower(current)) != std::string::npos)
-    {
-        buffer.push_back(current);
-        current = next();
-    }
-
-    add_token(token_type::HEX_NUMBER, buffer);
 }
 
 void Lexer::tokenize_operation()
