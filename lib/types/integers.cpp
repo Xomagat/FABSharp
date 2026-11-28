@@ -97,7 +97,8 @@ static char* fab_fmt_alloc_ld(const char* fmt, long double x)
     extern "C" long long fab_to_long_##NAME(T x)    { return (long long)x; } \
     extern "C" float fab_to_float_##NAME(T x)       { return (float)x; } \
     extern "C" double fab_to_double_##NAME(T x)     { return (double)x; } \
-    extern "C" long double fab_to_ldouble_##NAME(T x) { return (long double)x; }
+    extern "C" long double fab_to_ldouble_##NAME(T x) { return (long double)x; } \
+    extern "C" bool fab_is_pow2_##NAME(T a)         { return a > 0 && (((T)a & ((T)a - 1)) == 0); }
 
 // Int
 FAB_INTEGER(int, int)
@@ -220,7 +221,8 @@ static char* fab_u64_str(unsigned long long u)
   extern "C" long long   fab_to_long_##NAME(unsigned long long x)    { return (long long)(T)(x & (MASK)); } \
   extern "C" float       fab_to_float_##NAME(unsigned long long x)   { return (float)(T)(x & (MASK)); } \
   extern "C" double      fab_to_double_##NAME(unsigned long long x)  { return (double)(T)(x & (MASK)); } \
-  extern "C" long double fab_to_ldouble_##NAME(unsigned long long x) { return (long double)(T)(x & (MASK)); }
+  extern "C" long double fab_to_ldouble_##NAME(unsigned long long x) { return (long double)(T)(x & (MASK)); } \
+  extern "C" bool        fab_is_pow2_##NAME(T a)                      { return a > 0 && (((T)a & ((T)a - 1)) == 0); } \
 
 FAB_UNSIGNED(unchar,  unsigned char,      0xFFULL)
 FAB_UNSIGNED(unshort, unsigned short,     0xFFFFULL)

@@ -42,6 +42,7 @@ short.to_long     fab_to_long_short     long   : short
 short.to_float    fab_to_float_short    float  : short
 short.to_double   fab_to_double_short   double : short
 short.to_ldouble  fab_to_ldouble_short  ldouble : short
+short.is_pow2     fab_is_pow2_short     bool   : short
 
 # Int
 int.to_str      fab_to_str_int      string : int
@@ -59,6 +60,7 @@ int.to_long     fab_to_long_int     long   : int
 int.to_float    fab_to_float_int    float  : int
 int.to_double   fab_to_double_int   double : int
 int.to_ldouble  fab_to_ldouble_int  ldouble : int
+int.is_pow2     fab_is_pow2_int     bool   : int
 
 # Long
 long.to_str      fab_to_str_long      string : long
@@ -75,6 +77,7 @@ long.to_short    fab_to_short_long    short  : long
 long.to_int      fab_to_int_long      int    : long
 long.to_float    fab_to_float_long    float  : long
 long.to_ldouble  fab_to_ldouble_long  ldouble : long
+long.is_pow2     fab_is_pow2_long     bool   : long
 
 # Float
 float.to_str      fab_to_str_float      string : float
@@ -156,6 +159,7 @@ unshort.to_long     fab_to_long_unshort     long   : unshort
 unshort.to_float    fab_to_float_unshort    float  : unshort
 unshort.to_double   fab_to_double_unshort   double : unshort
 unshort.to_ldouble  fab_to_ldouble_unshort  ldouble : unshort
+unshort.is_pow2     fab_is_pow2_unshort     bool   : unshort
 
 # Un int
 unint.to_str      fab_to_str_unint      string : unint
@@ -171,6 +175,7 @@ unint.to_long     fab_to_long_unint     long   : unint
 unint.to_float    fab_to_float_unint    float  : unint
 unint.to_double   fab_to_double_unint   double : unint
 unint.to_ldouble  fab_to_ldouble_unint  ldouble : unint
+unint.is_pow2     fab_is_pow2_unint     bool   : unint
 
 # Un long
 unlong.to_str      fab_to_str_unlong      string : unlong
@@ -185,3 +190,4 @@ unlong.to_short    fab_to_short_unlong    short  : unlong
 unlong.to_int      fab_to_int_unlong      int    : unlong
 unlong.to_float    fab_to_float_unlong    float  : unlong
 unlong.to_ldouble  fab_to_ldouble_unlong  ldouble : unlong
+unlong.is_pow2     fab_is_pow2_unlong     bool   : unlong
