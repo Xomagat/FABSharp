@@ -1,8 +1,10 @@
-use system;
+use console;
 
 define main() -> int
 {
-    int x = 234;
-    int _x = x;
-    writeln (_x + 6;
+    set_encoding("utf-8");
+
+    write "x = ";
+    input_in un int x;
+    writeln x.is_pow2() ? "квадратный корень" : "не квадратный корень";
 }
