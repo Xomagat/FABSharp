@@ -4,5 +4,5 @@ define main() -> int
 {
     int x = 234;
     int _x = x;
-    writeln _x;
+    writeln (_x + 6;
 }

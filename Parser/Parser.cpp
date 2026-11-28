@@ -1297,7 +1297,7 @@ std::unique_ptr<Expression> Parser::primary_impl()
     if (match(token_type::LPARENT))
     {
         std::unique_ptr<Expression> result = expression();
-        match(token_type::RPARENT);
+        consume(token_type::RPARENT);
         return result;
     }
 
